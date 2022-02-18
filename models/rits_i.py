@@ -8,7 +8,8 @@ from torch.nn.parameter import Parameter
 
 import math
 
-SEQ_LEN = 48
+feature_len = 21
+SEQ_LEN = 252
 
 def binary_cross_entropy_with_logits(input, target, weight=None, size_average=True, reduce=True):
     if not (target.size() == input.size()):
@@ -70,10 +71,10 @@ class RITSModel(nn.Module):
         self.build()
 
     def build(self):
-        self.rnn_cell = nn.LSTMCell(35 * 2, self.rnn_hid_size)
+        self.rnn_cell = nn.LSTMCell(feature_len * 2, self.rnn_hid_size)
 
-        self.regression = nn.Linear(self.rnn_hid_size, 35)
-        self.temp_decay = TemporalDecay(input_size = 35, rnn_hid_size = self.rnn_hid_size)
+        self.regression = nn.Linear(self.rnn_hid_size, feature_len)
+        self.temp_decay = TemporalDecay(input_size = feature_len, rnn_hid_size = self.rnn_hid_size)
 
         self.out = nn.Linear(self.rnn_hid_size, 1)
 
@@ -85,6 +86,8 @@ class RITSModel(nn.Module):
 
         evals = data[direct]['evals']
         eval_masks = data[direct]['eval_masks']
+
+        seq_len = data[direct]['seq_len']
 
         labels = data['labels'].view(-1, 1)
         is_train = data['is_train'].view(-1, 1)
