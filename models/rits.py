@@ -5,11 +5,16 @@ import torch.optim as optim
 
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
-import numpy as np
-import math
 
-feature_len = 20
+import math
+import utils
+import argparse
+import data_loader
+import numpy as np
+from sklearn import metrics
+
 SEQ_LEN = 252
+feature_len = 20
 
 def binary_cross_entropy_with_logits(input, target, weight=None, size_average=True, reduce=True):
     if not (target.size() == input.size()):
@@ -44,15 +49,46 @@ def loss_mse(input, target, reduce=True, size_average=True):
     else:
         return loss
 
-class TemporalDecay(nn.Module):
-    def __init__(self, input_size, rnn_hid_size):
-        super(TemporalDecay, self).__init__()
-        self.rnn_hid_size = rnn_hid_size
+class FeatureRegression(nn.Module):
+    def __init__(self, input_size):
+        super(FeatureRegression, self).__init__()
         self.build(input_size)
 
     def build(self, input_size):
-        self.W = Parameter(torch.Tensor(self.rnn_hid_size, input_size))
-        self.b = Parameter(torch.Tensor(self.rnn_hid_size))
+        self.W = Parameter(torch.Tensor(input_size, input_size))
+        self.b = Parameter(torch.Tensor(input_size))
+
+        m = torch.ones(input_size, input_size) - torch.eye(input_size, input_size)
+        self.register_buffer('m', m)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.W.size(0))
+        self.W.data.uniform_(-stdv, stdv)
+        if self.b is not None:
+            self.b.data.uniform_(-stdv, stdv)
+
+    def forward(self, x):
+        z_h = F.linear(x, self.W * Variable(self.m), self.b)
+        return z_h
+
+class TemporalDecay(nn.Module):
+    def __init__(self, input_size, output_size, diag = False):
+        super(TemporalDecay, self).__init__()
+        self.diag = diag
+
+        self.build(input_size, output_size)
+
+    def build(self, input_size, output_size):
+        self.W = Parameter(torch.Tensor(output_size, input_size))
+        self.b = Parameter(torch.Tensor(output_size))
+
+        if self.diag == True:
+            assert(input_size == output_size)
+            m = torch.eye(input_size, input_size)
+            self.register_buffer('m', m)
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -62,7 +98,10 @@ class TemporalDecay(nn.Module):
             self.b.data.uniform_(-stdv, stdv)
 
     def forward(self, d):
-        gamma = F.relu(F.linear(d, self.W, self.b))
+        if self.diag == True:
+            gamma = F.relu(F.linear(d, self.W * Variable(self.m), self.b))
+        else:
+            gamma = F.relu(F.linear(d, self.W, self.b))
         gamma = torch.exp(-gamma)
         return gamma
 
@@ -79,22 +118,25 @@ class RITSModel(nn.Module):
     def build(self):
         self.rnn_cell = nn.LSTMCell(feature_len * 2, self.rnn_hid_size)
 
-        self.regression = nn.Linear(self.rnn_hid_size, feature_len)
-        self.temp_decay = TemporalDecay(input_size = feature_len, rnn_hid_size = self.rnn_hid_size)
+        self.temp_decay_h = TemporalDecay(input_size = feature_len, output_size = self.rnn_hid_size, diag = False)
+        self.temp_decay_x = TemporalDecay(input_size = feature_len, output_size = feature_len, diag = True)
 
+        self.hist_reg = nn.Linear(self.rnn_hid_size, feature_len)
+        self.feat_reg = FeatureRegression(feature_len)
+
+        self.weight_combine = nn.Linear(feature_len * 2, feature_len)
+
+        self.dropout = nn.Dropout(p = 0.25)
         self.out = nn.Linear(self.rnn_hid_size, SEQ_LEN)
 
     def forward(self, data, direct):
         # Original sequence with 24 time steps
         values = data[direct]['values']
-        # print(f"values: {values[0]}")
         masks = data[direct]['masks']
-        # print(f"masks: {masks[0]}")
         deltas = data[direct]['deltas']
-        # print('rits deltas: ', deltas.shape)
+
         evals = data[direct]['evals']
         eval_masks = data[direct]['eval_masks']
-
 
         labels = data['labels'].view(-1, 1)
         is_train = data['is_train'].view(-1, 1)
@@ -113,37 +155,48 @@ class RITSModel(nn.Module):
         for t in range(SEQ_LEN):
             x = values[:, t, :]
             m = masks[:, t, :]
-            
             d = deltas[:, t, :]
 
-            gamma = self.temp_decay(d)
-            h = h * gamma
-            x_h = self.regression(h)
+            gamma_h = self.temp_decay_h(d)
+            gamma_x = self.temp_decay_x(d)
+
+            h = h * gamma_h
+
+            x_h = self.hist_reg(h)
+            x_loss += torch.sum(torch.abs(x - x_h) * m) / (torch.sum(m) + 1e-5)
 
             x_c =  m * x +  (1 - m) * x_h
 
-            x_loss += torch.sum(torch.abs(x - x_h) * m) / (torch.sum(m) + 1e-5)
+            z_h = self.feat_reg(x_c)
+            x_loss += torch.sum(torch.abs(x - z_h) * m) / (torch.sum(m) + 1e-5)
 
-            inputs = torch.cat([x_c, m], dim = 1)
+            alpha = self.weight_combine(torch.cat([gamma_x, m], dim = 1))
+
+            c_h = alpha * z_h + (1 - alpha) * x_h
+            x_loss += torch.sum(torch.abs(x - c_h) * m) / (torch.sum(m) + 1e-5)
+
+            c_c = m * x + (1 - m) * c_h
+
+            inputs = torch.cat([c_c, m], dim = 1)
 
             h, c = self.rnn_cell(inputs, (h, c))
 
-            imputations.append(x_c.unsqueeze(dim = 1))
+            imputations.append(c_c.unsqueeze(dim = 1))
 
         imputations = torch.cat(imputations, dim = 1)
 
         # y_h = self.out(h)
+        # y_loss = binary_cross_entropy_with_logits(y_h, labels, reduce = False)
+        # y_loss = torch.sum(y_loss * is_train) / (torch.sum(is_train) + 1e-5)
         # not_nan = get_not_nan(labels)
         # y_p = y_h.view(-1, 1)
-        # y_loss = loss_mse(y_p[not_nan[0], not_nan[1]], labels[not_nan[0], not_nan[1]]) #binary_cross_entropy_with_logits(y_h, labels, reduce = False)
-
-        # only use training labels
-        # y_loss = torch.sum(y_loss * is_train) / (torch.sum(is_train) + 1e-5)
+        # y_loss = loss_mse(y_p[not_nan[0], not_nan[1]], labels[not_nan[0], not_nan[1]])
 
         # y_h = F.sigmoid(y_h)
-        # + y_loss * self.label_weight
+        #+ y_loss * self.label_weight
         # 'predictions': y_h
-        return {'loss': x_loss, 'predictions': None,\
+        # x_loss * self.impute_weight
+        return {'loss': x_loss * self.impute_weight, 'predictions': None,\
                 'imputations': imputations, 'labels': labels, 'is_train': is_train,\
                 'evals': evals, 'eval_masks': eval_masks}
 

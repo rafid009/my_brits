@@ -4,12 +4,19 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from torch.autograd import Variable
+from torch.nn.parameter import Parameter
 
-from models.rits_i import RITSModel
+import math
+import utils
+import argparse
+import data_loader
+
+from models.rits import RITSModel
+from sklearn import metrics
 
 
-
-SEQ_LEN = 36
+SEQ_LEN = 252
+RNN_HID_SIZE = 64
 
 
 class BRITSModel(nn.Module):
@@ -56,7 +63,7 @@ class BRITSModel(nn.Module):
 
     def reverse(self, ret):
         def reverse_tensor(tensor_):
-            if tensor_ is None or  tensor_.dim() <= 1:
+            if tensor_ is None or tensor_.dim() <= 1:
                 return tensor_
             indices = range(tensor_.size()[1])[::-1]
             indices = Variable(torch.LongTensor(indices), requires_grad = False)

@@ -22,11 +22,11 @@ features = [
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
     'MAX_ST8', # diff from zengxian
-    'MSLP_HPA', # barrometric pressure # diff from zengxian
+    #'MSLP_HPA', # barrometric pressure # diff from zengxian
     'ETO', # evaporation of soil water lost to atmosphere
     'ETR' # ???
 ]
-label = 'LT50'
+label = ['LT50']
 
 def preprocess_missing_values(df):
   df['AVG_AT'].replace(-100, np.nan, inplace=True)
@@ -114,6 +114,34 @@ def get_train_idx(season_array, idx_LT_not_null):
 
   return timeseries_idx_train
 
+def split_XY(df, max_season_len, seasons):#, x_mean, x_std):
+    X = []
+    Y = []
+    
+    for i, season in enumerate(seasons):
+        x = (df[features].loc[season, :]).to_numpy()
+
+        x = np.concatenate((x, np.zeros((max_season_len - len(season), len(features)))), axis = 0)
+
+        add_array = np.zeros((max_season_len - len(season), len(label)))
+        add_array[:] = np.NaN
+
+        y = df.loc[season,:][label].to_numpy()
+        # print(f'y: {y.shape}, add_arr: {add_array.shape}')
+        y = np.concatenate((y, add_array), axis=0)
+
+        X.append(x)
+        Y.append(y)
+
+    X = np.array(X)
+    Y = np.array(Y)
+    
+    # norm_features_idx = np.arange(0, x_mean.shape[0])
+        
+    # x[:, :, norm_features_idx]  = (x[:, :, norm_features_idx] - x_mean) / x_std # normalize
+    
+    return X, Y
+
 def create_xy(df, timeseries_idx, max_length):
     x = []
     y = []
@@ -136,3 +164,15 @@ def create_xy(df, timeseries_idx, max_length):
           continue
         
     return np.array(x), np.array(y), actual_seq_lenghts
+
+def get_mean_std(df, features):
+    mean = []
+    std = []
+    for feature in features:
+        season_npy = df[feature].to_numpy()
+        idx = np.where(~np.isnan(season_npy))
+        mean.append(np.mean(season_npy[idx]))
+        std.append(np.std(season_npy[idx]))
+    mean = np.array(mean)
+    std = np.array(std)
+    return mean, std

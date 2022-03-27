@@ -1,4 +1,5 @@
 import copy
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,11 +10,12 @@ import numpy as np
 
 import time
 import utils
-from models.brits_i import BRITSModel
+from models.brits import BRITSModel as BRITS
+from models.brits_i import BRITSModel as BRITS_I
 import argparse
 import data_loader
 import pandas as pd
-
+from tqdm import tqdm
 from sklearn import metrics
 
 
@@ -27,32 +29,40 @@ from sklearn import metrics
 # args = parser.parse_args()
 
 batch_size = 16
-n_epochs = 50
+n_epochs = 300
 
 # BRITS_I
 RNN_HID_SIZE = 64
-IMPUTE_WEIGHT = 0.3
+IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
+
+model_name = 'BRITS'
+model_path_name = 'BRITS'
+model_path = 'model_'+model_path_name+'.model'
 
 def train(model):
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     data_iter = data_loader.get_loader(batch_size=batch_size)
 
+    
     for epoch in range(n_epochs):
         model.train()
+        with tqdm(data_iter, unit='batch') as tepoch:
+            run_loss = 0.0
+            tepoch.set_description(f"Epoch {epoch+1}/{n_epochs} [T]")
+            for idx, data in enumerate(data_iter):
+                data = utils.to_var(data)
+                ret = model.run_on_batch(data, optimizer, epoch)
 
-        run_loss = 0.0
+                run_loss += ret['loss'].item()
+                tepoch.set_postfix(train_loss=(run_loss / (idx + 1.0)))
+                tepoch.update(1)
+                # print('\r Progress epoch {}, {:.2f}%, average loss {}'.format(epoch, (idx + 1) * 100.0 / len(data_iter), run_loss / (idx + 1.0)))
 
-        for idx, data in enumerate(data_iter):
-            data = utils.to_var(data)
-            ret = model.run_on_batch(data, optimizer, epoch)
-
-            run_loss += ret['loss'].item()
-
-            print('\r Progress epoch {}, {:.2f}%, average loss {}'.format(epoch, (idx + 1) * 100.0 / len(data_iter), run_loss / (idx + 1.0)))
-
-        evaluate(model, data_iter)
+            mre, mse = evaluate(model, data_iter)
+            tepoch.set_postfix(MSE=mse, MRE=mre)
+    torch.save(model.state_dict(), model_path)
 
 
 def evaluate(model, val_iter):
@@ -73,11 +83,11 @@ def evaluate(model, val_iter):
 
         # save the imputation results which is used to test the improvement of traditional methods with imputed values
         save_impute.append(ret['imputations'].data.cpu().numpy())
-        save_label.append(ret['labels'].data.cpu().numpy())
+        # save_label.append(ret['labels'].data.cpu().numpy())
 
-        pred = ret['predictions'].data.cpu().numpy()
-        label = ret['labels'].data.cpu().numpy()
-        is_train = ret['is_train'].data.cpu().numpy()
+        # pred = ret['predictions'].data.cpu().numpy()
+        # label = ret['labels'].data.cpu().numpy()
+        # is_train = ret['is_train'].data.cpu().numpy()
 
         eval_masks = ret['eval_masks'].data.cpu().numpy()
         eval_ = ret['evals'].data.cpu().numpy()
@@ -87,41 +97,50 @@ def evaluate(model, val_iter):
         imputations += imputation[np.where(eval_masks == 1)].tolist()
 
         # collect test label & prediction
-        pred = pred[np.where(is_train == 0)]
-        label = label[np.where(is_train == 0)]
+        # pred = pred[np.where(is_train == 0)]
+        # label = label[np.where(is_train == 0)]
 
-        labels += label.tolist()
-        preds += pred.tolist()
+        # labels += label.tolist()
+        # preds += pred.tolist()
 
-    labels = np.asarray(labels).astype('int32')
-    preds = np.asarray(preds)
+    # labels = np.asarray(labels).astype('int32')
+    # preds = np.asarray(preds)
 
-    print('AUC {}'.format(metrics.roc_auc_score(labels, preds)))
+    # print('AUC {}'.format(metrics.roc_auc_score(labels, preds)))
 
     evals = np.asarray(evals)
     imputations = np.asarray(imputations)
 
-    print('MAE', np.abs(evals - imputations).mean())
+    # mae = np.abs(evals - imputations).mean()
+    # print('MAE: ', mae)
+    mre = np.abs(evals - imputations).sum() / np.abs(evals).sum()
+    print('MRE: ', mre)
 
-    print('MRE', np.abs(evals - imputations).sum() / np.abs(evals).sum())
-
+    mse = ((evals - imputations) ** 2).mean()
+    print('MSE: ', mse)
     save_impute = np.concatenate(save_impute, axis=0)
-    save_label = np.concatenate(save_label, axis=0)
-
+    # save_label = np.concatenate(save_label, axis=0)
+    if not os.path.isdir('./result/'):
+        os.makedirs('./result/')
     np.save('./result/data', save_impute)
-    np.save('./result/label', save_label)
+    # np.save('./result/label', save_label)
+    return mre, mse
 
 
-
-model = BRITSModel(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)#getattr(models, args.model).Model(args.hid_size, args.impute_weight, args.label_weight)
-total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+if model_name == 'BRITS':
+    model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+else:
+    model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+if os.path.exists(model_path):
+    model.load_state_dict(torch.load(model_path))
+# total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 # print('Total params is {}'.format(total_params))
 
 if torch.cuda.is_available():
     model = model.cuda()
 
 train(model)
-evaluate(model)
+# evaluate(model)
 
 
 
