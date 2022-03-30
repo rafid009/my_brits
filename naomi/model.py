@@ -9,6 +9,8 @@ import torch.nn.init as init
 
 from naomi.model_utils import *
 
+use_gpu = torch.cuda.is_available()
+
 def num_trainable_params(model):
     total = 0
     for p in model.parameters():
@@ -26,7 +28,7 @@ class Discriminator(nn.Module):
         self.hidden_dim = params['discrim_rnn_dim']
         self.action_dim = params['y_dim']
         self.state_dim = params['y_dim']
-        self.gpu = params['cuda']
+        self.gpu = use_gpu
         self.num_layers = params['discrim_num_layers'] 
 
         self.gru = nn.GRU(self.state_dim, self.hidden_dim, self.num_layers)
@@ -89,7 +91,7 @@ class NAOMI(nn.Module):
         # ground_truth: seq_length * batch * 10
         h = Variable(torch.zeros(self.n_layers, batch_size, self.rnn_dim))
         h_back = Variable(torch.zeros(self.n_layers, batch_size, self.rnn_dim))
-        if self.params['cuda']:
+        if use_gpu:
             h, h_back = h.cuda(), h_back.cuda()
         
         loss = 0.0
@@ -130,18 +132,18 @@ class NAOMI(nn.Module):
         ret = []
         seq_len = len(data_list)
         h = Variable(torch.zeros(self.params['n_layers'], batch_size, self.rnn_dim))
-        if self.params['cuda']:
+        if use_gpu:
             h = h.cuda()
         
         h_back_dict = {}
         h_back = Variable(torch.zeros(self.params['n_layers'], batch_size, self.rnn_dim))
-        print(f'h_back: {h_back.shape}')
-        if self.params['cuda']:
+        # print(f'h_back: {h_back.shape}')
+        if use_gpu:
             h_back = h_back.cuda()  
         for t in range(seq_len - 1, 0, -1):
             h_back_dict[t+1] = h_back
             state_t = data_list[t]
-            print(f"state_t: {state_t.shape}")
+            # print(f"state_t: {state_t.shape}")
             _, h_back = self.back_gru(state_t, h_back)
         
         curr_p = 0
@@ -179,7 +181,7 @@ class NAOMI(nn.Module):
         
         added_state = state_t.unsqueeze(0)
         has_value = Variable(torch.ones(added_state.shape[0], added_state.shape[1], 1))
-        if self.params['cuda']:
+        if use_gpu:
             has_value = has_value.cuda()
         added_state = torch.cat([has_value, added_state], 2)
         
@@ -191,7 +193,7 @@ class NAOMI(nn.Module):
             h_back_dict[right] = h_back
             
             zeros = Variable(torch.zeros(added_state.shape[0], added_state.shape[1], self.y_dim + 1))
-            if self.params['cuda']:
+            if use_gpu:
                 zeros = zeros.cuda()
             for i in range(right-1, left-1, -1):
                 _, h_back = self.back_gru(zeros, h_back)
@@ -230,7 +232,7 @@ class SingleRes(nn.Module):
         # ground_truth: seq_length * batch * 10
         h = Variable(torch.zeros(self.n_layers, data.size(1), self.rnn_dim))
         h_back = Variable(torch.zeros(self.n_layers, data.size(1), self.rnn_dim))
-        if self.params['cuda']:
+        if use_gpu:
             h, h_back = h.cuda(), h_back.cuda()
         
         loss = 0.0
@@ -264,7 +266,7 @@ class SingleRes(nn.Module):
         # data_list: seq_length * (1 * batch * 11)
         h = Variable(torch.zeros(self.n_layers, self.batch_size, self.rnn_dim))
         h_back = Variable(torch.zeros(self.n_layers, self.batch_size, self.rnn_dim))
-        if self.params['cuda']:
+        if use_gpu:
             h, h_back = h.cuda(), h_back.cuda()
 
         seq_len = len(data_list)
@@ -290,7 +292,7 @@ class SingleRes(nn.Module):
                     
                 added_state = state_t.unsqueeze(0)
                 has_value = Variable(torch.ones(added_state.shape[0], added_state.shape[1], 1))
-                if self.params['cuda']:
+                if use_gpu:
                     has_value = has_value.cuda()
                 added_state = torch.cat([has_value, added_state], 2)
                 

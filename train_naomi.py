@@ -17,7 +17,7 @@ import torch.utils.data
 from process_data import *
 
 from naomi.helpers import *
-import visdom
+
 
 Tensor = torch.DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
@@ -77,10 +77,11 @@ params = {
     'n_layers' : 2, #args.n_layers,
     'discrim_rnn_dim' : 128, #args.discrim_rnn_dim,
     'discrim_num_layers' : 1, #args.discrim_layers,
-    'cuda' : False, #args.cuda,
+    'cuda' : True, #args.cuda,
     'highest' : 8, #args.highest,
 }
-
+if not torch.cuda.is_available():
+    params['cuda'] = False
 # hyperparameters
 trial = 1
 pretrain_epochs = 50 #args.pretrain
@@ -94,10 +95,16 @@ policy_learning_rate = 0.000003
 pretrain_disc_iter = 2000
 max_iter_num = 80000
 log_interval = 1
-save_model_interval = 50
+save_model_interval = 20
 
-policy_net = eval(policy_model_name)(params)
+policy_net = NAOMI(params)
 discrim_net = Discriminator(params).double()
+
+if os.path.exists('saved/NAOMI_001/discrim_step8_training.pth'):
+    discrim_net.load_state_dict(torch.load('saved/NAOMI_001/discrim_step8_training.pth'))
+if os.path.exists('saved/NAOMI_001/policy_step8_training.pth'):
+    policy_net.load_state_dict(torch.load('saved/NAOMI_001/policy_step8_training.pth'))
+
 if torch.cuda.is_available():
     policy_net, discrim_net = policy_net.cuda(), discrim_net.cuda()
 params['total_params'] = num_trainable_params(policy_net)
@@ -258,7 +265,7 @@ for i in range(pretrain_disc_iter):
         break
 
 # Save pretrained model
-if pretrain_disc_iter > 250:
+if pretrain_disc_iter > 200:
     torch.save(policy_net.state_dict(), save_path+'model/policy_step'+str(params['highest'])+'_pretrained.pth')
     torch.save(discrim_net.state_dict(), save_path+'model/discrim_step'+str(params['highest'])+'_pretrained.pth')
     

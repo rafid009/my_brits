@@ -30,13 +30,17 @@ def run_epoch(train, model, exp_data, clip, optimizer=None, batch_size=16, num_m
             data = data.cuda()
 
         # change (batch, time, x) to (time, batch, x)
-        ones = np.ones(data.shape)
-        missing_mask = np.logical_xor(np.isnan(data), ones)
+        ones = torch.ones(data.shape)
+
+        if use_gpu:
+            ones = ones.cuda()
+
+        is_nan = torch.isnan(data)
+        missing_mask = torch.logical_xor(is_nan, ones)
         # print(f"isnan: {np.isnan(np.nan)}, {np.isnan(data.numpy()).shape}, {data[np.isnan(data)].shape}")
-        data = data.numpy()
-        data[np.isnan(data)] = 0.0
+
+        data[is_nan] = 0.0
         # print(f"data: {data.shape}")
-        data = torch.tensor(data)
         # print(f"data tensor: {data.shape}")
         # print(f"missing mask: {np.isnan(data)}\nxor: {np.where(miss == 1)[0].sum()}")
 
@@ -45,7 +49,7 @@ def run_epoch(train, model, exp_data, clip, optimizer=None, batch_size=16, num_m
         ground_truth = data.clone()
         if num_missing is None:
             #num_missing = np.random.randint(data.shape[0] * 18 // 20, data.shape[0])
-            num_missing = np.random.randint(data.shape[0] * 2 // 5, data.shape[0])
+            num_missing = np.random.randint(data.shape[0] * 1 // 2, data.shape[0])
             #num_missing = 40
         
         missing_list = torch.from_numpy(np.random.choice(np.arange(1, data.shape[0]), num_missing, replace=False)).long()
@@ -66,7 +70,7 @@ def run_epoch(train, model, exp_data, clip, optimizer=None, batch_size=16, num_m
                 data_list.append(data[j:j+1])
             samples = model.sample(data_list, batch_size)
             batch_loss = torch.mean(((ground_truth - samples) * missing_mask).pow(2))
-        print(f"train: {train}, total_loss: {batch_loss}")
+        # print(f"train: {train}, total_loss: {batch_loss}")
         if train:
             optimizer.zero_grad()
             total_loss = batch_loss
@@ -126,26 +130,28 @@ def collect_samples_interpolate(policy_net, expert_data, use_gpu, i_iter, task, 
     exp_ind = torch.from_numpy(np.random.choice(expert_data.shape[0], size)).long()
     data = expert_data[exp_ind].clone()
     seq_len = data.shape[1]
-    #print(data.shape, seq_len)
-    ones = np.ones(data.shape)
-    missing_mask = np.logical_xor(np.isnan(data), ones)
-    # print(f"isnan: {np.isnan(np.nan)}, {np.isnan(data.numpy()).shape}, {data[np.isnan(data)].shape}")
-    data = data.numpy()
-    data[np.isnan(data)] = 0.0
-    data = torch.tensor(data)
     if use_gpu:
         data = data.cuda()
+    #print(data.shape, seq_len)
+    ones = torch.ones(data.shape)
+    if use_gpu:
+        ones = ones.cuda()
+    is_nan = torch.isnan(data)
+    missing_mask = torch.logical_xor(is_nan, ones)
+    # print(f"isnan: {np.isnan(np.nan)}, {np.isnan(data.numpy()).shape}, {data[np.isnan(data)].shape}")
+    data[is_nan] = 0.0
+    
     data = Variable(data.squeeze().transpose(0, 1))
     missing_mask = Variable(missing_mask.squeeze().transpose(0, 1))
     ground_truth = data.clone()
     
     if num_missing is None:
-        num_missing = np.random.randint(seq_len * 2 // 5, seq_len)
+        num_missing = np.random.randint(seq_len * 1 // 2, seq_len)
         #num_missing = np.random.randint(seq_len * 18 // 20, seq_len)
         #num_missing = 40
     missing_list = torch.from_numpy(np.random.choice(np.arange(1, seq_len), num_missing, replace=False)).long()
     sorted_missing_list, _ = torch.sort(missing_list)
-    print("collect sample:", sorted_missing_list)
+    # print("collect sample:", sorted_missing_list)
     data[missing_list] = 0.0
     has_value = Variable(torch.ones(seq_len, size, 1))
     if use_gpu:
@@ -205,13 +211,13 @@ def draw_and_stats(model_states, name, i_iter, task, compute_stats=True, draw=Tr
         # stats['ave_player_distance'] = np.mean(ave_player_distance(val_data))
         # stats['diff_max_min'] = np.mean(np.max(val_seqlength, axis=1) - np.min(val_seqlength, axis=1))
     
-    if draw:
-        print("Drawing")
-        draw_data = model_states.cpu().numpy()[:, 0, :] 
-        draw_data = unnormalize(draw_data, task)
-        colormap = ['b', 'r', 'g', 'm', 'y']
-        plot_sequence(draw_data, task, colormap=colormap, \
-                      save_name="imgs/{}_{}".format(name, i_iter), missing_list=missing_list)
+    # if draw:
+    #     print("Drawing")
+    #     draw_data = model_states.cpu().numpy()[:, 0, :] 
+    #     draw_data = unnormalize(draw_data, task)
+    #     colormap = ['b', 'r', 'g', 'm', 'y']
+    #     plot_sequence(draw_data, task, colormap=colormap, \
+    #                   save_name="imgs/{}_{}".format(name, i_iter), missing_list=missing_list)
 
     return stats
 
