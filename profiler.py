@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from evaluate_imputations import get_minimum_missing_season
 from process_data import *
 df = pd.read_csv('ColdHardiness_Grape_Merlot.csv')
 
@@ -41,3 +42,12 @@ print(f"X: {X.shape}, Y: {Y.shape}")
 season_not_null = season_df[features].dropna()
 print(f"not null instances in seasons: {len(df_not_null)}")
 print(f'missing: {season_df[features].isna().sum()}')
+
+print(f"\n\nSeasons: {len(season_array)}\n")
+for feature in features:
+    min_season, season_idx = get_minimum_missing_season(season_df, feature, season_array)
+    print(f"feature: {feature}\tseason: {season_idx}")
+
+print(f"\n\nMissing for the last season:\n")
+print(f"last season: {np.isnan(X[-1])}")
+print(f"season array: {season_array[-1]}")
