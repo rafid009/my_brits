@@ -50,12 +50,17 @@ train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
 mean, std = get_mean_std(train_season_df, features)
 
+
 ############## Load Models ##############
+
+normalized_season_df = train_season_df.copy()
+normalized_season_df = (normalized_season_df - mean) /std
+
 knn_impute = KNNImputer(n_neighbors=7, weights='distance')
-knn_impute.fit(train_season_df[features])
+knn_impute.fit(normalized_season_df[features].to_numpy())
 
 mice_impute = IterativeImputer(random_state=0, max_iter=20)
-mice_impute.fit(train_season_df[features])
+mice_impute.fit(normalized_season_df[features].to_numpy())
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
@@ -229,6 +234,11 @@ def get_minimum_missing_season(df, feature, season_array):
             season_idx = i
     return min_missing_season, season_idx
 
+def unnormalize(X, mean, std, feature_idx=-1):
+    if feature_idx == -1:
+        return (X * std) + mean
+    else:
+        return (X * std[feature_idx]) + mean[feature_idx]
 
 def parse_id(x, y, feature_impute_idx, length, trial_num=-1):
     evals = x
@@ -526,18 +536,18 @@ for given_feature in given_features:
 
         missing_values = copy.deepcopy(real_value)
         missing_values[row_indices] = 0
-        draws['real'] = real_value
-        draws['missing'] = missing_values
+        draws['real'] = unnormalize(real_value, mean, std, feature_idx)
+        draws['missing'] = unnormalize(missing_values, mean, std, feature_idx)
 
         imputation_brits = ret['imputations'].data.cpu().numpy()
         imputation_brits = np.squeeze(imputation_brits)
-        draws['BRITS'] = imputation_brits[:, feature_idx]
+        draws['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
         # imputed_brits.extend(copy.deepcopy(imputation_brits[:, feature_idx]))
 
         ret = model_brits_I.run_on_batch(data, None)
         imputation_brits_I = ret['imputations'].data.cpu().numpy()
         imputation_brits_I = np.squeeze(imputation_brits_I)
-        draws['BRITS_I'] = imputation_brits_I[:, feature_idx]
+        draws['BRITS_I'] = unnormalize(imputation_brits_I[:, feature_idx], mean, std, feature_idx)
         # imputed_brits_I.extend(copy.deepcopy(imputation_brits_I[:, feature_idx]))
 
 
@@ -545,16 +555,16 @@ for given_feature in given_features:
         ret_eval[row_indices, feature_idx] = np.nan
 
         imputation_knn = knn_impute.transform(ret_eval)
-        draws['KNN'] = imputation_knn[:, feature_idx]
+        draws['KNN'] = unnormalize(imputation_knn[:, feature_idx], mean, std, feature_idx)
         # imputed_knn.extend(copy.deepcopy(imputation_knn[:, feature_idx]))
 
         imputation_mice = mice_impute.transform(ret_eval)
-        draws['MICE'] = imputation_mice[:, feature_idx]
+        draws['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
         # imputed_mice.extend(copy.deepcopy(imputation_mice[:, feature_idx]))
         data = torch.tensor(np.expand_dims(ret_eval, axis=0))
         _, imputed_values = run_test(model_naomi, data, 1, row_indices, feature_idx)
         imputation_naomi = imputed_values[0].transpose(1,0).squeeze().detach().numpy()
-        draws['NAOMI'] = imputation_naomi[:, feature_idx]
+        draws['NAOMI'] = unnormalize(imputation_naomi[:, feature_idx], mean, std, feature_idx)
         
         # print(f"missing: {draws['missing'].shape}")
         # print(f"BRITS: {draws['BRITS'].shape}")
