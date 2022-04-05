@@ -127,8 +127,10 @@ class NAOMI(nn.Module):
 
         return loss / count / data.shape[1]
 
-    def sample(self, data_list, batch_size=16):
+    def sample(self, data_list, batch_size=16, resize=False):
         # data_list: seq_length * (1 * batch * 11)
+        # if resize:
+        #     data_list = data_list.squeeze().transpose(0, 1)
         ret = []
         seq_len = len(data_list)
         h = Variable(torch.zeros(self.params['n_layers'], batch_size, self.rnn_dim))

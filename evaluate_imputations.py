@@ -16,11 +16,13 @@ import matplotlib.pyplot as plt
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import KNNImputer, IterativeImputer
 import time
+from naomi.model import *
+from naomi.helpers import *
 import warnings
 warnings.filterwarnings("ignore")
 
 RNN_HID_SIZE = 64
-IMPUTE_WEIGHT = 0.3
+IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
 
@@ -44,18 +46,40 @@ std = []
 df = pd.read_csv('ColdHardiness_Grape_Merlot.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons)
-mean, std = get_mean_std(season_df, features)
+train_season_df = season_df.drop(season_array[-1], axis=0)
+train_season_df = train_season_df.drop(season_array[-2], axis=0)
+mean, std = get_mean_std(train_season_df, features)
 
 ############## Load Models ##############
 knn_impute = KNNImputer(n_neighbors=7, weights='distance')
-knn_impute.fit(season_df[features])
+knn_impute.fit(train_season_df[features])
 
-mice_impute = IterativeImputer(random_state=0)
-mice_impute.fit(season_df[features])
+mice_impute = IterativeImputer(random_state=0, max_iter=20)
+mice_impute.fit(train_season_df[features])
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
 model_brits_I = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+
+params = {
+    'task' : '',#args.task,
+    'batch' : 16, #args.batch_size,
+    'y_dim' : 20, #args.y_dim,
+    'rnn_dim' : 300, #args.rnn_dim,
+    'dec1_dim' : 200, #args.dec1_dim,
+    'dec2_dim' : 200, #args.dec2_dim,
+    'dec4_dim' : 200, #args.dec4_dim,
+    'dec8_dim' : 200, #args.dec8_dim,
+    'dec16_dim' : 200, #args.dec16_dim,
+    'n_layers' : 2, #args.n_layers,
+    'discrim_rnn_dim' : 128, #args.discrim_rnn_dim,
+    'discrim_num_layers' : 1, #args.discrim_layers,
+    'cuda' : True, #args.cuda,
+    'highest' : 8, #args.highest,
+}
+model_naomi = NAOMI(params)
+if os.path.exists('./policy_step8_training.pth'):
+    model_naomi.load_state_dict(torch.load('./policy_step8_training.pth', map_location=torch.device('cpu')))
 
 if os.path.exists('./model_BRITS.model'):
     model_brits.load_state_dict(torch.load('./model_BRITS.model'))
@@ -66,9 +90,11 @@ if os.path.exists('./model_BRITS_I.model'):
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
     model_brits_I = model_brits_I.cuda()
+    model_naomi = model_naomi.cuda()
 
 model_brits.eval()
 model_brits_I.eval()
+model_naomi.eval()
 
 ############## Draw Functions ##############
 def _graph_bar_diff_multi(GT_values, result_dict, title, x, xlabel, ylabel, i, drop_linear=False):
@@ -88,8 +114,8 @@ def _graph_bar_diff_multi(GT_values, result_dict, title, x, xlabel, ylabel, i, d
           plt.bar(x + pos + 1, value, width, label = key)
           pos += width
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.xlabel(xlabel, fontsize=16)
+    plt.ylabel(ylabel, fontsize=16)
     plt.title(title)
     plt.axis([0, 100, -2, 3])
 
@@ -113,27 +139,47 @@ def draw_data_trend(df_t, df_c, f, interp_name, i):
     plt.close()
 
 def draw_data_plot(results, f, season_idx):
+    if not os.path.isdir('subplots/' + f):
+        os.makedirs('subplots/' + f)
     plt.figure(figsize=(32,18))
-    plt.title(f"For feature = {f}")
-    ax = plt.subplot(321)
-    ax.set_title(f+' original data')
-    plt.plot(np.arange(results['real'].shape[0]), results['real'])
-    ax = plt.subplot(322)
-    ax.set_title(f+' missing data')
-    plt.plot(np.arange(results['missing'].shape[0]), results['missing'])
-    ax = plt.subplot(323)
-    ax.set_title('feature = '+f+' imputed by BRITS')
-    plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'])
-    ax = plt.subplot(324)
-    ax.set_title('feature = '+f+' imputed by BRITS_I')
-    plt.plot(np.arange(results['BRITS_I'].shape[0]), results['BRITS_I'])
-    ax = plt.subplot(325)
-    ax.set_title('feature = '+f+' imputed by KNN')
-    plt.plot(np.arange(results['KNN'].shape[0]), results['KNN'])
-    ax = plt.subplot(326)
-    ax.set_title('feature = '+f+' imputed by MICE')
-    plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'])
-    plt.savefig(f"subplots/{f}-imputations-season-{season_idx}.png", dpi=300)
+    plt.title(f"For feature = {f}", fontsize=24)
+    ax = plt.subplot(421)
+    ax.set_title(f+' original data', fontsize=20)
+    plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(422)
+    ax.set_title(f+' missing data', fontsize=20)
+    plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(423)
+    ax.set_title('feature = '+f+' imputed by BRITS', fontsize=20)
+    plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(424)
+    ax.set_title('feature = '+f+' imputed by BRITS_I', fontsize=20)
+    plt.plot(np.arange(results['BRITS_I'].shape[0]), results['BRITS_I'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(425)
+    ax.set_title('feature = '+f+' imputed by KNN', fontsize=20)
+    plt.plot(np.arange(results['KNN'].shape[0]), results['KNN'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(426)
+    ax.set_title('feature = '+f+' imputed by MICE', fontsize=20)
+    plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    ax = plt.subplot(427)
+    ax.set_title('feature = '+f+' imputed by NAOMI', fontsize=20)
+    plt.plot(np.arange(results['NAOMI'].shape[0]), results['NAOMI'], 'tab:blue')
+    ax.set_xlabel('Days', fontsize=16)
+    ax.set_ylabel('Values', fontsize=16)
+    plt.tight_layout(pad=5)
+    plt.savefig(f"subplots/{f}/{f}-imputations-season-{season_idx}.png", dpi=300)
     plt.close()
 
 ############## Model Input Process Functions ##############
@@ -184,7 +230,7 @@ def get_minimum_missing_season(df, feature, season_array):
     return min_missing_season, season_idx
 
 
-def parse_id(x, y, feature_impute_idx, length):
+def parse_id(x, y, feature_impute_idx, length, trial_num=-1):
     evals = x
 
     evals = (evals - mean) / std
@@ -200,7 +246,10 @@ def parse_id(x, y, feature_impute_idx, length):
     # randomly eliminate 10% values as the imputation ground-truth
     # print('not null: ',np.where(~np.isnan(evals)))
     indices = idx1.tolist()
-    start_idx = np.random.choice(indices, 1)
+    if trial_num == -1:
+        start_idx = indices[len(indices)//4]#np.random.choice(indices, 1)
+    else:
+        start_idx = indices[trial_num] #np.random.choice(indices, 1)
     start = indices.index(start_idx)
     if start + length <= len(indices): 
         end = start + length
@@ -237,190 +286,282 @@ def parse_id(x, y, feature_impute_idx, length):
     fs.write(rec + '\n')
     return indices
 
-given_feature = 'MEAN_AT'
+# given_feature = 'AVG_REL_HUMIDITY'
 L = [i for i in range(1, 51)]
 iter = 100
 
-results = {
-    'BRITS': {},
-    'BRITS_I': {},
-    'KNN': {},
-    'MICE': {}
-}
+
 start_time = time.time()
-result_mse_plots = {
+given_features = ['MEAN_AT', 'AVG_REL_HUMIDITY'] #features
+for given_feature in given_features:
+    result_mse_plots = {
     'BRITS': [],
     'BRITS_I': [],
     'KNN': [],
-    'MICE': []
-}
-for l in L:
-    real_values = []
-    imputed_brits = []
-    imputed_brits_I = []
-    imputed_knn = []
-    imputed_mice = []
+    'MICE': [],
+    'NAOMI': []
+    }
+    results = {
+        'BRITS': {},
+        'BRITS_I': {},
+        'KNN': {},
+        'MICE': {},
+        'NAOMI': {}
+    }
+    for l in L:
+        real_values = []
+        imputed_brits = []
+        imputed_brits_I = []
+        imputed_knn = []
+        imputed_mice = []
+        imputed_naomi = []
 
-#     for i in range(iter):
-#         fs = open(filename, 'w')
-#         X, Y = split_XY(season_df, max_length, season_array)
+        for i in range(iter):
+            fs = open(filename, 'w')
+            X, Y = split_XY(season_df, max_length, season_array)
 
-#         missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
-
-#         feature_idx = features.index(given_feature)
-#         # for i in range(X.shape[0]):
-#         missing_indices = parse_id(X[season_idx], Y[season_idx], feature_idx, l)
-#         fs.close()
-
-
-#         val_iter = data_loader.get_loader(batch_size=1, filename=filename)
-
-#         for idx, data in enumerate(val_iter):
-#             data = utils.to_var(data)
-#             row_indices = missing_indices // len(features)
-
-#             ret = model_brits.run_on_batch(data, None)
-#             eval_ = ret['evals'].data.cpu().numpy()
-#             eval_ = np.squeeze(eval_)
-#             imputation_brits = ret['imputations'].data.cpu().numpy()
-#             imputation_brits = np.squeeze(imputation_brits)
-
-#             ret = model_brits_I.run_on_batch(data, None)
-#             imputation_brits_I = ret['imputations'].data.cpu().numpy()
-#             imputation_brits_I = np.squeeze(imputation_brits_I)
-
-#             ret_eval = copy.deepcopy(eval_)
-#             ret_eval[row_indices, feature_idx] = np.nan
-
-#             imputation_knn = knn_impute.transform(ret_eval)
-#             imputation_mice = mice_impute.transform(ret_eval)
-
-#             imputed_brits.extend(imputation_brits[row_indices, feature_idx].tolist())
-#             imputed_brits_I.extend(imputation_brits_I[row_indices, feature_idx].tolist())
-#             imputed_knn.extend(imputation_knn[row_indices, feature_idx].tolist())
-#             imputed_mice.extend(imputation_mice[row_indices, feature_idx].tolist())
-#             real_values.extend(eval_[row_indices, feature_idx].tolist())
-            
-#             # print(f"\reval: {eval_[row_indices, feature_idx]}\nimputed(BRITS): {imputation_brits[row_indices, feature_idx]}\
-#             #     \nimputed(BRITS_I): {imputation_brits_I[row_indices, feature_idx]}\nimputed(KNN): {imputed_knn[row_indices, feature_idx]}\
-#             #     \nimputed(MICE): {imputed_mice[row_indices, feature_idx]}")
-#     imputed_brits = np.array(imputed_brits)
-#     imputed_brits_I = np.array(imputed_brits_I)
-#     imputed_knn = np.array(imputed_knn)
-#     imputed_mice = np.array(imputed_mice)
-#     real_values = np.array(real_values)
-
-#     brits_mse = np.round(((real_values - imputed_brits) ** 2).mean(), 5) 
-#     brits_I_mse = np.round(((real_values - imputed_brits_I) ** 2).mean(), 5)
-#     knn_mse = np.round(((real_values - imputed_knn) ** 2).mean(), 5)
-#     mice_mse = np.round(((real_values - imputed_mice) ** 2).mean(), 5)
-
-#     diff_brits = np.abs(real_values) - np.abs(imputed_brits)
-#     diff_brits_I = np.abs(real_values) - np.abs(imputed_brits_I)
-#     diff_knn = np.abs(real_values) - np.abs(imputed_knn)
-#     diff_mice = np.abs(real_values) - np.abs(imputed_mice)
+            # missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
+            season_idx = -1
+            feature_idx = features.index(given_feature)
+            # for i in range(X.shape[0]):
+            missing_indices = parse_id(X[season_idx], Y[season_idx], feature_idx, l, i)
+            fs.close()
 
 
-#     results['BRITS'][l] = brits_mse# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
-#     results['BRITS_I'][l] = brits_I_mse# f"MSE: {brits_I_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits_I)))}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits_I)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits_I)))}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits_I)), 5)}",
-#     results['KNN'][l] = knn_mse# f"MSE: {knn_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_knn)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_knn)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_knn)))}\\STD (diff GT): {np.round(np.std(np.abs(diff_knn)), 5)}",
-#     results['MICE'][l] = mice_mse# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
+            val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+
+            for idx, data in enumerate(val_iter):
+                data = utils.to_var(data)
+                row_indices = missing_indices // len(features)
+
+                ret = model_brits.run_on_batch(data, None)
+                eval_ = ret['evals'].data.cpu().numpy()
+                eval_ = np.squeeze(eval_)
+                imputation_brits = ret['imputations'].data.cpu().numpy()
+                imputation_brits = np.squeeze(imputation_brits)
+
+                ret = model_brits_I.run_on_batch(data, None)
+                imputation_brits_I = ret['imputations'].data.cpu().numpy()
+                imputation_brits_I = np.squeeze(imputation_brits_I)
+
+                ret_eval = copy.deepcopy(eval_)
+                ret_eval[row_indices, feature_idx] = np.nan
+
+                imputation_knn = knn_impute.transform(ret_eval)
+                imputation_mice = mice_impute.transform(ret_eval)
+
+                data = torch.tensor(np.expand_dims(ret_eval, axis=0))
+                _, imputed_values = run_test(model_naomi, data, 1, row_indices, feature_idx)
+                imputation_naomi = imputed_values[0].transpose(1,0).squeeze().detach().numpy()
+
+                imputed_brits.extend(imputation_brits[row_indices, feature_idx].tolist())
+                imputed_brits_I.extend(imputation_brits_I[row_indices, feature_idx].tolist())
+                imputed_knn.extend(imputation_knn[row_indices, feature_idx].tolist())
+                imputed_mice.extend(imputation_mice[row_indices, feature_idx].tolist())
+                imputed_naomi.extend(imputation_naomi[row_indices, feature_idx].tolist())
+                real_values.extend(eval_[row_indices, feature_idx].tolist())
+                
+                # print(f"\reval: {eval_[row_indices, feature_idx]}\nimputed(BRITS): {imputation_brits[row_indices, feature_idx]}\
+                #     \nimputed(BRITS_I): {imputation_brits_I[row_indices, feature_idx]}\nimputed(KNN): {imputed_knn[row_indices, feature_idx]}\
+                #     \nimputed(MICE): {imputed_mice[row_indices, feature_idx]}")
+        imputed_brits = np.array(imputed_brits)
+        imputed_brits_I = np.array(imputed_brits_I)
+        imputed_knn = np.array(imputed_knn)
+        imputed_mice = np.array(imputed_mice)
+        imputed_naomi = np.array(imputed_naomi)
+        real_values = np.array(real_values)
+
+        brits_mse = np.round(((real_values - imputed_brits) ** 2).mean(), 5) 
+        brits_I_mse = np.round(((real_values - imputed_brits_I) ** 2).mean(), 5)
+        knn_mse = np.round(((real_values - imputed_knn) ** 2).mean(), 5)
+        mice_mse = np.round(((real_values - imputed_mice) ** 2).mean(), 5)
+        naomi_mse = np.round(((real_values - imputed_naomi) ** 2).mean(), 5)
+
+        diff_brits = np.abs(real_values) - np.abs(imputed_brits)
+        diff_brits_I = np.abs(real_values) - np.abs(imputed_brits_I)
+        diff_knn = np.abs(real_values) - np.abs(imputed_knn)
+        diff_mice = np.abs(real_values) - np.abs(imputed_mice)
+        diff_naomi = np.abs(real_values) - np.abs(imputed_naomi)
+
+
+        results['BRITS'][l] = brits_mse# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
+        results['BRITS_I'][l] = brits_I_mse# f"MSE: {brits_I_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits_I)))}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits_I)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits_I)))}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits_I)), 5)}",
+        results['KNN'][l] = knn_mse# f"MSE: {knn_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_knn)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_knn)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_knn)))}\\STD (diff GT): {np.round(np.std(np.abs(diff_knn)), 5)}",
+        results['MICE'][l] = mice_mse# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
+        results['NAOMI'][l] = naomi_mse
+
+        result_mse_plots['BRITS'].append(brits_mse)
+        result_mse_plots['BRITS_I'].append(brits_I_mse)
+        result_mse_plots['KNN'].append(knn_mse)
+        result_mse_plots['MICE'].append(mice_mse)
+        result_mse_plots['NAOMI'].append(naomi_mse)
+        
+        print(f"For L = {l}:\n\tMSE (BRITS): {brits_mse}\n\tDifference from GT:\
+            \n\t\tmin: {np.round(np.min(np.abs(diff_brits)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_brits)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_brits)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_brits)), 5)} \
+            \n\n\tMSE (BRITS_I): {brits_I_mse}\n\tDifference from GT:\
+            \n\t\tmin: {np.round(np.min(np.abs(diff_brits_I)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_brits_I)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_brits_I)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_brits_I)), 5)} \
+            \n\n\tMSE (KNN): {knn_mse}\n\tDifference from GT:\
+            \n\t\tmin: {np.round(np.min(np.abs(diff_knn)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_knn)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_knn)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_knn)), 5)} \
+            \n\n\tMSE (MICE): {mice_mse}\n\tDifference from GT:\
+            \n\t\tmin: {np.round(np.min(np.abs(diff_mice)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_mice)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_mice)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_mice)), 5)}\n\n")
+    end_time = time.time()
+    result_df = pd.DataFrame(results)
+    if not os.path.isdir('imputation_results/'+given_feature):
+        os.makedirs('imputation_results/'+given_feature)
+    result_df.to_csv(f'imputation_results/{given_feature}/{given_feature}_results_impute.csv')
+    # result_df.to_latex('imputation_results/{given_feature}/{given_feature}_results_impute.tex')
+
     
-#     result_mse_plots['BRITS'].append(brits_mse)
-#     result_mse_plots['BRITS_I'].append(brits_I_mse)
-#     result_mse_plots['KNN'].append(knn_mse)
-#     result_mse_plots['MICE'].append(mice_mse)
+
+    if not os.path.isdir('plots/' + given_feature):
+        os.makedirs('plots/' + given_feature)
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+    plt.plot(L, result_mse_plots['BRITS_I'], 'tab:blue', label='BRITS_I', marker='o')
+    plt.plot(L, result_mse_plots['KNN'], 'tab:green', label='KNN', marker='o')
+    plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+    plt.plot(L, result_mse_plots['NAOMI'], 'tab:purple', label='NAOMI', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-5-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+    plt.plot(L, result_mse_plots['BRITS_I'], 'tab:blue', label='BRITS_I', marker='o')
+    plt.plot(L, result_mse_plots['KNN'], 'tab:green', label='KNN', marker='o')
+    plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-4-models{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+    plt.plot(L, result_mse_plots['BRITS_I'], 'tab:blue', label='BRITS_I', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-BRITS-comp-models{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['BRITS_I'], 'tab:blue', label='BRITS_I', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-BRITS_I-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['KNN'], 'tab:green', label='KNN', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-KNN-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(16,9))
+    plt.plot(L, result_mse_plots['NAOMI'], 'tab:purple', label='NAOMI', marker='o')
+    plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+    plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+    plt.ylabel(f'MSE', fontsize=16)
+    plt.legend()
+    plt.savefig(f'plots/{given_feature}/L-vs-MSE-NAOMI-{features[feature_idx]}-{len(L)}.png', dpi=300)
+    plt.close()
+print(f"Total time: {(end_time-start_time)/1000}s")
+
+
+
+####################### Draw data plots #######################
+for given_feature in given_features:
+    fs = open(filename, 'w')
+    X, Y = split_XY(season_df, max_length, season_array)
+
+    # missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
+
+    feature_idx = features.index(given_feature)
+    # for i in range(X.shape[0]):
+    missing_indices = parse_id(X[-2], Y[-2], feature_idx, 70)
+    fs.close()
+
+    val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+    draws = {}
+    for idx, data in enumerate(val_iter):
+        data = utils.to_var(data)
+        row_indices = missing_indices // len(features)
+
+        ret = model_brits.run_on_batch(data, None)
+        eval_ = ret['evals'].data.cpu().numpy()
+        eval_ = np.squeeze(eval_)
+        
+        real_value = eval_[:, feature_idx]
+        # real_values.extend(copy.deepcopy(real_value))
+
+        missing_values = copy.deepcopy(real_value)
+        missing_values[row_indices] = 0
+        draws['real'] = real_value
+        draws['missing'] = missing_values
+
+        imputation_brits = ret['imputations'].data.cpu().numpy()
+        imputation_brits = np.squeeze(imputation_brits)
+        draws['BRITS'] = imputation_brits[:, feature_idx]
+        # imputed_brits.extend(copy.deepcopy(imputation_brits[:, feature_idx]))
+
+        ret = model_brits_I.run_on_batch(data, None)
+        imputation_brits_I = ret['imputations'].data.cpu().numpy()
+        imputation_brits_I = np.squeeze(imputation_brits_I)
+        draws['BRITS_I'] = imputation_brits_I[:, feature_idx]
+        # imputed_brits_I.extend(copy.deepcopy(imputation_brits_I[:, feature_idx]))
+
+
+        ret_eval = copy.deepcopy(eval_)
+        ret_eval[row_indices, feature_idx] = np.nan
+
+        imputation_knn = knn_impute.transform(ret_eval)
+        draws['KNN'] = imputation_knn[:, feature_idx]
+        # imputed_knn.extend(copy.deepcopy(imputation_knn[:, feature_idx]))
+
+        imputation_mice = mice_impute.transform(ret_eval)
+        draws['MICE'] = imputation_mice[:, feature_idx]
+        # imputed_mice.extend(copy.deepcopy(imputation_mice[:, feature_idx]))
+        data = torch.tensor(np.expand_dims(ret_eval, axis=0))
+        _, imputed_values = run_test(model_naomi, data, 1, row_indices, feature_idx)
+        imputation_naomi = imputed_values[0].transpose(1,0).squeeze().detach().numpy()
+        draws['NAOMI'] = imputation_naomi[:, feature_idx]
+        
+        # print(f"missing: {draws['missing'].shape}")
+        # print(f"BRITS: {draws['BRITS'].shape}")
+
+        draw_data_plot(draws, features[feature_idx], '2020-2021')
+
     
-#     print(f"For L = {l}:\n\tMSE (BRITS): {brits_mse}\n\tDifference from GT:\
-#         \n\t\tmin: {np.round(np.min(np.abs(diff_brits)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_brits)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_brits)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_brits)), 5)} \
-#         \n\n\tMSE (BRITS_I): {brits_I_mse}\n\tDifference from GT:\
-#         \n\t\tmin: {np.round(np.min(np.abs(diff_brits_I)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_brits_I)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_brits_I)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_brits_I)), 5)} \
-#         \n\n\tMSE (KNN): {knn_mse}\n\tDifference from GT:\
-#         \n\t\tmin: {np.round(np.min(np.abs(diff_knn)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_knn)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_knn)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_knn)), 5)} \
-#         \n\n\tMSE (MICE): {mice_mse}\n\tDifference from GT:\
-#         \n\t\tmin: {np.round(np.min(np.abs(diff_mice)), 5)}\n\t\tmax: {np.round(np.max(np.abs(diff_mice)), 5)}\n\t\tmean: {np.round(np.mean(np.abs(diff_mice)), 5)}\n\t\tstd: {np.round(np.std(np.abs(diff_mice)), 5)}\n\n")
-# end_time = time.time()
-# result_df = pd.DataFrame(results)
-# result_df.to_csv('results_impute.csv')
-# result_df.to_latex('results_impute.tex')
-
-# print(f"Total time: {(end_time-start_time)/1000}s")
-
-# plt.figure(figsize=(16,9))
-# plt.plot(L, result_mse_plots['BRITS'], 'r', label='BRITS', marker='o')
-# plt.plot(L, result_mse_plots['BRITS_I'], 'b', label='BRITS_I', marker='o')
-# plt.plot(L, result_mse_plots['KNN'], 'g', label='KNN', marker='o')
-# plt.plot(L, result_mse_plots['MICE'], 'c', label='MICE', marker='o')
-# plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}')
-# plt.xlabel(f'Length of contiguous missing values')
-# plt.ylabel(f'MSE')
-# plt.legend()
-# plt.savefig(f'plots/L-vs-MSE-{features[feature_idx]}-{L}.png', dpi=300)
-# plt.close()
-
-# plt.figure(figsize=(16,9))
-# plt.plot(L, result_mse_plots['BRITS'], 'r', label='BRITS', marker='o')
-# plt.plot(L, result_mse_plots['MICE'], 'c', label='MICE', marker='o')
-# plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}')
-# plt.xlabel(f'Length of contiguous missing values')
-# plt.ylabel(f'MSE')
-# plt.legend()
-# plt.savefig(f'plots/L-vs-MSE-BRITS-MICE-{features[feature_idx]}-{L}.png', dpi=300)
-# plt.close()
-
-fs = open(filename, 'w')
-X, Y = split_XY(season_df, max_length, season_array)
-
-missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
-
-feature_idx = features.index(given_feature)
-# for i in range(X.shape[0]):
-missing_indices = parse_id(X[season_idx], Y[season_idx], feature_idx, 40)
-fs.close()
-
-val_iter = data_loader.get_loader(batch_size=1, filename=filename)
-draws = {}
-for idx, data in enumerate(val_iter):
-    data = utils.to_var(data)
-    row_indices = missing_indices // len(features)
-
-    ret = model_brits.run_on_batch(data, None)
-    eval_ = ret['evals'].data.cpu().numpy()
-    eval_ = np.squeeze(eval_)
-    imputation_brits = ret['imputations'].data.cpu().numpy()
-    imputation_brits = np.squeeze(imputation_brits)
-    draws['BRITS'] = imputation_brits[:, feature_idx]
-
-    ret = model_brits_I.run_on_batch(data, None)
-    imputation_brits_I = ret['imputations'].data.cpu().numpy()
-    imputation_brits_I = np.squeeze(imputation_brits_I)
-    draws['BRITS_I'] = imputation_brits_I[:, feature_idx]
-
-    ret_eval = copy.deepcopy(eval_)
-    ret_eval[row_indices, feature_idx] = np.nan
-
-    imputation_knn = knn_impute.transform(ret_eval)
-    draws['KNN'] = imputation_knn[:, feature_idx]
-    imputation_mice = mice_impute.transform(ret_eval)
-    draws['MICE'] = imputation_mice[:, feature_idx]
-
-    real_values = eval_[:, feature_idx]
-    missing_values = copy.deepcopy(real_values)
-    missing_values[row_indices] = 0
-
-    draws['real'] = real_values
-    draws['missing'] = missing_values
-    print(f"missing: {draws['missing'].shape}")
-    print(f"BRITS: {draws['BRITS'].shape}")
-
-    draw_data_plot(draws, features[feature_idx], season_idx)
-
-
-
-
-
-
-
 
 
 

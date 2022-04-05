@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib import animation
 from skimage.transform import resize
+import copy
 
 use_gpu = torch.cuda.is_available()
 
@@ -81,6 +82,73 @@ def run_epoch(train, model, exp_data, clip, optimizer=None, batch_size=16, num_m
         losses.append(batch_loss.data.cpu().numpy())
 
     return np.mean(losses)
+
+def run_test(model, exp_data, batch_size=16, missing_rows=None, feature_idx=-1):
+    losses = []
+    inds = np.arange(exp_data.shape[0]) #np.random.permutation(exp_data.shape[0])
+    # print(f'exp_data: {exp_data.shape}\ninds: {inds}')
+    i = 0
+    batch_samples = []
+    while i + batch_size <= exp_data.shape[0]:
+        if batch_size != 1:
+            ind = torch.from_numpy(inds[i:i+batch_size]).long()
+            # print(f"ind: {ind}")
+            data = exp_data[ind]
+        else:
+            data = torch.clone(exp_data)
+        if use_gpu:
+            data = data.cuda()
+        
+        i += batch_size
+
+        # change (batch, time, x) to (time, batch, x)
+        ones = torch.ones(data.shape)
+
+        if use_gpu:
+            ones = ones.cuda()
+        print(f"data: {data.shape}, feature: {feature_idx}")
+        is_nan = torch.isnan(data)
+        missing_mask = torch.logical_xor(is_nan, ones)
+        # print(f"isnan: {np.isnan(np.nan)}, {np.isnan(data.numpy()).shape}, {data[np.isnan(data)].shape}")
+
+        data[is_nan] = 0.0
+        # print(f"data: {data.shape}")
+        # print(f"data tensor: {data.shape}")
+        # print(f"missing mask: {np.isnan(data)}\nxor: {np.where(miss == 1)[0].sum()}")
+        if batch_size == 1:
+            data = Variable(data.transpose(0, 1))
+            missing_mask = Variable(missing_mask.transpose(0, 1))
+        else:
+            data = Variable(data.squeeze().transpose(0, 1))
+            missing_mask = Variable(missing_mask.squeeze().transpose(0, 1))
+        ground_truth = data.clone()
+        # if num_missing is None:
+        #     #num_missing = np.random.randint(data.shape[0] * 18 // 20, data.shape[0])
+        #     num_missing = np.random.randint(data.shape[0] * 1 // 2, data.shape[0])
+            #num_missing = 40
+        
+        missing_list = torch.from_numpy(missing_rows).long() # torch.from_numpy(np.random.choice(np.arange(1, data.shape[0]), num_missing, replace=False)).long()
+        
+        data[missing_list] = 0.0
+        has_value = Variable(torch.ones(data.shape[0], data.shape[1], 1))
+        if use_gpu:
+            has_value = has_value.cuda()
+            missing_mask = missing_mask.cuda()
+        has_value[missing_list] = 0.0
+        data = torch.cat([has_value, data], 2)
+        seq_len = data.shape[0]
+
+        data_list = []
+        for j in range(seq_len):
+            data_list.append(data[j:j+1])
+        samples = model.sample(data_list, batch_size)
+        batch_samples.append(samples)
+        print(f"ground: {ground_truth.shape}, samples: {samples.shape}")
+        batch_loss = torch.mean(((ground_truth - samples) * missing_mask).pow(2))
+        
+        losses.append(batch_loss.data.cpu().numpy())
+
+    return np.mean(losses), batch_samples
 
 def ones(*shape):
     return torch.ones(*shape).cuda() if use_gpu else torch.ones(*shape)
