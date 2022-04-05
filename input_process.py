@@ -125,15 +125,11 @@ season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seas
 X, Y = split_XY(season_df, max_length, season_array)
 X = X[:-2]
 Y = Y[:-2]
-print(f"X: {X.shape}, Y: {Y.shape}")
 
-mean = []
-std = []
-for feature in attributes:
-    season_npy = season_df[feature].to_numpy()
-    idx = np.where(~np.isnan(season_npy))
-    mean.append(np.mean(season_npy[idx]))
-    std.append(np.std(season_npy[idx]))
+
+train_season_df = season_df.drop(season_array[-1], axis=0)
+train_season_df = train_season_df.drop(season_array[-2], axis=0)
+mean, std = get_mean_std(train_season_df, features)
 
 # print('season mean at: ',np.where(~np.isnan(season_npy)))
 
@@ -144,15 +140,6 @@ np.save('std.npy', std)
 
 for i in range(X.shape[0] - 1):
     parse_id(X[i], Y[i])
-
-
-# for id_ in patient_ids:
-#     print('Processing patient {}'.format(id_))
-#     try:
-#         parse_id(id_)
-#     except Exception as e:
-#         print(e)
-#         continue
 
 fs.close()
 
