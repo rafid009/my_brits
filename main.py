@@ -29,7 +29,7 @@ from sklearn import metrics
 # args = parser.parse_args()
 
 batch_size = 16
-n_epochs = 1500
+n_epochs = 2000
 
 # BRITS_I
 RNN_HID_SIZE = 64
@@ -62,7 +62,8 @@ def train(model):
 
             mre, mse = evaluate(model, data_iter)
             tepoch.set_postfix(MSE=mse, MRE=mre)
-    torch.save(model.state_dict(), model_path)
+        if (epoch + 1) % 100 == 0:
+            torch.save(model.state_dict(), model_path)
 
 
 def evaluate(model, val_iter):
