@@ -5,6 +5,7 @@ import sys
 import pickle
 import time
 import numpy as np
+import pandas as pd
 import shutil
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -14,6 +15,7 @@ import torch.nn as nn
 import torch
 import torch.utils
 import torch.utils.data
+# from utils import *
 from process_data import *
 
 from naomi.helpers import *
@@ -134,8 +136,8 @@ test_data = torch.Tensor(X[-2:, :, :])
 train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
 mean, std = get_mean_std(train_season_df, features)
-normalized_season_df = season_df[features].copy()
-normalized_season_df = (normalized_season_df - mean) /std
+normalized_season_df = season_df.copy()
+normalized_season_df[features] = (normalized_season_df[features] - mean) /std
 
 X, Y = split_XY(normalized_season_df, max_length, season_array)
 train_data = torch.Tensor(X[:-2, :, :])
