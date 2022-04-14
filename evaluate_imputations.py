@@ -53,7 +53,8 @@ mean, std = get_mean_std(train_season_df, features)
 
 ############## Load Models ##############
 
-normalized_season_df = train_season_df.copy()
+normalized_season_df = train_season_df[features].copy()
+print(f"norm: {normalized_season_df.shape}, mean: {mean.shape}, std: {std.shape}")
 normalized_season_df = (normalized_season_df - mean) /std
 
 knn_impute = KNNImputer(n_neighbors=7, weights='distance')

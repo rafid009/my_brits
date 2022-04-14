@@ -36,8 +36,8 @@ RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
-model_name = 'BRITS'
-model_path_name = 'BRITS'
+model_name = 'BRITS_I'
+model_path_name = 'BRITS_I'
 model_path = 'model_'+model_path_name+'.model'
 
 def train(model):
