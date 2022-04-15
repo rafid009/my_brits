@@ -106,7 +106,7 @@ def run_test(model, exp_data, batch_size=16, missing_rows=None, feature_idx=-1):
 
         if use_gpu:
             ones = ones.cuda()
-        print(f"data: {data.shape}, feature: {feature_idx}")
+        # print(f"data: {data.shape}, feature: {feature_idx}")
         is_nan = torch.isnan(data)
         missing_mask = torch.logical_xor(is_nan, ones)
         # print(f"isnan: {np.isnan(np.nan)}, {np.isnan(data.numpy()).shape}, {data[np.isnan(data)].shape}")
@@ -143,7 +143,7 @@ def run_test(model, exp_data, batch_size=16, missing_rows=None, feature_idx=-1):
             data_list.append(data[j:j+1])
         samples = model.sample(data_list, batch_size)
         batch_samples.append(samples)
-        print(f"ground: {ground_truth.shape}, samples: {samples.shape}")
+        # print(f"ground: {ground_truth.shape}, samples: {samples.shape}")
         batch_loss = torch.mean(((ground_truth - samples) * missing_mask).pow(2))
         
         losses.append(batch_loss.data.cpu().numpy())

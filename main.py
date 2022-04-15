@@ -29,7 +29,9 @@ from sklearn import metrics
 # args = parser.parse_args()
 
 batch_size = 16
-n_epochs = 2000
+# BRITS -> 4000
+# BRITS_I -> 6000
+n_epochs = 6000
 
 # BRITS_I
 RNN_HID_SIZE = 64

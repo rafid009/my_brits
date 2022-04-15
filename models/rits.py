@@ -196,7 +196,7 @@ class RITSModel(nn.Module):
         #+ y_loss * self.label_weight
         # 'predictions': y_h
         # x_loss * self.impute_weight
-        return {'loss': x_loss * self.impute_weight, 'predictions': None,\
+        return {'loss': x_loss, 'predictions': None,\
                 'imputations': imputations, 'labels': labels, 'is_train': is_train,\
                 'evals': evals, 'eval_masks': eval_masks}
 
