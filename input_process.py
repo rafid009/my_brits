@@ -117,20 +117,23 @@ def parse_id(x, y):
     fs.write(rec + '\n')
 
 
-df = pd.read_csv('ColdHardiness_Grape_Merlot.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons)
+df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
 # idx_LT_not_null = get_non_null_LT(season_df)
 # train_idx = get_train_idx(season_array, idx_LT_not_null)
 X, Y = split_XY(season_df, max_length, season_array)
+print(f"X: {X.shape}")
 X = X[:-2]
 Y = Y[:-2]
 
 
 train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
+train_season_df = train_season_df.drop(season_array[-3], axis=0)
+train_season_df = train_season_df.drop(season_array[-4], axis=0)
 mean, std = get_mean_std(train_season_df, features)
-
+print(f"X: {X.shape}")
 # print('season mean at: ',np.where(~np.isnan(season_npy)))
 
 mean = np.array(mean) #np.mean(season_df[attributes].to_numpy(), axis=0)

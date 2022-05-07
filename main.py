@@ -38,8 +38,8 @@ RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
-model_name = 'BRITS_I'
-model_path_name = 'BRITS_I'
+model_name = 'BRITS'
+model_path_name = 'BRITS'
 model_path = 'model_'+model_path_name+'.model'
 
 def train(model):
@@ -99,17 +99,6 @@ def evaluate(model, val_iter):
         evals += eval_[np.where(eval_masks == 1)].tolist()
         imputations += imputation[np.where(eval_masks == 1)].tolist()
 
-        # collect test label & prediction
-        # pred = pred[np.where(is_train == 0)]
-        # label = label[np.where(is_train == 0)]
-
-        # labels += label.tolist()
-        # preds += pred.tolist()
-
-    # labels = np.asarray(labels).astype('int32')
-    # preds = np.asarray(preds)
-
-    # print('AUC {}'.format(metrics.roc_auc_score(labels, preds)))
 
     evals = np.asarray(evals)
     imputations = np.asarray(imputations)
@@ -117,10 +106,10 @@ def evaluate(model, val_iter):
     # mae = np.abs(evals - imputations).mean()
     # print('MAE: ', mae)
     mre = np.abs(evals - imputations).sum() / np.abs(evals).sum()
-    print('MRE: ', mre)
+    # print('MRE: ', mre)
 
     mse = ((evals - imputations) ** 2).mean()
-    print('MSE: ', mse)
+    # print('MSE: ', mse)
     save_impute = np.concatenate(save_impute, axis=0)
     # save_label = np.concatenate(save_label, axis=0)
     if not os.path.isdir('./result/'):
@@ -136,14 +125,11 @@ else:
     model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 if os.path.exists(model_path):
     model.load_state_dict(torch.load(model_path))
-# total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-# print('Total params is {}'.format(total_params))
 
 if torch.cuda.is_available():
     model = model.cuda()
 
 train(model)
-# evaluate(model)
 
 
 
