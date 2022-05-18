@@ -70,7 +70,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/out', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/SeasonData_pretrained_2022-05-15_16-35-48_ae4/checkpoints/model_last.pth', 
+    'load_model': './transformer/output/SeasonData_pretrained_2022-05-17_19-13-43_0V0/checkpoints/model_last.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -95,7 +95,7 @@ params = {
     'val_pattern': None, 
     'test_pattern': None, 
     'normalization': 'standardization', 
-    'norm_from': './transformer/output/SeasonData_pretrained_2022-05-15_16-35-48_ae4/normalization.pickle', 
+    'norm_from': './transformer/output/SeasonData_pretrained_2022-05-17_19-13-43_0V0/normalization.pickle', 
     'subsample_factor': None, 
     'task': 'imputation', 
     'masking_ratio': 0.2, 
@@ -413,11 +413,11 @@ start_time = time.time()
 given_features = features
 
 given_features = [
-    # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    # 'MIN_AT',
-    # 'AVG_AT', # average temp is AgWeather Network
-    # 'MAX_AT',
-    # 'MIN_REL_HUMIDITY',
+    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT',
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    'MIN_REL_HUMIDITY',
     'AVG_REL_HUMIDITY',
     'MAX_REL_HUMIDITY',
     'MIN_DEWPT',
