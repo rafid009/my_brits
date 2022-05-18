@@ -188,8 +188,8 @@ mice_impute.fit(normalized_season_df[features])
 
 print('Now test')
 test_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
-modified_df, dormant_seasons = preprocess_missing_values(test_df, is_dormant=False)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False)
+modified_df, dormant_seasons = preprocess_missing_values(test_df, is_dormant=False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
 # print('season array: ', len(season_array), '\n', season_array)
 
 test_normalized_df = season_df[features].copy()
@@ -202,7 +202,7 @@ print(f"{test_df.iloc[11824]}")
 mice_df = test_df.copy()
 mice_df[features] = np.round(test_imputed, 2)
 mice_df.iloc[11824:] = test_df.iloc[11824:] 
-mice_df.to_csv('ColdHardiness_Grape_Merlot_imputed_predormant_mice.csv', index=False)
+mice_df.to_csv('ColdHardiness_Grape_Merlot_imputed_yearly_mice.csv', index=False)
 
 X, Y = split_XY(season_df, max_length, season_array)
 
@@ -218,8 +218,8 @@ fs.close()
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
-if os.path.exists('./model_brits.model'):
-    model_brits.load_state_dict(torch.load('./model_brits.model'))
+if os.path.exists('./model_BRITS.model'):
+    model_brits.load_state_dict(torch.load('./model_BRITS.model'))
 
 model_brits.eval()
 
@@ -247,7 +247,7 @@ brits_df[features] = imputed_array_brits
 brits_df.iloc[11824:] = test_df.iloc[11824:] 
 print(f"test: {test_df.iloc[12088]}")
 print(f"brits: {brits_df.iloc[12088]}")
-brits_df.to_csv('ColdHardiness_Grape_Merlot_imputed_predormant_brits.csv', index=False)
+brits_df.to_csv('ColdHardiness_Grape_Merlot_imputed_yearly_brits.csv', index=False)
 
 
 

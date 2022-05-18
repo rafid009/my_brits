@@ -19,6 +19,7 @@ import time
 from naomi.model import *
 from naomi.helpers import run_test
 from tqdm import tqdm
+from transformer.src.transformer import run_transformer
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -58,13 +59,84 @@ seasons = {
 '2019': 31,
 '2020': 32,
 '2021': 33,
-'2022': 34
+# '2022': 34
 }
 
 RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
+params = {
+    'config_filepath': None, 
+    'output_dir': './transformer/output/out', 
+    'data_dir': './transformer/data_dir/', 
+    'load_model': './transformer/output/SeasonData_pretrained_2022-05-15_16-35-48_ae4/checkpoints/model_last.pth', 
+    'resume': False, 
+    'change_output': False, 
+    'save_all': False, 
+    'experiment_name': 'SeasonData_pretrained', 
+    'comment': 'pretraining through imputation', 
+    'no_timestamp': False, 
+    'records_file': './transformer/Imputation_records.csv', 
+    'console': False, 
+    'print_interval': 1, 
+    'gpu': '-1', 
+    'n_proc': 1, 
+    'num_workers': 0, 
+    'seed': None, 
+    'limit_size': None, 
+    'test_only': 'testset', 
+    'data_class': 'agaid', 
+    'labels': None, 
+    'test_from': './transformer/test_indices.txt', 
+    'test_ratio': 0, 
+    'val_ratio': 0, 
+    'pattern': 'Merlot_test', 
+    'val_pattern': None, 
+    'test_pattern': None, 
+    'normalization': 'standardization', 
+    'norm_from': './transformer/output/SeasonData_pretrained_2022-05-15_16-35-48_ae4/normalization.pickle', 
+    'subsample_factor': None, 
+    'task': 'imputation', 
+    'masking_ratio': 0.2, 
+    'mean_mask_length': 10.0, 
+    'mask_mode': 'separate', 
+    'mask_distribution': 'geometric', 
+    'exclude_feats': None, 
+    'mask_feats': [0, 1], 
+    'start_hint': 0.0, 
+    'end_hint': 0.0, 
+    'harden': True, 
+    'epochs': 500, 
+    'val_interval': 2, 
+    'optimizer': 'Adam', 
+    'lr': 0.0009, 
+    'lr_step': [1000000], 
+    'lr_factor': [0.1], 
+    'batch_size': 1, 
+    'l2_reg': 0, 
+    'global_reg': False, 
+    'key_metric': 'loss', 
+    'freeze': False, 
+    'model': 'transformer', 
+    'max_seq_len': 366, 
+    'data_window_len': None, 
+    'd_model': 128, 
+    'dim_feedforward': 256, 
+    'num_heads': 8, 
+    'num_layers': 3, 
+    'dropout': 0.1, 
+    'pos_encoding': 'learnable', 
+    'activation': 'relu', 
+    'normalization_layer': 'BatchNorm'
+}
+
+def add_season_id(data_folder, season_df):
+    season_df['season_id'] = 0
+    for season_id in range(len(season_array)):
+        for idx in season_array[season_id]:
+            train_season_df.loc[idx, 'season_id'] = season_id
+    season_df.to_csv(f'{data_folder}/ColdHardiness_Grape_Merlot_test.csv', index=False)
 
 folder = './json/'
 file = 'json_eval_2'
@@ -93,39 +165,21 @@ mean, std = get_mean_std(train_season_df, features)
 
 
 ############## Load Models ##############
-# print(f'seasons: {len(season_df)}, train season: {len(train_season_df)}')
+
 normalized_season_df = train_season_df[features].copy()
-# print(f"norm: {normalized_season_df.shape}, mean: {mean.shape}, std: {std.shape}")
 normalized_season_df = (normalized_season_df - mean) /std
-
-# knn_impute = KNNImputer(n_neighbors=7, weights='distance')
-# knn_impute.fit(normalized_season_df[features].to_numpy())
-
 mice_impute = IterativeImputer(random_state=0, max_iter=20)
 mice_impute.fit(normalized_season_df[features].to_numpy())
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
-# model_brits_I = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-
-# model_naomi = NAOMI(params)
-# if os.path.exists('./policy_step8_training.pth'):
-#     model_naomi.load_state_dict(torch.load('./policy_step8_training.pth', map_location=torch.device('cpu')))
-
 if os.path.exists('./model_BRITS.model'):
     model_brits.load_state_dict(torch.load('./model_BRITS.model'))
 
-# if os.path.exists('./model_BRITS_I.model'):
-#     model_brits_I.load_state_dict(torch.load('./model_BRITS_I.model'))
-
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
-    # model_brits_I = model_brits_I.cuda()
-    # model_naomi = model_naomi.cuda()
 
 model_brits.eval()
-# model_brits_I.eval()
-# model_naomi.eval()
 
 ############## Draw Functions ##############
 def graph_bar_diff_multi(GT_values, result_dict, title, x, xlabel, ylabel, season, feature, drop_linear=False, missing=None):
@@ -279,9 +333,7 @@ def unnormalize(X, mean, std, feature_idx=-1):
         return (X * std[feature_idx]) + mean[feature_idx]
 
 def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_features=None, real_test=True, random_start=False):
-    # evals = copy.deepcopy(x)
-    # if length > 1:
-    #      print(dependent_feature_ids)
+
     if real_test:
         idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
         idx1 = idx1 * len(features) + feature_impute_idx
@@ -344,8 +396,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
     # prepare the model for both directions
     rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
     rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
-    # for key in rec.keys():
-    #     print(f"{key}: {type(rec[key])}")# and {rec[key].shape}")
+
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
@@ -366,7 +417,7 @@ given_features = [
     # 'MIN_AT',
     # 'AVG_AT', # average temp is AgWeather Network
     # 'MAX_AT',
-    'MIN_REL_HUMIDITY',
+    # 'MIN_REL_HUMIDITY',
     'AVG_REL_HUMIDITY',
     'MAX_REL_HUMIDITY',
     'MIN_DEWPT',
@@ -386,9 +437,9 @@ given_features = [
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=False, is_year=True)
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
-season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True, is_year=True)
 
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
@@ -399,10 +450,12 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         result_mse_plots = {
         'BRITS': [],
         'MICE': [],
+        'Transformer': []
         }
         results = {
             'BRITS': {},
             'MICE': {},
+            'Transformer': {}
         }
         for l in L:
             season_idx = seasons[eval_season]
@@ -417,12 +470,14 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
             total_count = 0
             brits_mse = 0
             mice_mse = 0
+            transformer_mse = 0
 
             for i in tqdm(range(iter)):
                 # i.set_description(f"For {given_feature} & L = {l}")
                 real_values = []
                 imputed_brits = []
                 imputed_mice = []
+                imputed_transformer = []
 
                 fs = open(filename, 'w')
 
@@ -452,6 +507,15 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval[row_indices, feature_idx] = np.nan
 
+                    trans_test_df = pd.DataFrame(ret_eval, columns=features)
+                    add_season_id('./transformer/data_dir', trans_test_df)
+
+                    transformer_preds = run_transformer(params)
+                    # print(f'trasformer preds: {transformer_preds.shape}')
+                    
+                    imputation_transformer = np.squeeze(transformer_preds)
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].detach().numpy()
+                    # print(f'trans preds: {imputed_transformer}')
                     imputation_mice = mice_impute.transform(ret_eval)
 
                     imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
@@ -463,15 +527,19 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 brits_mse += ((real_values - imputed_brits) ** 2).mean()
 
                 mice_mse += ((real_values - imputed_mice) ** 2).mean()
+
+                transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
                 total_count += 1
 
-            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}")
+            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
 
             results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
             results['MICE'][l] = mice_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
+            results['Transformer'][l] = transformer_mse/total_count
 
             result_mse_plots['BRITS'].append(brits_mse/total_count)
             result_mse_plots['MICE'].append(mice_mse/total_count)
+            result_mse_plots['Transformer'].append(transformer_mse/total_count)
             
         end_time = time.time()
         result_df = pd.DataFrame(results)
@@ -485,18 +553,33 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
         plt.figure(figsize=(16,9))
         plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-
+        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
         plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
-        plt.legend()
+        plt.legend(fontsize=16)
         plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-brits-mice-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
         plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+        plt.ylabel(f'MSE', fontsize=16)
+        plt.legend()
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(16,9))
+        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
         plt.legend()
@@ -505,7 +588,9 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
         plt.figure(figsize=(16,9))
         plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
         plt.legend()
@@ -514,305 +599,6 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
 
 
-# L = [i for i in range(4, 22, 2)]
-# L.append(36)
-# for given_feature in given_features:
-#     result_mse_plots = {
-#     'BRITS': [],
-#     # 'BRITS_I': [],
-#     # 'KNN': [],
-#     'MICE': [],
-#     # 'NAOMI': []
-#     }
-#     results = {
-#         'BRITS': {},
-#         'MICE': {},
-#         # 'NAOMI': {}
-#     }
-#     index = 0
-#     for l in L:
-#         # imputed_naomi = []
-#         # with tqdm(range(iter), unit='iter') as titer:
-#         season_idx = seasons['2020-2021']
-#         feature_idx = features.index(given_feature)
-#         X, Y = split_XY(season_df, max_length, season_array)
-#         original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-#         iter = 4 #len(season_array[-2]) - (l-1) - len(original_missing_indices)
-#         if l == 36:
-#             iter = 1
-#         else:
-#             iter = 2
-#         print(f"For feature = {given_feature} and length = {l}")
-#         brits_mse = 0
-#         mice_mse = 0
-#         total_count = 0
-#         for i in tqdm(range(iter)):
-#             real_values = []
-#             imputed_brits = []
-#             imputed_mice = []
-#             # i.set_description(f"For {given_feature} & L = {l}")
-#             fs = open(filename, 'w')
-            
-#             # missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
-            
-            
-#             # for i in range(X.shape[0]):
-#             if given_feature.split('_')[-1] not in feature_dependency.keys():
-#                 dependent_feature_ids = []
-#             else:
-#                 dependent_feature_ids = [features.index(f) for f in feature_dependency[given_feature.split('_')[-1]] if f != given_feature]
-#             missing_indices = parse_id(X[season_idx], Y[season_idx], feature_idx, l, index, dependent_feature_ids)
-#             fs.close()
-
-
-#             val_iter = data_loader.get_loader(batch_size=1, filename=filename)
-
-#             for idx, data in enumerate(val_iter):
-#                 data = utils.to_var(data)
-#                 row_indices = missing_indices // len(features)
-
-#                 ret = model_brits.run_on_batch(data, None)
-#                 eval_ = ret['evals'].data.cpu().numpy()
-#                 eval_ = np.squeeze(eval_)
-#                 imputation_brits = ret['imputations'].data.cpu().numpy()
-#                 imputation_brits = np.squeeze(imputation_brits)
-
-#                 # ret = model_brits_I.run_on_batch(data, None)
-#                 # imputation_brits_I = ret['imputations'].data.cpu().numpy()
-#                 # imputation_brits_I = np.squeeze(imputation_brits_I)
-
-#                 ret_eval = copy.deepcopy(eval_)
-#                 ret_eval[row_indices, feature_idx] = np.nan
-
-#                 # imputation_knn = knn_impute.transform(ret_eval)
-#                 imputation_mice = mice_impute.transform(ret_eval)
-
-#                 # data = torch.tensor(np.expand_dims(ret_eval, axis=0))
-#                 # _, imputed_values = run_test(model_naomi, data, 1, row_indices, feature_idx)
-#                 # imputation_naomi = imputed_values[0].transpose(1,0).squeeze().detach().numpy()
-
-#                 imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
-#                 # imputed_brits_I.extend(copy.deepcopy(imputation_brits_I[row_indices, feature_idx].tolist()))
-#                 # imputed_knn.extend(copy.deepcopy(imputation_knn[row_indices, feature_idx].tolist()))
-#                 imputed_mice = imputation_mice[row_indices, feature_idx]#unnormalize(imputation_mice[row_indices, feature_idx], mean, std, feature_idx)
-#                 # imputed_naomi.extend(copy.deepcopy(imputation_naomi[row_indices, feature_idx].tolist()))
-#                 real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
-                
-#                 # print(f"\reval: {eval_[row_indices, feature_idx]}\nimputed(BRITS): {imputation_brits[row_indices, feature_idx]}\
-#                 #     \nimputed(BRITS_I): {imputation_brits_I[row_indices, feature_idx]}\nimputed(KNN): {imputed_knn[row_indices, feature_idx]}\
-#                 #     \nimputed(MICE): {imputed_mice[row_indices, feature_idx]}")
-#             index += l
-
-
-#             brits_mse += ((real_values - imputed_brits) ** 2).mean()
-        
-#             mice_mse += ((real_values - imputed_mice) ** 2).mean()
-#             total_count += 1
-
-#         print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}")
-
-#         # diff_brits = np.abs(real_values) - np.abs(imputed_brits)
-#         # diff_brits_I = np.abs(real_values) - np.abs(imputed_brits_I)
-#         # diff_knn = np.abs(real_values) - np.abs(imputed_knn)
-#         # diff_mice = np.abs(real_values) - np.abs(imputed_mice)
-#         # diff_naomi = np.abs(real_values) - np.abs(imputed_naomi)
-
-
-#         results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
-#         results['MICE'][l] = mice_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
-#         # results['NAOMI'][l] = naomi_mse
-
-#         result_mse_plots['BRITS'].append(brits_mse/total_count)
-#         # result_mse_plots['BRITS_I'].append(brits_I_mse)
-#         # result_mse_plots['KNN'].append(knn_mse)
-#         result_mse_plots['MICE'].append(mice_mse/total_count)
-#         # result_mse_plots['NAOMI'].append(naomi_mse)
-        
-#     end_time = time.time()
-#     result_df = pd.DataFrame(results)
-#     if not os.path.isdir('non_imputation_results/'+given_feature):
-#         os.makedirs('non_imputation_results/'+given_feature)
-#     result_df.to_csv(f'non_imputation_results/{given_feature}/{given_feature}_results_impute.csv')
-#     result_df.to_latex(f'non_imputation_results/{given_feature}/{given_feature}_results_impute.tex')
-
-#     if not os.path.isdir('non_overlap_plots/'+given_feature):
-#         os.makedirs('non_overlap_plots/'+given_feature)
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-#     plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_plots/{given_feature}/L-vs-MSE-BRITS-MICE-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
-
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
-
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
-
-# L = [i for i in range(1, 81, 2)]
-# # L.append(36)
-# for given_feature in given_features:
-#     result_mse_plots = {
-#     'BRITS': [],
-#     # 'BRITS_I': [],
-#     # 'KNN': [],
-#     'MICE': [],
-#     # 'NAOMI': []
-#     }
-#     results = {
-#         'BRITS': {},
-#         'MICE': {},
-#         # 'NAOMI': {}
-#     }
-    
-#     for l in L:
-#         # imputed_naomi = []
-#         # with tqdm(range(iter), unit='iter') as titer:
-#         season_idx = -2
-#         feature_idx = features.index(given_feature)
-#         X, Y = split_XY(season_df, max_length, season_array)
-#         original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-#         # iter = 4 #len(season_array[-2]) - (l-1) - len(original_missing_indices)
-#         # if l == 36:
-#         #     iter = 1
-#         # else:
-#         #     iter = 2
-#         iter = (len(season_array[-2]) - len(original_missing_indices))//l
-#         index = 0
-#         print(f"For feature = {given_feature} and length = {l}")
-#         brits_mse = 0
-#         mice_mse = 0
-#         total_count = 0       
-#         for i in tqdm(range(iter)):
-#             real_values = []
-#             imputed_brits = []
-#             imputed_mice = []
-#             # i.set_description(f"For {given_feature} & L = {l}")
-#             fs = open(filename, 'w')
-            
-#             # missing_season, season_idx = get_minimum_missing_season(season_df, given_feature, season_array)
-            
-            
-#             # for i in range(X.shape[0]):
-#             if given_feature.split('_')[-1] not in feature_dependency.keys():
-#                 dependent_feature_ids = []
-#             else:
-#                 dependent_feature_ids = [features.index(f) for f in feature_dependency[given_feature.split('_')[-1]] if f != given_feature]
-#             missing_indices = parse_id(X[season_idx], Y[season_idx], feature_idx, l, index, dependent_feature_ids)
-#             fs.close()
-
-
-#             val_iter = data_loader.get_loader(batch_size=1, filename=filename)
-
-#             for idx, data in enumerate(val_iter):
-#                 data = utils.to_var(data)
-#                 row_indices = missing_indices // len(features)
-
-#                 ret = model_brits.run_on_batch(data, None)
-#                 eval_ = ret['evals'].data.cpu().numpy()
-#                 eval_ = np.squeeze(eval_)
-#                 imputation_brits = ret['imputations'].data.cpu().numpy()
-#                 imputation_brits = np.squeeze(imputation_brits)
-
-#                 # ret = model_brits_I.run_on_batch(data, None)
-#                 # imputation_brits_I = ret['imputations'].data.cpu().numpy()
-#                 # imputation_brits_I = np.squeeze(imputation_brits_I)
-
-#                 ret_eval = copy.deepcopy(eval_)
-#                 ret_eval[row_indices, feature_idx] = np.nan
-
-#                 # imputation_knn = knn_impute.transform(ret_eval)
-#                 imputation_mice = mice_impute.transform(ret_eval)
-
-#                 # data = torch.tensor(np.expand_dims(ret_eval, axis=0))
-#                 # _, imputed_values = run_test(model_naomi, data, 1, row_indices, feature_idx)
-#                 # imputation_naomi = imputed_values[0].transpose(1,0).squeeze().detach().numpy()
-
-#                 imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
-#                 # imputed_brits_I.extend(copy.deepcopy(imputation_brits_I[row_indices, feature_idx].tolist()))
-#                 # imputed_knn.extend(copy.deepcopy(imputation_knn[row_indices, feature_idx].tolist()))
-#                 imputed_mice = imputation_mice[row_indices, feature_idx]#unnormalize(imputation_mice[row_indices, feature_idx], mean, std, feature_idx)
-#                 # imputed_naomi.extend(copy.deepcopy(imputation_naomi[row_indices, feature_idx].tolist()))
-#                 real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
-                
-#                 # print(f"\reval: {eval_[row_indices, feature_idx]}\nimputed(BRITS): {imputation_brits[row_indices, feature_idx]}\
-#                 #     \nimputed(BRITS_I): {imputation_brits_I[row_indices, feature_idx]}\nimputed(KNN): {imputed_knn[row_indices, feature_idx]}\
-#                 #     \nimputed(MICE): {imputed_mice[row_indices, feature_idx]}")
-#             index += l
-        
-
-#             brits_mse += ((real_values - imputed_brits) ** 2).mean()
-#             mice_mse += ((real_values - imputed_mice) ** 2).mean()
-#             total_count += 1
-
-#         print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}")
-
-#         # diff_brits = np.abs(real_values) - np.abs(imputed_brits)
-#         # diff_brits_I = np.abs(real_values) - np.abs(imputed_brits_I)
-#         # diff_knn = np.abs(real_values) - np.abs(imputed_knn)
-#         # diff_mice = np.abs(real_values) - np.abs(imputed_mice)
-#         # diff_naomi = np.abs(real_values) - np.abs(imputed_naomi)
-
-
-#         results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
-#         results['MICE'][l] = mice_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
-#         # results['NAOMI'][l] = naomi_mse
-
-#         result_mse_plots['BRITS'].append(brits_mse/total_count)
-#         result_mse_plots['MICE'].append(mice_mse/total_count)
-        
-#     end_time = time.time()
-#     result_df = pd.DataFrame(results)
-#     if not os.path.isdir('non_l_imputation_results/'+given_feature):
-#         os.makedirs('non_l_imputation_results/'+given_feature)
-#     result_df.to_csv(f'non_l_imputation_results/{given_feature}/{given_feature}_results_impute.csv')
-#     result_df.to_latex(f'non_l_imputation_results/{given_feature}/{given_feature}_results_impute.tex')
-
-#     if not os.path.isdir('non_overlap_l_plots/'+given_feature):
-#         os.makedirs('non_overlap_l_plots/'+given_feature)
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-#     plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_l_plots/{given_feature}/L-vs-MSE-BRITS-MICE-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
-
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_l_plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
-
-#     plt.figure(figsize=(16,9))
-#     plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-#     plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, season=2020-2021', fontsize=20)
-#     plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-#     plt.ylabel(f'MSE', fontsize=16)
-#     plt.legend()
-#     plt.savefig(f'non_overlap_l_plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{L[-1]}.png', dpi=300)
-#     plt.close()
 
 ####################### Draw data plots #######################
 
@@ -889,9 +675,13 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
 
 
-eval_folder = 'eval_dir'
+eval_folder = 'eval_dir/dormant'
+if not os.path.isdir(eval_folder):
+    os.makedirs(eval_folder)
 do_evaluation(eval_folder, 'cont', '2021')
-# data_plots_folder = 'data_plots'
+data_plots_folder = 'data_plots/dormant'
+if not os.path.isdir(data_plots_folder):
+    os.makedirs(data_plots_folder)
 # do_data_plots(data_plots_folder, 50, is_original=True)
 # do_data_plots(data_plots_folder, 50, is_original=False)
 
