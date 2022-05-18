@@ -505,6 +505,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # imputation_brits = unnormalize(imputation_brits, mean, std, -1)
 
                     ret_eval = copy.deepcopy(eval_)
+                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                     ret_eval[row_indices, feature_idx] = np.nan
 
                     trans_test_df = pd.DataFrame(ret_eval, columns=features)
