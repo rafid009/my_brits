@@ -118,8 +118,8 @@ def parse_id(x, y):
 
 
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
 # idx_LT_not_null = get_non_null_LT(season_df)
 # train_idx = get_train_idx(season_array, idx_LT_not_null)
 X, Y = split_XY(season_df, max_length, season_array)

@@ -25,7 +25,7 @@ features = [
     #'MSLP_HPA', # barrometric pressure # diff from zengxian
     'ETO', # evaporation of soil water lost to atmosphere
     'ETR', # ???
-    'LTE50'
+    # 'LTE50'
 ]
 label = ['LTE50']
 

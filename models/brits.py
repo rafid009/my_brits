@@ -15,7 +15,7 @@ from models.rits import RITSModel
 from sklearn import metrics
 
 
-SEQ_LEN = 252#366
+SEQ_LEN = 366
 RNN_HID_SIZE = 64
 
 

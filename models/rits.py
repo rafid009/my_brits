@@ -13,8 +13,8 @@ import data_loader
 import numpy as np
 from sklearn import metrics
 
-SEQ_LEN = 252#366
-feature_len = 21
+SEQ_LEN = 366
+feature_len = 20
 
 def binary_cross_entropy_with_logits(input, target, weight=None, size_average=True, reduce=True):
     if not (target.size() == input.size()):
