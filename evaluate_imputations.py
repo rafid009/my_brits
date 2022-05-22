@@ -505,9 +505,12 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # imputation_brits = unnormalize(imputation_brits, mean, std, -1)
 
                     ret_eval = copy.deepcopy(eval_)
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    imputation_mice = mice_impute.transform(ret_eval)
+                    
+                    ret_eval = copy.deepcopy(eval_)
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                     ret_eval[row_indices, feature_idx] = np.nan
-
                     trans_test_df = pd.DataFrame(ret_eval, columns=features)
                     add_season_id('./transformer/data_dir', trans_test_df)
 
@@ -517,7 +520,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     imputation_transformer = np.squeeze(transformer_preds)
                     imputed_transformer = imputation_transformer[row_indices, feature_idx].detach().numpy()
                     # print(f'trans preds: {imputed_transformer}')
-                    imputation_mice = mice_impute.transform(ret_eval)
+                    
 
                     imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
                     
