@@ -13,7 +13,7 @@ attributes = features
 folder = './json/'
 if not os.path.exists(folder):
     os.makedirs(folder)
-fs = open(folder+'json', 'w')
+fs = open(folder+'json_LT', 'w')
 
 # def to_time_bin(x):
 #     h, m = map(int, x.split(':'))
@@ -118,8 +118,8 @@ def parse_id(x, y):
 
 
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#, is_year=True)
 # idx_LT_not_null = get_non_null_LT(season_df)
 # train_idx = get_train_idx(season_array, idx_LT_not_null)
 X, Y = split_XY(season_df, max_length, season_array)
@@ -130,8 +130,8 @@ Y = Y[:-2]
 
 train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
-train_season_df = train_season_df.drop(season_array[-3], axis=0)
-train_season_df = train_season_df.drop(season_array[-4], axis=0)
+# train_season_df = train_season_df.drop(season_array[-3], axis=0)
+# train_season_df = train_season_df.drop(season_array[-4], axis=0)
 mean, std = get_mean_std(train_season_df, features)
 print(f"X: {X.shape}")
 # print('season mean at: ',np.where(~np.isnan(season_npy)))

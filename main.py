@@ -31,7 +31,7 @@ from sklearn import metrics
 batch_size = 16
 # BRITS -> 4000
 # BRITS_I -> 6000
-n_epochs = 6000
+n_epochs = 1000
 
 # BRITS_I
 RNN_HID_SIZE = 64
@@ -40,12 +40,12 @@ LABEL_WEIGHT = 1
 
 model_name = 'BRITS'
 model_path_name = 'BRITS'
-model_path = 'model_'+model_path_name+'.model'
+model_path = 'model_'+model_path_name+'_LT.model'
 
 def train(model):
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    data_iter = data_loader.get_loader(batch_size=batch_size)
+    data_iter = data_loader.get_loader(batch_size=batch_size, filename='./json/json_LT')
 
     
     for epoch in range(n_epochs):
@@ -114,7 +114,7 @@ def evaluate(model, val_iter):
     # save_label = np.concatenate(save_label, axis=0)
     if not os.path.isdir('./result/'):
         os.makedirs('./result/')
-    np.save('./result/data', save_impute)
+    np.save('./result/data_LT', save_impute)
     # np.save('./result/label', save_label)
     return mre, mse
 

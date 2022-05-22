@@ -676,11 +676,11 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
 
 
-eval_folder = 'eval_dir/dormant'
+eval_folder = 'eval_dir/year'
 if not os.path.isdir(eval_folder):
     os.makedirs(eval_folder)
 do_evaluation(eval_folder, 'cont', '2021')
-data_plots_folder = 'data_plots/dormant'
+data_plots_folder = 'data_plots/year'
 if not os.path.isdir(data_plots_folder):
     os.makedirs(data_plots_folder)
 # do_data_plots(data_plots_folder, 50, is_original=True)
