@@ -119,7 +119,7 @@ params = {
     'key_metric': 'loss', 
     'freeze': False, 
     'model': 'transformer', 
-    'max_seq_len': 366, 
+    'max_seq_len': 252, 
     'data_window_len': None, 
     'd_model': 128, 
     'dim_feedforward': 256, 
@@ -139,7 +139,7 @@ def add_season_id(data_folder, season_df):
     season_df.to_csv(f'{data_folder}/ColdHardiness_Grape_Merlot_test.csv', index=False)
 
 folder = './json/'
-file = 'json_eval_2'
+file = 'json_eval_2_LT'
 filename = folder + file
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -156,8 +156,8 @@ std = []
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#False, is_year=True)
 train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
 
@@ -173,8 +173,8 @@ mice_impute.fit(normalized_season_df[features].to_numpy())
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
-if os.path.exists('./model_BRITS.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS.model'))
+if os.path.exists('./model_BRITS_LT.model'):
+    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
@@ -433,7 +433,8 @@ given_features = [
     'MAX_ST8', # diff from zengxian
     #'MSLP_HPA', # barrometric pressure # diff from zengxian
     'ETO', # evaporation of soil water lost to atmosphere
-    'ETR' # ???
+    'ETR',
+    'LTE50' # ???
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
@@ -445,7 +446,7 @@ season_df, season_array, max_length = get_seasons_data(test_modified_df, test_do
 plot_mse_folder = 'overlapping_mse/'
 
 def do_evaluation(mse_folder, eval_type, eval_season='2021'):
-    filename = 'json/json_eval_2'
+    filename = 'json/json_eval_2_LT'
     for given_feature in given_features:
         result_mse_plots = {
         'BRITS': [],
@@ -507,7 +508,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval[row_indices, feature_idx] = np.nan
                     imputation_mice = mice_impute.transform(ret_eval)
-                    
+
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                     ret_eval[row_indices, feature_idx] = np.nan
@@ -608,7 +609,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
 def do_data_plots(data_folder, missing_length, is_original=False):
     print(f'Season array: {len(season_array)}')
-    filename = 'json/json_eval_3'
+    filename = 'json/json_eval_3_LT'
     missing_num = missing_length
     if is_original:
         data_folder += '/original_missing'

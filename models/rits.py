@@ -1,20 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 import math
-import utils
-import argparse
-import data_loader
 import numpy as np
-from sklearn import metrics
 
-SEQ_LEN = 366
-feature_len = 20
+SEQ_LEN = 252
+feature_len = 21
 
 def binary_cross_entropy_with_logits(input, target, weight=None, size_average=True, reduce=True):
     if not (target.size() == input.size()):
