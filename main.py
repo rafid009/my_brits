@@ -31,7 +31,7 @@ from sklearn import metrics
 batch_size = 16
 # BRITS -> 4000
 # BRITS_I -> 6000
-n_epochs = 1000
+n_epochs = 2000
 
 # BRITS_I
 RNN_HID_SIZE = 64
