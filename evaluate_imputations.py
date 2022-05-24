@@ -23,7 +23,7 @@ from transformer.src.transformer import run_transformer
 import warnings
 warnings.filterwarnings("ignore")
 
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 seasons = {
 '1988': 0,
 '1989': 1,
@@ -70,7 +70,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/out', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/SeasonData_pretrained_2022-05-17_20-50-54_vg1_LT/checkpoints/model_last.pth', 
+    'load_model': './transformer/output/SeasonData_pretrained_2022-05-17_20-50-54_vg1_LT/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -80,7 +80,7 @@ params = {
     'records_file': './transformer/Imputation_records.csv', 
     'console': False, 
     'print_interval': 1, 
-    'gpu': '-1', 
+    'gpu': '0', 
     'n_proc': 1, 
     'num_workers': 0, 
     'seed': None, 
