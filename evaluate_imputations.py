@@ -459,13 +459,14 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
             'Transformer': {}
         }
         for l in L:
-            season_idx = seasons[eval_season]
+            # season_idx = seasons[eval_season]
+            season_idx = -2
             feature_idx = features.index(given_feature)
             X, Y = split_XY(season_df, max_length, season_array)
             # print(f'X: {X.shape}, Y: {Y.shape}')
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             if eval_type != 'random':
-                iter = len(season_array[-2]) - (l-1) - len(original_missing_indices)
+                iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
             print(f"For feature = {given_feature} and length = {l}")
             
             total_count = 0
