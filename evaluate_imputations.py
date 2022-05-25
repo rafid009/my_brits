@@ -519,7 +519,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
                     imputation_transformer = np.squeeze(transformer_preds)
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].detach().numpy()
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
 
@@ -683,7 +683,7 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 eval_folder = 'eval_dir_LT/year'
 if not os.path.isdir(eval_folder):
     os.makedirs(eval_folder)
-do_evaluation(eval_folder, 'cont', '2021')
+do_evaluation(eval_folder, 'cont', '2020-2021')
 data_plots_folder = 'data_plots_LT/year'
 if not os.path.isdir(data_plots_folder):
     os.makedirs(data_plots_folder)
