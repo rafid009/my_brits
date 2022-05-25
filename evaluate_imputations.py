@@ -80,7 +80,7 @@ params = {
     'records_file': './transformer/Imputation_records.csv', 
     'console': False, 
     'print_interval': 1, 
-    'gpu': '-1', 
+    'gpu': '0', 
     'n_proc': 1, 
     'num_workers': 0, 
     'seed': None, 
@@ -404,6 +404,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
 
 # given_feature = 'AVG_REL_HUMIDITY'
 L = [i for i in range(1, 50)]
+L = [1, 3, 5, 10, 15]
 iter = 30
 
 
@@ -414,32 +415,32 @@ given_features = features
 
 given_features = [
     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    'MIN_AT',
+    # 'MIN_AT',
     'AVG_AT', # average temp is AgWeather Network
-    'MAX_AT',
+    # 'MAX_AT',
     'MIN_REL_HUMIDITY',
     'AVG_REL_HUMIDITY',
-    'MAX_REL_HUMIDITY',
-    'MIN_DEWPT',
+    # 'MAX_REL_HUMIDITY',
+    # 'MIN_DEWPT',
     'AVG_DEWPT',
-    'MAX_DEWPT',
-    'P_INCHES', # precipitation
-    'WS_MPH', # wind speed. if no sensor then value will be na
-    'MAX_WS_MPH', 
-    'LW_UNITY', # leaf wetness sensor
-    'SR_WM2', # solar radiation # different from zengxian
-    'MIN_ST8', # diff from zengxian
-    'ST8', # soil temperature # diff from zengxian
-    'MAX_ST8', # diff from zengxian
+    # 'MAX_DEWPT',
+    # 'P_INCHES', # precipitation
+    # 'WS_MPH', # wind speed. if no sensor then value will be na
+    # 'MAX_WS_MPH', 
+    # 'LW_UNITY', # leaf wetness sensor
+    # 'SR_WM2', # solar radiation # different from zengxian
+    # 'MIN_ST8', # diff from zengxian
+    # 'ST8', # soil temperature # diff from zengxian
+    # 'MAX_ST8', # diff from zengxian
     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    'ETO', # evaporation of soil water lost to atmosphere
-    'ETR' # ???
+    # 'ETO', # evaporation of soil water lost to atmosphere
+    # 'ETR' # ???
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True, is_year=True)
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=False, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
-season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True, is_year=True)
+season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=False, is_year=True)
 
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
@@ -464,7 +465,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
             # print(f'X: {X.shape}, Y: {Y.shape}')
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             if eval_type != 'random':
-                iter = len(season_array[-2]) - (l-1) - len(original_missing_indices)
+                iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
             print(f"For feature = {given_feature} and length = {l}")
             
             total_count = 0
@@ -518,7 +519,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
                     imputation_transformer = np.squeeze(transformer_preds)
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].detach().numpy()
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
 
@@ -533,6 +534,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 mice_mse += ((real_values - imputed_mice) ** 2).mean()
 
                 transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
+                print(f"real: {real_values}\nbrits: {imputed_brits}\nmice: {imputed_mice}\ntransformer: {imputation_transformer}")
                 total_count += 1
 
             print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
@@ -565,7 +567,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
         plt.legend(fontsize=16)
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-brits-mice-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-all-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
@@ -587,7 +589,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-transformer-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
@@ -683,9 +685,9 @@ eval_folder = 'eval_dir/year'
 if not os.path.isdir(eval_folder):
     os.makedirs(eval_folder)
 do_evaluation(eval_folder, 'cont', '2021')
-data_plots_folder = 'data_plots/year'
-if not os.path.isdir(data_plots_folder):
-    os.makedirs(data_plots_folder)
+# data_plots_folder = 'data_plots/year'
+# if not os.path.isdir(data_plots_folder):
+#     os.makedirs(data_plots_folder)
 # do_data_plots(data_plots_folder, 50, is_original=True)
 # do_data_plots(data_plots_folder, 50, is_original=False)
 
