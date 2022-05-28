@@ -233,6 +233,24 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
     plt.figure(figsize=(32,18))
     plt.title(f"For feature = {f} in Season {season_idx}", fontsize=24)
     if is_original:
+        ax = plt.subplot(211)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
+        plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
+        ax.set_xlabel('Days', fontsize=16)
+        ax.set_ylabel('Values', fontsize=16)
+
+        ax = plt.subplot(212)
+        # ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
+        # plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
+        # ax.set_xlabel('Days', fontsize=16)
+        # ax.set_ylabel('Values', fontsize=16)
+
+        # ax = plt.subplot(313)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
+        plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
+        ax.set_xlabel('Days', fontsize=16)
+        ax.set_ylabel('Values', fontsize=16)
+    else:
         ax = plt.subplot(311)
         ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
@@ -240,36 +258,18 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         ax.set_ylabel('Values', fontsize=16)
 
         ax = plt.subplot(312)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
-        plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
-
-        ax = plt.subplot(313)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
-        plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
-    else:
-        ax = plt.subplot(411)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
-        plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
-
-        ax = plt.subplot(412)
         ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=20)
         plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=16)
         ax.set_ylabel('Values', fontsize=16)
 
-        ax = plt.subplot(413)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
-        plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax = plt.subplot(313)
+        # ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
+        # plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
+        # ax.set_xlabel('Days', fontsize=16)
+        # ax.set_ylabel('Values', fontsize=16)
 
-        ax = plt.subplot(414)
+        # ax = plt.subplot(414)
         ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=16)
@@ -675,8 +675,8 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # ret_eval[row_indices, feature_idx] = np.nan
                 ret_eval[original_missing_indices, feature_idx] = np.nan
 
-                imputation_mice = mice_impute.transform(ret_eval)
-                draws['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
+                # imputation_mice = mice_impute.transform(ret_eval)
+                # draws['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
 
                 draw_data_plot(draws, features[feature_idx], given_season, folder=data_folder, is_original=is_original)
 
@@ -690,8 +690,8 @@ do_evaluation(eval_folder, 'cont', '2020-2021')
 data_plots_folder = 'data_plots_LT/year'
 if not os.path.isdir(data_plots_folder):
     os.makedirs(data_plots_folder)
-# do_data_plots(data_plots_folder, 50, is_original=True)
-# do_data_plots(data_plots_folder, 50, is_original=False)
+do_data_plots(data_plots_folder, 50, is_original=True)
+do_data_plots(data_plots_folder, 50, is_original=False)
 
 
 
