@@ -404,7 +404,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
 
 # given_feature = 'AVG_REL_HUMIDITY'
 L = [i for i in range(1, 50)]
-L = [1, 3, 5, 10, 15]
+L = [1, 5, 10, 15, 20, 25, 40, 50, 80, 100, 200, 300]
 iter = 30
 
 
@@ -416,25 +416,25 @@ given_features = features
 given_features = [
     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
     # 'MIN_AT',
-    'AVG_AT', # average temp is AgWeather Network
-    # 'MAX_AT',
-    'MIN_REL_HUMIDITY',
+    #'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    #'MIN_REL_HUMIDITY',
     'AVG_REL_HUMIDITY',
-    # 'MAX_REL_HUMIDITY',
+    'MAX_REL_HUMIDITY',
     # 'MIN_DEWPT',
     'AVG_DEWPT',
     # 'MAX_DEWPT',
-    # 'P_INCHES', # precipitation
+    'P_INCHES', # precipitation
     # 'WS_MPH', # wind speed. if no sensor then value will be na
-    # 'MAX_WS_MPH', 
-    # 'LW_UNITY', # leaf wetness sensor
+    'MAX_WS_MPH', 
+    'LW_UNITY', # leaf wetness sensor
     # 'SR_WM2', # solar radiation # different from zengxian
     # 'MIN_ST8', # diff from zengxian
-    # 'ST8', # soil temperature # diff from zengxian
+    'ST8', # soil temperature # diff from zengxian
     # 'MAX_ST8', # diff from zengxian
     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    # 'ETO', # evaporation of soil water lost to atmosphere
-    # 'ETR' # ???
+    'ETO', # evaporation of soil water lost to atmosphere
+    'ETR' # ???
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
@@ -472,7 +472,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
             brits_mse = 0
             mice_mse = 0
             transformer_mse = 0
-
+            # iter = 1
             for i in tqdm(range(iter)):
                 # i.set_description(f"For {given_feature} & L = {l}")
                 real_values = []
@@ -519,7 +519,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
                     imputation_transformer = np.squeeze(transformer_preds)
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().numpy()
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
 
@@ -534,7 +534,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 mice_mse += ((real_values - imputed_mice) ** 2).mean()
 
                 transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
-                print(f"real: {real_values}\nbrits: {imputed_brits}\nmice: {imputed_mice}\ntransformer: {imputation_transformer}")
+                print(f"real: {real_values}\nbrits: {imputed_brits}\nmice: {imputed_mice}\ntransformer: {imputed_transformer}")
                 total_count += 1
 
             print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
@@ -681,7 +681,7 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
 
 
-eval_folder = 'eval_dir/year'
+eval_folder = '../eval_dir/year'
 if not os.path.isdir(eval_folder):
     os.makedirs(eval_folder)
 do_evaluation(eval_folder, 'cont', '2021')
