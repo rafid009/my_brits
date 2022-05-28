@@ -403,7 +403,8 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
     return indices
 
 # given_feature = 'AVG_REL_HUMIDITY'
-L = [i for i in range(1, 50)]
+# L = [i for i in range(1, 50)]
+L = [1, 5, 10, 20, 50, 70, 100, 150, 200, 250, 300]
 iter = 30
 
 
@@ -568,7 +569,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=16)
         plt.ylabel(f'MSE', fontsize=16)
         plt.legend(fontsize=16)
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-brits-mice-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-all-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
@@ -582,27 +583,27 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
-        plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        plt.close()
+        # plt.figure(figsize=(16,9))
+        # plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+        # plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        # plt.xticks(fontsize=16)
+        # plt.yticks(fontsize=16)
+        # plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+        # plt.ylabel(f'MSE', fontsize=16)
+        # plt.legend()
+        # plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        # plt.close()
 
-        plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        plt.close()
+        # plt.figure(figsize=(16,9))
+        # plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+        # plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        # plt.xticks(fontsize=16)
+        # plt.yticks(fontsize=16)
+        # plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+        # plt.ylabel(f'MSE', fontsize=16)
+        # plt.legend()
+        # plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        # plt.close()
 
 
 
