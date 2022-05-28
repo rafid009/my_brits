@@ -499,7 +499,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 for idx, data in enumerate(val_iter):
                     data = utils.to_var(data)
                     row_indices = missing_indices // len(features)
-
+                    print(f"rows: {row_indices}")
                     ret = model_brits.run_on_batch(data, None)
                     eval_ = ret['evals'].data.cpu().numpy()
                     eval_ = np.squeeze(eval_)
@@ -521,7 +521,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
                     imputation_transformer = np.squeeze(transformer_preds)
-                    print(f"rows: {row_indices.shape}\ntrans: {imputation_transformer.shape}")
+                    print(f"trans: {imputation_transformer.shape}")
                     imputed_transformer = imputation_transformer[row_indices, feature_idx].data.cpu().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
