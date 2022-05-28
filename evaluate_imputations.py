@@ -80,7 +80,7 @@ params = {
     'records_file': './transformer/Imputation_records.csv', 
     'console': False, 
     'print_interval': 1, 
-    'gpu': -1, 
+    'gpu': '-1', 
     'n_proc': 1, 
     'num_workers': 0, 
     'seed': None, 
@@ -404,7 +404,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
 
 # given_feature = 'AVG_REL_HUMIDITY'
 # L = [i for i in range(1, 50)]
-L = [1, 5, 10, 20, 50, 70, 100, 150, 200, 250, 300]
+L = [1, 5, 10, 50, 70, 100, 150, 200]
 iter = 30
 
 
@@ -522,7 +522,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     
                     imputation_transformer = np.squeeze(transformer_preds)
                     print(f"rows: {row_indices.shape}\ntrans: {imputation_transformer.shape}")
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].data.cpu().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
 
