@@ -80,7 +80,7 @@ params = {
     'records_file': './transformer/Imputation_records.csv', 
     'console': False, 
     'print_interval': 1, 
-    'gpu': '0', 
+    'gpu': -1, 
     'n_proc': 1, 
     'num_workers': 0, 
     'seed': None, 
