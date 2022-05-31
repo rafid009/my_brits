@@ -31,7 +31,7 @@ from sklearn import metrics
 batch_size = 16
 # BRITS -> 4000
 # BRITS_I -> 6000
-n_epochs = 2000
+n_epochs = 4000
 
 # BRITS_I
 RNN_HID_SIZE = 64
@@ -40,7 +40,7 @@ LABEL_WEIGHT = 1
 
 model_name = 'BRITS'
 model_path_name = 'BRITS'
-model_path = 'model_'+model_path_name+'_LT.model'
+model_path = 'model_'+model_path_name+'_LT_all.model'
 
 def train(model):
     optimizer = optim.Adam(model.parameters(), lr=1e-3)

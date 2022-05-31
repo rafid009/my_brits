@@ -25,40 +25,40 @@ warnings.filterwarnings("ignore")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 seasons = {
-'1988': 0,
-'1989': 1,
-'1990': 2,
-'1991': 3,
-'1992': 4,
-'1993': 5,
-'1994': 6,
-'1995': 7,
-'1996': 8,
-'1997': 9,
-'1998': 10,
-'1999': 11,
-'2000': 12,
-'2001': 13,
-'2002': 14,
-'2003': 15,
-'2004': 16,
-'2005': 17,
-'2006': 18,
-'2007': 19,
-'2008': 20,
-'2009': 21,
-'2010': 22,
-'2011': 23,
-'2012': 24,
-'2013': 25,
-'2014': 26,
-'2015': 27,
-'2016': 28,
-'2017': 29,
-'2018': 30,
-'2019': 31,
-'2020': 32,
-'2021': 33,
+'1988-1989': 0,
+'1989-1990': 1,
+'1990-1991': 2,
+'1991-1992': 3,
+'1992-1993': 4,
+'1993-1994': 5,
+'1994-1995': 6,
+'1995-1996': 7,
+'1996-1997': 8,
+'1997-1998': 9,
+'1998-1999': 10,
+'1999-2000': 11,
+'2000-2001': 12,
+'2001-2002': 13,
+'2002-2003': 14,
+'2003-2004': 15,
+'2004-2005': 16,
+'2005-2006': 17,
+'2006-2007': 18,
+'2007-2008': 19,
+'2008-2009': 20,
+'2009-2010': 21,
+'2010-2011': 22,
+'2011-2012': 23,
+'2012-2013': 24,
+'2013-2014': 25,
+'2014-2015': 26,
+'2015-2016': 27,
+'2016-2017': 28,
+'2017-2018': 29,
+'2018-2019': 30,
+'2019-2020': 31,
+'2020-2021': 32,
+'2021-2022': 33,
 # '2022': 34
 }
 
@@ -336,7 +336,9 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
 
     if real_test:
         idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+        # print(f"idx1: {idx1}")
         idx1 = idx1 * len(features) + feature_impute_idx
+        # print(f"idx1-1: {idx1}")
         # exit()
 
         # randomly eliminate 10% values as the imputation ground-truth
@@ -403,15 +405,15 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
     return indices
 
 # given_feature = 'AVG_REL_HUMIDITY'
-# L = [i for i in range(1, 50)]
-L = [1, 5, 10, 50, 70, 100, 150, 200]
+L = [i for i in range(1, 30)]
+# L = [1, 5, 10, 20]#, 70, 100, 150, 200]
 iter = 30
 
 
 start_time = time.time()
 
 
-given_features = features
+# given_features = features
 
 given_features = [
     # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
@@ -439,9 +441,9 @@ given_features = [
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True, is_year=True)
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
-season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True, is_year=True)
+season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True)#, is_year=True)
 
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
@@ -464,17 +466,16 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
             season_idx = -2
             feature_idx = features.index(given_feature)
             X, Y = split_XY(season_df, max_length, season_array)
-            # print(f'X: {X.shape}, Y: {Y.shape}')
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             if eval_type != 'random':
                 iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
             print(f"For feature = {given_feature} and length = {l}")
-            
+            # print(f"original miss: {original_missing_indices.shape[0]}\n{original_missing_indices}\nseason: {len(season_array[season_idx])}")
             total_count = 0
             brits_mse = 0
             mice_mse = 0
             transformer_mse = 0
-
+            neg = 0
             for i in tqdm(range(iter)):
                 # i.set_description(f"For {given_feature} & L = {l}")
                 real_values = []
@@ -493,13 +494,16 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 else:
                     missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids)
                 fs.close()
-
+                if len(missing_indices) == 0:
+                    print(f"0 missing added")
+                    continue
+                # print(f"i: {i}\nmissing indices: {missing_indices}")
                 val_iter = data_loader.get_loader(batch_size=1, filename=filename)
 
                 for idx, data in enumerate(val_iter):
                     data = utils.to_var(data)
                     row_indices = missing_indices // len(features)
-                    print(f"rows: {row_indices}")
+                    # print(f"rows: {row_indices}")
                     ret = model_brits.run_on_batch(data, None)
                     eval_ = ret['evals'].data.cpu().numpy()
                     eval_ = np.squeeze(eval_)
@@ -521,7 +525,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
                     imputation_transformer = np.squeeze(transformer_preds)
-                    print(f"trans: {imputation_transformer.shape}")
+                    # print(f"trans: {imputation_transformer.shape}")
                     imputed_transformer = imputation_transformer[row_indices, feature_idx].data.cpu().numpy()
                     # print(f'trans preds: {imputed_transformer}')
                     
@@ -538,7 +542,9 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
                 transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
                 total_count += 1
-
+            if total_count <= 0:
+                neg+=1
+                continue
             print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
 
             results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
@@ -559,10 +565,11 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}'):
             os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}')
 
+        
         plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-        plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+        plt.plot(L[:(-neg-1)], result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+        plt.plot(L[:(-neg-1)], result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+        plt.plot(L[:(-neg-1)], result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
@@ -573,7 +580,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.close()
 
         plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+        plt.plot(L[:(-neg-1)], result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
@@ -604,6 +611,122 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         # plt.legend()
         # plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
         # plt.close()
+
+
+def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1):
+
+    idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+    # print(f"idx1: {idx1}")
+    idx1 = idx1 * len(features) + feature_impute_idx
+    # print(f"idx1-1: {idx1}")
+    # exit()
+
+    # randomly eliminate 10% values as the imputation ground-truth
+    # print('not null: ',np.where(~np.isnan(evals)))
+    indices = idx1.tolist()
+
+    start_idx = indices[(trial_num + 1)] #np.random.choice(indices, 1)
+    start = indices.index(start_idx)
+    # if start + length <= len(indices): 
+    #     end = start + length
+    # else:
+    #     end = len(indices)
+    end = len(indices) - start + 1
+    indices = np.array(indices)[start:end]
+
+    # global real_values
+    # real_values = evals[indices]
+    # if dependent_features is not None and len(dependent_features) != 0:
+    #     inv_indices = (indices - feature_impute_idx)//len(features)
+    #     # if length > 1:
+    #     #     print('inv: ', inv_indices)
+    #     for i in inv_indices:
+    #         x[i, dependent_features] = np.nan 
+
+    evals = x
+
+    evals = (evals - mean) / std
+    # print('eval: ', evals)
+    # print('eval shape: ', evals.shape)
+    shp = evals.shape
+    evals = evals.reshape(-1)
+
+    values = evals.copy()
+    if indices is not None:
+        values[indices] = np.nan
+
+    masks = ~np.isnan(values)
+
+    eval_masks = (~np.isnan(values)) ^ (~np.isnan(evals))
+
+    evals = evals.reshape(shp)
+    values = values.reshape(shp)
+
+    masks = masks.reshape(shp)
+    eval_masks = eval_masks.reshape(shp)
+    label = y.tolist() #out.loc[int(id_)]
+    # print(f'rec y: {list(y)}')
+    rec = {'label': label}
+
+    # prepare the model for both directions
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+
+    rec = json.dumps(rec)
+
+    fs.write(rec + '\n')
+    return indices
+
+def forward_prediction(forward_folder):
+    filename = 'json/json_eval_forward_LT'
+    feature_idx = features.index('LTE50')
+    X, Y = split_XY(season_df, max_length, season_array)
+    season_names = ['2020-2021', '2021-2022']
+    for given_season in season_names:
+        season_idx = seasons[given_season]
+        non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
+        draws = []
+        x_axis = []
+        for i in range(len(non_missing_indices)-1):
+            fs = open(filename, 'w')
+            missing_indices = forward_parse_id(fs, X[season_idx], Y[season_idx], feature_idx, i)
+            fs.close()
+            val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+            
+            for idx, data in enumerate(val_iter):
+                data = utils.to_var(data)
+                row_indices = missing_indices // len(features)
+
+                ret = model_brits.run_on_batch(data, None)
+                eval_ = ret['evals'].data.cpu().numpy()
+                eval_ = np.squeeze(eval_)
+                imputation_brits = ret['imputations'].data.cpu().numpy()
+                imputation_brits = np.squeeze(imputation_brits)
+                imputed_brits = imputation_brits[row_indices, feature_idx]
+                real_values = eval_[row_indices, feature_idx]
+
+                brits_mse = ((real_values - imputed_brits) ** 2).mean()
+                draws.append(brits_mse)
+                x_axis.append(i+1)
+        
+        if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
+            os.makedirs(f'{forward_folder}/plots/LTE50/')
+
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws, 'tab:blue', label='BRITS', marker='o')
+        plt.title(f'Length of previous existing LTE50 vs Imputation MSE for feature = {features[feature_idx]}, year={given_season}', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.xlabel(f'Length of exisiting LTE50 values', fontsize=16)
+        plt.ylabel(f'MSE', fontsize=16)
+        plt.legend(fontsize=16)
+        plt.savefig(f'{forward_folder}/plots/LTE50/L-vs-MSE-brits-{features[feature_idx]}-{given_season}.png', dpi=300)
+        plt.close()
+                
+
+
+
+
 
 
 
@@ -683,15 +806,18 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
 
 
-eval_folder = 'eval_dir_LT/year'
-if not os.path.isdir(eval_folder):
-    os.makedirs(eval_folder)
-do_evaluation(eval_folder, 'cont', '2020-2021')
-data_plots_folder = 'data_plots_LT/year'
-if not os.path.isdir(data_plots_folder):
-    os.makedirs(data_plots_folder)
-do_data_plots(data_plots_folder, 50, is_original=True)
-do_data_plots(data_plots_folder, 50, is_original=False)
+# eval_folder = 'eval_dir_LT/LT'
+# if not os.path.isdir(eval_folder):
+#     os.makedirs(eval_folder)
+# do_evaluation(eval_folder, 'cont', '2020-2021')
+# data_plots_folder = 'data_plots_LT/LT'
+# if not os.path.isdir(data_plots_folder):
+#     os.makedirs(data_plots_folder)
+# do_data_plots(data_plots_folder, 20, is_original=True)
+# do_data_plots(data_plots_folder, 20, is_original=False)
+
+forward_folder = 'forward_folder'
+forward_prediction(forward_folder)
 
 
 
