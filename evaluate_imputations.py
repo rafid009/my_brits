@@ -332,7 +332,7 @@ def unnormalize(X, mean, std, feature_idx=-1):
     else:
         return (X * std[feature_idx]) + mean[feature_idx]
 
-def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_features=None, real_test=True, random_start=False):
+def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_features=None, real_test=True, random_start=False, remove_features=None):
 
     if real_test:
         idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
@@ -365,7 +365,13 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
             # if length > 1:
             #     print('inv: ', inv_indices)
             for i in inv_indices:
-                x[i, dependent_features] = np.nan 
+                x[i, dependent_features] = np.nan
+        if remove_features is not None and len(remove_features) != 0:
+            inv_indices = (indices - feature_impute_idx)//len(features)
+            # if length > 1:
+            #     print('inv: ', inv_indices)
+            for i in inv_indices:
+                x[i, remove_features] = np.nan
     else:
         indices = None
     evals = x
@@ -414,27 +420,27 @@ start_time = time.time()
 given_features = features
 
 given_features = [
-    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
     # 'MIN_AT',
     #'AVG_AT', # average temp is AgWeather Network
-    'MAX_AT',
+    # 'MAX_AT',
     #'MIN_REL_HUMIDITY',
     'AVG_REL_HUMIDITY',
-    'MAX_REL_HUMIDITY',
+    # 'MAX_REL_HUMIDITY',
     # 'MIN_DEWPT',
-    'AVG_DEWPT',
+    # 'AVG_DEWPT',
     # 'MAX_DEWPT',
-    'P_INCHES', # precipitation
+    # 'P_INCHES', # precipitation
     # 'WS_MPH', # wind speed. if no sensor then value will be na
-    'MAX_WS_MPH', 
-    'LW_UNITY', # leaf wetness sensor
+    # 'MAX_WS_MPH', 
+    # 'LW_UNITY', # leaf wetness sensor
     # 'SR_WM2', # solar radiation # different from zengxian
     # 'MIN_ST8', # diff from zengxian
-    'ST8', # soil temperature # diff from zengxian
+    # 'ST8', # soil temperature # diff from zengxian
     # 'MAX_ST8', # diff from zengxian
     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    'ETO', # evaporation of soil water lost to atmosphere
-    'ETR' # ???
+    # 'ETO', # evaporation of soil water lost to atmosphere
+    # 'ETR' # ???
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
@@ -581,29 +587,160 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
         plt.close()
 
-        plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-transformer-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        plt.close()
 
-        plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        plt.close()
+def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
+    features_to_remove = [
+        'MEAN_AT',
+        'MIN_REL_HUMIDITY', 
+        'MIN_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR' # ???
+    ]
+    filename = 'json/json_eval_2'
+    for given_feature in given_features:
+        result_mse_plots = {
+        'BRITS': [],
+        'MICE': [],
+        'Transformer': []
+        }
+        results = {
+            'BRITS': {},
+            'MICE': {},
+            'Transformer': {}
+        }
+        for r_feat in features_to_remove:
+            to_remove = [features.index(f) for f in feature_dependency[r_feat.split('_')[-1]] if f != r_feat]
+            to_remove.append(features.index(r_feat))
+            print(f"removed features: {to_remove}")
+            for l in L:
+                season_idx = seasons[eval_season]
+                feature_idx = features.index(given_feature)
+                X, Y = split_XY(season_df, max_length, season_array)
+                # print(f'X: {X.shape}, Y: {Y.shape}')
+                original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
+                if eval_type != 'random':
+                    iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
+                print(f"For feature = {given_feature} and length = {l}")
+                
+                total_count = 0
+                brits_mse = 0
+                mice_mse = 0
+                transformer_mse = 0
+                # iter = 1
+                for i in tqdm(range(iter)):
+                    # i.set_description(f"For {given_feature} & L = {l}")
+                    real_values = []
+                    imputed_brits = []
+                    imputed_mice = []
+                    imputed_transformer = []
 
+                    fs = open(filename, 'w')
 
+                    if given_feature.split('_')[-1] not in feature_dependency.keys():
+                        dependent_feature_ids = []
+                    else:
+                        dependent_feature_ids = [features.index(f) for f in feature_dependency[given_feature.split('_')[-1]] if f != given_feature]
+                    if eval_type == 'random':
+                        missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids, random_start=True, remove_features=to_remove)
+                    else:
+                        missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids, remove_features=to_remove)
+                    fs.close()
+
+                    val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+
+                    for idx, data in enumerate(val_iter):
+                        data = utils.to_var(data)
+                        row_indices = missing_indices // len(features)
+
+                        ret = model_brits.run_on_batch(data, None)
+                        eval_ = ret['evals'].data.cpu().numpy()
+                        eval_ = np.squeeze(eval_)
+                        imputation_brits = ret['imputations'].data.cpu().numpy()
+                        imputation_brits = np.squeeze(imputation_brits)
+                        # imputation_brits = unnormalize(imputation_brits, mean, std, -1)
+
+                        ret_eval = copy.deepcopy(eval_)
+                        ret_eval[row_indices, feature_idx] = np.nan
+                        imputation_mice = mice_impute.transform(ret_eval)
+                        
+                        ret_eval = copy.deepcopy(eval_)
+                        ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                        ret_eval[row_indices, feature_idx] = np.nan
+                        trans_test_df = pd.DataFrame(ret_eval, columns=features)
+                        add_season_id('./transformer/data_dir', trans_test_df)
+
+                        transformer_preds = run_transformer(params)
+                        # print(f'trasformer preds: {transformer_preds.shape}')
+                        
+                        imputation_transformer = np.squeeze(transformer_preds)
+                        imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+                        # print(f'trans preds: {imputed_transformer}')
+                        
+
+                        imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
+                        
+                        imputed_mice = imputation_mice[row_indices, feature_idx]#unnormalize(imputation_mice[row_indices, feature_idx], mean, std, feature_idx)
+                        
+                        real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
+
+                    brits_mse += ((real_values - imputed_brits) ** 2).mean()
+
+                    mice_mse += ((real_values - imputed_mice) ** 2).mean()
+
+                    transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
+                    # print(f"real: {real_values}\nbrits: {imputed_brits}\nmice: {imputed_mice}\ntransformer: {imputed_transformer}")
+                    total_count += 1
+
+                print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
+
+                results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
+                results['MICE'][l] = mice_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
+                results['Transformer'][l] = transformer_mse/total_count
+
+                result_mse_plots['BRITS'].append(brits_mse/total_count)
+                result_mse_plots['MICE'].append(mice_mse/total_count)
+                result_mse_plots['Transformer'].append(transformer_mse/total_count)
+                
+            end_time = time.time()
+            result_df = pd.DataFrame(results)
+            if not os.path.isdir(f'{mse_folder}/{eval_type}/imputation_results/'+given_feature):
+                os.makedirs(f'{mse_folder}/{eval_type}/imputation_results/'+given_feature)
+            result_df.to_csv(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{given_feature}_results_impute.csv')
+            result_df.to_latex(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{given_feature}_results_impute.tex')
+
+            if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}'):
+                os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}')
+
+            plt.figure(figsize=(16,9))
+            plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+            plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+            plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+            plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+            plt.xticks(fontsize=16)
+            plt.yticks(fontsize=16)
+            plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+            plt.ylabel(f'MSE', fontsize=16)
+            plt.legend(fontsize=16)
+            plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-all-models-{features[feature_idx]}-{r_feat}.png', dpi=300)
+            plt.close()
+
+            plt.figure(figsize=(16,9))
+            plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+            plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+            plt.xticks(fontsize=16)
+            plt.yticks(fontsize=16)
+            plt.xlabel(f'Length of contiguous missing values', fontsize=16)
+            plt.ylabel(f'MSE', fontsize=16)
+            plt.legend()
+            plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{r_feat}.png', dpi=300)
+            plt.close()
 
 
 ####################### Draw data plots #######################
@@ -681,10 +818,10 @@ def do_data_plots(data_folder, missing_length, is_original=False):
                 # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
 
 
-eval_folder = '../eval_dir/year'
+eval_folder = '../eval_dir_rm/year'
 if not os.path.isdir(eval_folder):
     os.makedirs(eval_folder)
-do_evaluation(eval_folder, 'cont', '2021')
+do_evaluation_remove_features(eval_folder, 'cont', '2021')
 # data_plots_folder = 'data_plots/year'
 # if not os.path.isdir(data_plots_folder):
 #     os.makedirs(data_plots_folder)
