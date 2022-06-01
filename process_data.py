@@ -33,7 +33,14 @@ feature_dependency = {
   'AT': ['MEAN_AT', 'AVG_AT', 'MIN_AT', 'MAX_AT'],
   'HUMIDITY': ['MIN_REL_HUMIDITY', 'MAX_REL_HUMIDITY', 'AVG_REL_HUMIDITY'],
   'DEWPT': ['MIN_DEWPT', 'AVG_DEWPT', 'MAX_DEWPT'],
-  'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8']
+  'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8'],
+  'INCHES': [],
+  'MPH': [], # wind speed. if no sensor then value will be na
+  'UNITY': [], # leaf wetness sensor
+  'WM2': [], # solar radiation # different from zengxian
+  'HPA': [], # barrometric pressure # diff from zengxian
+  'ETO': [], # evaporation of soil water lost to atmosphere
+  'ETR': []
   }
 
 def preprocess_missing_values(df, is_dormant=True, is_year=False):

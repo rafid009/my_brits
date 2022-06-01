@@ -234,46 +234,60 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
     plt.title(f"For feature = {f} in Season {season_idx}", fontsize=24)
     if is_original:
         ax = plt.subplot(311)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
         ax = plt.subplot(312)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=27)
         plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
         ax = plt.subplot(313)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
     else:
         ax = plt.subplot(411)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
         ax = plt.subplot(412)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=27)
         plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
         ax = plt.subplot(413)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=27)
         plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
         ax = plt.subplot(414)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        ax.xticks(fontsize=20)
+        ax.yticks(fontsize=20)
 
     plt.tight_layout(pad=5)
     plt.savefig(f"{folder}/{f}/{f}-imputations-season-{season_idx}.png", dpi=300)
@@ -350,6 +364,9 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
             else:
                 return []
         else:
+            # print(f"tiral_num: {trial_num}")
+            if trial_num >= len(indices):
+                return []
             start_idx = indices[trial_num] #np.random.choice(indices, 1)
         start = indices.index(start_idx)
         if start + length <= len(indices): 
@@ -410,7 +427,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
 
 # given_feature = 'AVG_REL_HUMIDITY'
 L = [i for i in range(1, 50)]
-L = [1, 5, 10, 15, 20, 25, 40, 50, 80, 100, 200, 300]
+L = [1, 5, 10, 20, 40, 60, 80, 100, 200, 300]
 iter = 30
 
 
@@ -590,13 +607,13 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
 
 def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
     features_to_remove = [
-        'MEAN_AT',
-        'MIN_REL_HUMIDITY', 
-        'MIN_DEWPT',
-        'P_INCHES', # precipitation
-        'WS_MPH', # wind speed. if no sensor then value will be na
-        'MAX_WS_MPH', 
-        'LW_UNITY', # leaf wetness sensor
+        # 'MEAN_AT',
+        # 'MIN_REL_HUMIDITY', 
+        # 'MIN_DEWPT',
+        # 'P_INCHES', # precipitation
+        # 'WS_MPH', # wind speed. if no sensor then value will be na
+        # 'MAX_WS_MPH', 
+        # 'LW_UNITY', # leaf wetness sensor
         'SR_WM2', # solar radiation # different from zengxian
         'ST8', # soil temperature # diff from zengxian
         'MSLP_HPA', # barrometric pressure # diff from zengxian
@@ -605,20 +622,22 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
     ]
     filename = 'json/json_eval_2'
     for given_feature in given_features:
-        result_mse_plots = {
-        'BRITS': [],
-        'MICE': [],
-        'Transformer': []
-        }
-        results = {
-            'BRITS': {},
-            'MICE': {},
-            'Transformer': {}
-        }
+        
         for r_feat in features_to_remove:
+            result_mse_plots = {
+            'BRITS': [],
+            'MICE': [],
+            'Transformer': []
+            }
+            results = {
+                'BRITS': {},
+                'MICE': {},
+                'Transformer': {}
+            }
             to_remove = [features.index(f) for f in feature_dependency[r_feat.split('_')[-1]] if f != r_feat]
             to_remove.append(features.index(r_feat))
-            print(f"removed features: {to_remove}")
+            print(f"removed features: {r_feat}")
+            l_needed = []
             for l in L:
                 season_idx = seasons[eval_season]
                 feature_idx = features.index(given_feature)
@@ -652,7 +671,8 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
                     else:
                         missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids, remove_features=to_remove)
                     fs.close()
-
+                    if len(missing_indices) == 0:
+                        continue
                     val_iter = data_loader.get_loader(batch_size=1, filename=filename)
 
                     for idx, data in enumerate(val_iter):
@@ -690,6 +710,8 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
                         
                         real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
 
+                    
+
                     brits_mse += ((real_values - imputed_brits) ** 2).mean()
 
                     mice_mse += ((real_values - imputed_mice) ** 2).mean()
@@ -697,7 +719,7 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
                     transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
                     # print(f"real: {real_values}\nbrits: {imputed_brits}\nmice: {imputed_mice}\ntransformer: {imputed_transformer}")
                     total_count += 1
-
+                l_needed.append(l)
                 print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
 
                 results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
@@ -717,11 +739,11 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
 
             if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}'):
                 os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}')
-
+            print(f"l: {len(l_needed)}, brits: {len(result_mse_plots['BRITS'])}")
             plt.figure(figsize=(16,9))
-            plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-            plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-            plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+            plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+            plt.plot(l_needed, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+            plt.plot(l_needed, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
             plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
@@ -732,7 +754,7 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
             plt.close()
 
             plt.figure(figsize=(16,9))
-            plt.plot(L, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+            plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
             plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
