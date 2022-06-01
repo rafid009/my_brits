@@ -21,42 +21,47 @@ from naomi.helpers import run_test
 from tqdm import tqdm
 from transformer.src.transformer import run_transformer
 import warnings
+import matplotlib
+
+
 warnings.filterwarnings("ignore")
+matplotlib.rc('xtick', labelsize=20) 
+matplotlib.rc('ytick', labelsize=20) 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 seasons = {
-'1988-1989': 0,
-'1989-1990': 1,
-'1990-1991': 2,
-'1991-1992': 3,
-'1992-1993': 4,
-'1993-1994': 5,
-'1994-1995': 6,
-'1995-1996': 7,
-'1996-1997': 8,
-'1997-1998': 9,
-'1998-1999': 10,
-'1999-2000': 11,
-'2000-2001': 12,
-'2001-2002': 13,
-'2002-2003': 14,
-'2003-2004': 15,
-'2004-2005': 16,
-'2005-2006': 17,
-'2006-2007': 18,
-'2007-2008': 19,
-'2008-2009': 20,
-'2009-2010': 21,
-'2010-2011': 22,
-'2011-2012': 23,
-'2012-2013': 24,
-'2013-2014': 25,
-'2014-2015': 26,
-'2015-2016': 27,
-'2016-2017': 28,
-'2017-2018': 29,
-'2018-2019': 30,
-'2019-2020': 31,
+# '1988-1989': 0,
+# '1989-1990': 1,
+# '1990-1991': 2,
+# '1991-1992': 3,
+# '1992-1993': 4,
+# '1993-1994': 5,
+# '1994-1995': 6,
+# '1995-1996': 7,
+# '1996-1997': 8,
+# '1997-1998': 9,
+# '1998-1999': 10,
+# '1999-2000': 11,
+# '2000-2001': 12,
+# '2001-2002': 13,
+# '2002-2003': 14,
+# '2003-2004': 15,
+# '2004-2005': 16,
+# '2005-2006': 17,
+# '2006-2007': 18,
+# '2007-2008': 19,
+# '2008-2009': 20,
+# '2009-2010': 21,
+# '2010-2011': 22,
+# '2011-2012': 23,
+# '2012-2013': 24,
+# '2013-2014': 25,
+# '2014-2015': 26,
+# '2015-2016': 27,
+# '2016-2017': 28,
+# '2017-2018': 29,
+# '2018-2019': 30,
+# '2019-2020': 31,
 '2020-2021': 32,
 '2021-2022': 33,
 # '2022': 34
@@ -231,13 +236,15 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
     if not os.path.isdir(f"{folder}/{f}"):
         os.makedirs(f"{folder}/{f}")
     plt.figure(figsize=(32,18))
-    plt.title(f"For feature = {f} in Season {season_idx}", fontsize=24)
+    plt.title(f"For feature = {f} in Season {season_idx}", fontsize=30)
     if is_original:
         ax = plt.subplot(211)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        # ax.xticks(fontsize=20)
+        # ax.yticks(fontsize=20)
 
         ax = plt.subplot(212)
         # ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
@@ -246,22 +253,28 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.set_ylabel('Values', fontsize=16)
 
         # ax = plt.subplot(313)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        # ax.xticks(fontsize=20)
+        # ax.yticks(fontsize=20)
     else:
         ax = plt.subplot(311)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        # ax.xticks(fontsize=20)
+        # ax.yticks(fontsize=20)
 
         ax = plt.subplot(312)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=27)
         plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        # ax.xticks(fontsize=20)
+        # ax.yticks(fontsize=20)
 
         ax = plt.subplot(313)
         # ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
@@ -270,10 +283,12 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.set_ylabel('Values', fontsize=16)
 
         # ax = plt.subplot(414)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=20)
+        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
-        ax.set_xlabel('Days', fontsize=16)
-        ax.set_ylabel('Values', fontsize=16)
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
+        # ax.xticks(fontsize=20)
+        # ax.yticks(fontsize=20)
 
     plt.tight_layout(pad=5)
     plt.savefig(f"{folder}/{f}/{f}-imputations-season-{season_idx}.png", dpi=300)
@@ -741,9 +756,9 @@ def do_data_plots(data_folder, missing_length, is_original=False):
         data_folder += '/original_missing'
     else:
         data_folder += '/eval_missing'
-    for given_season in seasons:
+    for given_season in seasons.keys():
         season_idx = seasons[given_season]
-        given_features = features
+        given_features = ['LTE50']#features
         for given_feature in tqdm(given_features):
             fs = open(filename, 'w')
             X, Y = split_XY(season_df, max_length, season_array)
@@ -810,14 +825,14 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # if not os.path.isdir(eval_folder):
 #     os.makedirs(eval_folder)
 # do_evaluation(eval_folder, 'cont', '2020-2021')
-# data_plots_folder = 'data_plots_LT/LT'
-# if not os.path.isdir(data_plots_folder):
-#     os.makedirs(data_plots_folder)
-# do_data_plots(data_plots_folder, 20, is_original=True)
-# do_data_plots(data_plots_folder, 20, is_original=False)
+data_plots_folder = 'data_plots_LT/LT'
+if not os.path.isdir(data_plots_folder):
+    os.makedirs(data_plots_folder)
+do_data_plots(data_plots_folder, 10, is_original=True)
+do_data_plots(data_plots_folder, 10, is_original=False)
 
-forward_folder = 'forward_folder'
-forward_prediction(forward_folder)
+# forward_folder = 'forward_folder'
+# forward_prediction(forward_folder)
 
 
 
