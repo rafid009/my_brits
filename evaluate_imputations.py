@@ -614,13 +614,14 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
         # 'WS_MPH', # wind speed. if no sensor then value will be na
         # 'MAX_WS_MPH', 
         # 'LW_UNITY', # leaf wetness sensor
-        'SR_WM2', # solar radiation # different from zengxian
-        'ST8', # soil temperature # diff from zengxian
-        'MSLP_HPA', # barrometric pressure # diff from zengxian
-        'ETO', # evaporation of soil water lost to atmosphere
+        # 'SR_WM2', # solar radiation # different from zengxian
+        # 'ST8', # soil temperature # diff from zengxian
+        # 'MSLP_HPA', # barrometric pressure # diff from zengxian
+        # 'ETO', # evaporation of soil water lost to atmosphere
         'ETR' # ???
     ]
     filename = 'json/json_eval_2'
+    # given_features = ['AVG_REL']
     for given_feature in given_features:
         
         for r_feat in features_to_remove:
@@ -634,8 +635,10 @@ def do_evaluation_remove_features(mse_folder, eval_type, eval_season='2021'):
                 'MICE': {},
                 'Transformer': {}
             }
-            to_remove = [features.index(f) for f in feature_dependency[r_feat.split('_')[-1]] if f != r_feat]
-            to_remove.append(features.index(r_feat))
+            # to_remove = [features.index(f) for f in feature_dependency[r_feat.split('_')[-1]] if f != r_feat]
+            # to_remove.append(features.index(r_feat))
+            to_remove = [features.index(f) for f in features if f != given_feature]
+            r_feat = 'all'
             print(f"removed features: {r_feat}")
             l_needed = []
             for l in L:

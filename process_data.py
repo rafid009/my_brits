@@ -35,7 +35,7 @@ feature_dependency = {
   'DEWPT': ['MIN_DEWPT', 'AVG_DEWPT', 'MAX_DEWPT'],
   'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8'],
   'INCHES': [],
-  'MPH': [], # wind speed. if no sensor then value will be na
+  'MPH': ['WS_MPH', 'MAX_WS_MPH'], # wind speed. if no sensor then value will be na
   'UNITY': [], # leaf wetness sensor
   'WM2': [], # solar radiation # different from zengxian
   'HPA': [], # barrometric pressure # diff from zengxian
