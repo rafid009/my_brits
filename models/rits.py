@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 SEQ_LEN = 252
-feature_len = 21
+feature_len = 13
 
 def binary_cross_entropy_with_logits(input, target, weight=None, size_average=True, reduce=True):
     if not (target.size() == input.size()):

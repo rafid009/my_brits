@@ -124,8 +124,8 @@ season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seas
 # train_idx = get_train_idx(season_array, idx_LT_not_null)
 X, Y = split_XY(season_df, max_length, season_array)
 print(f"X: {X.shape}")
-X = X[:-2]
-Y = Y[:-2]
+X = X[6:-2]
+Y = Y[6:-2]
 
 
 train_season_df = season_df.drop(season_array[-1], axis=0)

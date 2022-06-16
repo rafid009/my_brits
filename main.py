@@ -40,14 +40,13 @@ LABEL_WEIGHT = 1
 
 model_name = 'BRITS'
 model_path_name = 'BRITS'
-model_path = 'model_'+model_path_name+'_LT_all.model'
+model_path = 'model_'+model_path_name+'_LT_lam_1.model'
 
 def train(model):
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     data_iter = data_loader.get_loader(batch_size=batch_size, filename='./json/json_LT')
 
-    
     for epoch in range(n_epochs):
         model.train()
         with tqdm(data_iter, unit='batch') as tepoch:
@@ -119,17 +118,19 @@ def evaluate(model, val_iter):
     return mre, mse
 
 
-if model_name == 'BRITS':
-    model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-else:
-    model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-if os.path.exists(model_path):
-    model.load_state_dict(torch.load(model_path))
 
-if torch.cuda.is_available():
-    model = model.cuda()
+if __name__ == "__main__":
+    if model_name == 'BRITS':
+        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+    else:
+        model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
 
-train(model)
+    if torch.cuda.is_available():
+        model = model.cuda()
+
+    train(model)
 
 
 

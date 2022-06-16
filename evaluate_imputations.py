@@ -9,12 +9,11 @@ import json
 import os
 import torch
 from models.brits import BRITSModel as BRITS
-from models.brits_i import BRITSModel as BRITS_I
 import utils
 import data_loader
 import matplotlib.pyplot as plt
 from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import KNNImputer, IterativeImputer
+from sklearn.impute import IterativeImputer
 import time
 from naomi.model import *
 from naomi.helpers import run_test
@@ -27,6 +26,8 @@ import matplotlib
 warnings.filterwarnings("ignore")
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20) 
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 seasons = {
@@ -71,70 +72,6 @@ RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
-params = {
-    'config_filepath': None, 
-    'output_dir': './transformer/output/out', 
-    'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/SeasonData_LT_2022-05-24_11-06-36_lPH_LT/checkpoints/model_best.pth', 
-    'resume': False, 
-    'change_output': False, 
-    'save_all': False, 
-    'experiment_name': 'SeasonData_pretrained', 
-    'comment': 'pretraining through imputation', 
-    'no_timestamp': False, 
-    'records_file': './transformer/Imputation_records.csv', 
-    'console': False, 
-    'print_interval': 1, 
-    'gpu': '-1', 
-    'n_proc': 1, 
-    'num_workers': 0, 
-    'seed': None, 
-    'limit_size': None, 
-    'test_only': 'testset', 
-    'data_class': 'agaid', 
-    'labels': None, 
-    'test_from': './transformer/test_indices.txt', 
-    'test_ratio': 0, 
-    'val_ratio': 0, 
-    'pattern': 'Merlot_test', 
-    'val_pattern': None, 
-    'test_pattern': None, 
-    'normalization': 'standardization', 
-    'norm_from': './transformer/output/SeasonData_LT_2022-05-24_11-06-36_lPH_LT/normalization.pickle', 
-    'subsample_factor': None, 
-    'task': 'imputation', 
-    'masking_ratio': 0.2, 
-    'mean_mask_length': 10.0, 
-    'mask_mode': 'separate', 
-    'mask_distribution': 'geometric', 
-    'exclude_feats': None, 
-    'mask_feats': [0, 1], 
-    'start_hint': 0.0, 
-    'end_hint': 0.0, 
-    'harden': True, 
-    'epochs': 500, 
-    'val_interval': 2, 
-    'optimizer': 'Adam', 
-    'lr': 0.0009, 
-    'lr_step': [1000000], 
-    'lr_factor': [0.1], 
-    'batch_size': 1, 
-    'l2_reg': 0, 
-    'global_reg': False, 
-    'key_metric': 'loss', 
-    'freeze': False, 
-    'model': 'transformer', 
-    'max_seq_len': 252, 
-    'data_window_len': None, 
-    'd_model': 128, 
-    'dim_feedforward': 256, 
-    'num_heads': 8, 
-    'num_layers': 3, 
-    'dropout': 0.1, 
-    'pos_encoding': 'learnable', 
-    'activation': 'relu', 
-    'normalization_layer': 'BatchNorm'
-}
 
 def add_season_id(data_folder, season_df):
     season_df['season_id'] = 0
@@ -178,8 +115,8 @@ mice_impute.fit(normalized_season_df[features].to_numpy())
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
 
-if os.path.exists('./model_BRITS_LT.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
+if os.path.exists('./model_BRITS_LT_lam.model'):
+    model_brits.load_state_dict(torch.load('./model_BRITS_LT_lam.model'))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
@@ -187,9 +124,9 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Draw Functions ##############
-def graph_bar_diff_multi(GT_values, result_dict, title, x, xlabel, ylabel, season, feature, drop_linear=False, missing=None):
+def graph_bar_diff_multi(diff_folder, GT_values, result_dict, title, x, xlabel, ylabel, season, feature, drop_linear=False, missing=None, existing=-1):
     plot_dict = {}
-    plt.figure(figsize=(16,9))
+    plt.figure(figsize=(16,12))
     for key, value in result_dict.items():
       plot_dict[key] = np.abs(GT_values) - np.abs(value[missing])
     # ind = np.arange(prediction.shape[0])
@@ -208,13 +145,16 @@ def graph_bar_diff_multi(GT_values, result_dict, title, x, xlabel, ylabel, seaso
     plt.xlabel(xlabel, fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     plt.title(title, fontsize=20)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     # plt.axis([0, 80, -2, 3])
 
     plt.legend(loc='best')
-    # plt.tight_layout(pad=5)
-    if not os.path.isdir('diff_imgs'):
-        os.makedirs('diff_imgs')
-    plt.savefig(f'diff_imgs/result-diff-{feature}-{season}.png', dpi=300)
+    plt.tight_layout(pad=5)
+    folder = f"{diff_folder}/{season}"
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    plt.savefig(f'{folder}/result-diff-{feature}-{season}-{existing}.png', dpi=300)
     plt.close()
     # plt.show()
 
@@ -232,14 +172,13 @@ def draw_data_trend(df_t, df_c, f, interp_name, i):
     plt.savefig(f"subplots/{f}-{interp_name}-{i}.png", dpi=300)
     plt.close()
 
-def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False):
-    if not os.path.isdir(f"{folder}/{f}"):
-        os.makedirs(f"{folder}/{f}")
+def draw_data_plot(results, f, season, folder='subplots', is_original=False, existing=-1):
+    
     plt.figure(figsize=(32,18))
-    plt.title(f"For feature = {f} in Season {season_idx}", fontsize=30)
+    plt.title(f"For feature = {f} in Season {season} existing LT = {existing}", fontsize=30)
     if is_original:
         ax = plt.subplot(211)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
+        ax.set_title('Feature = '+f+' Season = '+season+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
@@ -253,7 +192,7 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.set_ylabel('Values', fontsize=16)
 
         # ax = plt.subplot(313)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
+        ax.set_title('Feature = '+f+' Season = '+season+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
@@ -261,7 +200,7 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.yticks(fontsize=20)
     else:
         ax = plt.subplot(311)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' original data', fontsize=27)
+        ax.set_title('Feature = '+f+' Season = '+season+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
@@ -269,7 +208,7 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.yticks(fontsize=20)
 
         ax = plt.subplot(312)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' missing data', fontsize=27)
+        ax.set_title('Feature = '+f+' Season = '+season+' missing data', fontsize=27)
         plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
@@ -283,7 +222,7 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.set_ylabel('Values', fontsize=16)
 
         # ax = plt.subplot(414)
-        ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by BRITS', fontsize=27)
+        ax.set_title('Feature = '+f+' Season = '+season+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
@@ -291,7 +230,13 @@ def draw_data_plot(results, f, season_idx, folder='subplots', is_original=False)
         # ax.yticks(fontsize=20)
 
     plt.tight_layout(pad=5)
-    plt.savefig(f"{folder}/{f}/{f}-imputations-season-{season_idx}.png", dpi=300)
+    folder = f"{folder}/{season}/{f}"
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    if existing == -1:
+        plt.savefig(f"{folder}/{f}-imputations-season-{season}.png", dpi=300)
+    else:
+        plt.savefig(f"{folder}/{f}-imputations-season-{season}-{existing}.png", dpi=300)
     plt.close()
 
 ############## Model Input Process Functions ##############
@@ -628,11 +573,11 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
         # plt.close()
 
 
-def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1):
+def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1, all=False):
 
-    idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
-    # print(f"idx1: {idx1}")
-    idx1 = idx1 * len(features) + feature_impute_idx
+    idx_temp = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+    print(f"idx1: {idx_temp}")
+    idx1 = idx_temp * len(features) + feature_impute_idx
     # print(f"idx1-1: {idx1}")
     # exit()
 
@@ -641,24 +586,32 @@ def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1):
     indices = idx1.tolist()
 
     start_idx = indices[(trial_num + 1)] #np.random.choice(indices, 1)
+    print(f"indices: {indices}")
     start = indices.index(start_idx)
     # if start + length <= len(indices): 
     #     end = start + length
     # else:
     #     end = len(indices)
-    end = len(indices) - start + 1
+    end = len(indices)
+    print(f"start: {start}, end: {end}")
     indices = np.array(indices)[start:end]
 
     # global real_values
     # real_values = evals[indices]
-    # if dependent_features is not None and len(dependent_features) != 0:
-    #     inv_indices = (indices - feature_impute_idx)//len(features)
-    #     # if length > 1:
-    #     #     print('inv: ', inv_indices)
-    #     for i in inv_indices:
-    #         x[i, dependent_features] = np.nan 
-
-    evals = x
+    if all:
+        print(f"x: {x.shape}")
+        x_copy = x.copy()
+        # inv_indices = (indices - feature_impute_idx)//len(features)
+        # if length > 1:
+        # print('inv: ', inv_indices)
+        features_to_nan = [features.index(f) for f in features if features.index(f) != feature_impute_idx]
+        print(f'features: {features_to_nan}\nstart: {start_idx}')
+        # for i in inv_indices:
+        x_copy[idx_temp[trial_num + 2]:, features_to_nan] = np.nan 
+        print(f"x copy: {x_copy}")
+        evals = x_copy
+    else:
+        evals = x
 
     evals = (evals - mean) / std
     # print('eval: ', evals)
@@ -692,6 +645,8 @@ def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1):
     fs.write(rec + '\n')
     return indices
 
+
+
 def forward_prediction(forward_folder):
     filename = 'json/json_eval_forward_LT'
     feature_idx = features.index('LTE50')
@@ -700,18 +655,25 @@ def forward_prediction(forward_folder):
     for given_season in season_names:
         season_idx = seasons[given_season]
         non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
+        original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
         draws = []
         x_axis = []
-        for i in range(len(non_missing_indices)-1):
+        print(f"\n\nseason: {given_season}")
+        for i in tqdm(range(len(non_missing_indices)-2)):
+            print(f"i = {i}")
             fs = open(filename, 'w')
-            missing_indices = forward_parse_id(fs, X[season_idx], Y[season_idx], feature_idx, i)
+            print(f"season x: {X[season_idx]}")
+            missing_indices = forward_parse_id(fs, X[season_idx], Y[season_idx], feature_idx, i)#, all=True)
+
             fs.close()
+            if len(missing_indices) == 0:
+                continue
             val_iter = data_loader.get_loader(batch_size=1, filename=filename)
-            
+            draw_data = {}
             for idx, data in enumerate(val_iter):
                 data = utils.to_var(data)
                 row_indices = missing_indices // len(features)
-
+                print(f"rows: {row_indices}")
                 ret = model_brits.run_on_batch(data, None)
                 eval_ = ret['evals'].data.cpu().numpy()
                 eval_ = np.squeeze(eval_)
@@ -721,14 +683,35 @@ def forward_prediction(forward_folder):
                 real_values = eval_[row_indices, feature_idx]
 
                 brits_mse = ((real_values - imputed_brits) ** 2).mean()
+                print(f"real: {real_values}\nbrits: {imputed_brits}\nmse: {brits_mse}\n")
                 draws.append(brits_mse)
                 x_axis.append(i+1)
-        
+
+
+                real_value = eval_[:, feature_idx]
+                # real_values.extend(copy.deepcopy(real_value))
+                
+                
+                draw_data['real'] = unnormalize(real_value, mean, std, feature_idx)
+                draw_data['real'][original_missing_indices] = 0
+
+                missing_values = copy.deepcopy(real_value)
+                missing_values[row_indices] = 0
+                draw_data['missing'] = unnormalize(missing_values, mean, std, feature_idx)
+                draw_data['missing'][original_missing_indices] = 0
+                draw_data['missing'][row_indices] = 0
+
+                draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
+
+                # draws['real'][row_indices] = 0
+                draw_data_plot(draw_data, features[feature_idx], given_season, folder=f'data_folder_forward', existing=i)
+                graph_bar_diff_multi(draw_data['real'][row_indices], draw_data, f'Difference From Gorund Truth for LTE50 in {given_season} existing = {i}', np.arange(len(row_indices)), 'Days of existing LTE50', 'Degrees', given_season, 'LTE50', missing=row_indices, existing=i)
+
         if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
             os.makedirs(f'{forward_folder}/plots/LTE50/')
 
         plt.figure(figsize=(16,9))
-        plt.plot(x_axis, draws, 'tab:blue', label='BRITS', marker='o')
+        plt.plot(x_axis, draws, 'tab:orange', label='BRITS', marker='o')
         plt.title(f'Length of previous existing LTE50 vs Imputation MSE for feature = {features[feature_idx]}, year={given_season}', fontsize=20)
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
@@ -739,6 +722,198 @@ def forward_prediction(forward_folder):
         plt.close()
                 
 
+def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1, all=False, same=True):
+
+    idx_temp = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+    print(f"idx1: {idx_temp}")
+    print(f"existing LT: {existing_LT}")
+    idx1 = idx_temp * len(features) + feature_impute_idx
+
+    indices = idx1.tolist()
+
+    if trial_num != -1:
+        start_idx = indices[(trial_num + existing_LT + 1)] #np.random.choice(indices, 1)
+    else:
+        start_idx = indices[(existing_LT + 1)]
+    print(f"indices: {indices}")
+    start = indices.index(start_idx)
+    end = len(indices)
+    print(f"start: {start}, end: {end}")
+    indices = np.array(indices)[start:end]
+
+    # global real_values
+    # real_values = evals[indices]
+    if all:
+        print(f"x: {x.shape}")
+        x_copy = x.copy()
+        # inv_indices = (indices - feature_impute_idx)//len(features)
+        # if length > 1:
+        # print('inv: ', inv_indices)
+        features_to_nan = [features.index(f) for f in features if features.index(f) != feature_impute_idx]
+        print(f'features: {features_to_nan}\nstart: {start_idx}')
+        # for i in inv_indices:
+        if trial_num != 0 and trial_num != -1:
+            x_copy[:idx_temp[trial_num], feature_impute_idx] = np.nan
+        features_to_nan
+        if trial_num != -1:
+            if same:
+                x_copy[(idx_temp[trial_num + existing_LT + 1] + 1):, features_to_nan] = np.nan
+            else:
+                x_copy[idx_temp[trial_num + existing_LT + 1]:, features_to_nan] = np.nan
+        else:
+            if same:
+                x_copy[(idx_temp[existing_LT + 1] + 1):, features_to_nan] = np.nan
+            else:
+                x_copy[idx_temp[existing_LT + 1], features_to_nan] = np.nan
+        if trial_num != -1:
+            print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
+        else:
+            print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
+        evals = x_copy
+    else:
+        evals = x
+
+    evals = (evals - mean) / std
+    print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
+    # print('eval: ', evals)
+    # print('eval shape: ', evals.shape)
+    shp = evals.shape
+    evals = evals.reshape(-1)
+
+    values = evals.copy()
+    if indices is not None:
+        values[indices] = np.nan
+    
+    masks = ~np.isnan(values)
+
+    eval_masks = (~np.isnan(values)) ^ (~np.isnan(evals))
+
+    evals = evals.reshape(shp)
+    values = values.reshape(shp)
+    print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
+    masks = masks.reshape(shp)
+    eval_masks = eval_masks.reshape(shp)
+    label = y.tolist() #out.loc[int(id_)]
+    # print(f'rec y: {list(y)}')
+    rec = {'label': label}
+
+    # prepare the model for both directions
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+
+    rec = json.dumps(rec)
+
+    fs.write(rec + '\n')
+    return indices
+
+
+
+
+def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder=None, diff_folder=None):
+    filename = 'json/json_eval_forward_LT'
+    feature_idx = features.index('LTE50')
+    X, Y = split_XY(season_df, max_length, season_array)
+    season_names = ['2020-2021', '2021-2022']
+    for given_season in season_names:
+        season_idx = seasons[given_season]
+        non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
+        original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
+        draws_1 = []
+        draw_data = {}
+        # draws_2 = []
+        x_axis = []
+        print(f"\n\nseason: {given_season}")
+        for i in range(len(non_missing_indices)-1):
+            print(f"i = {i}")
+            mse_1 = 0
+            # mse_2 = 0
+            trial_count = 0
+            if slide:
+                num_trials = len(non_missing_indices)-i-1
+            else:
+                num_trials = 1
+            for trial in tqdm(range(num_trials)):
+                fs = open(filename, 'w')
+                missing_indices = forward_parse_id_day(fs, X[season_idx], Y[season_idx], feature_idx, i, trial_num=trial, all=True, same=same)
+
+                fs.close()
+                if len(missing_indices) == 0:
+                    continue
+
+                val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+                
+                for idx, data in enumerate(val_iter):
+                    data = utils.to_var(data)
+                    row_indices = missing_indices // len(features)
+                    ret = model_brits.run_on_batch(data, None)
+                    eval_ = ret['evals'].data.cpu().numpy()
+                    eval_ = np.squeeze(eval_)
+                    imputation_brits = ret['imputations'].data.cpu().numpy()
+                    imputation_brits = np.squeeze(imputation_brits)
+                    imputed_brits = imputation_brits[row_indices, feature_idx]
+                    real_values = eval_[row_indices, feature_idx]
+                    print(f"same_mse: {((real_values[0] - imputed_brits[0]) ** 2)}")
+                    mse_1 += ((real_values[0] - imputed_brits[0]) ** 2)
+                    # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
+                    trial_count += 1
+
+                    real_value = eval_[:, feature_idx]
+                # real_values.extend(copy.deepcopy(real_value))
+                
+                
+                    draw_data['real'] = unnormalize(real_value, mean, std, feature_idx)
+                    draw_data['real'][original_missing_indices] = 0
+
+                    missing_values = copy.deepcopy(real_value)
+                    missing_values[row_indices] = 0
+                    draw_data['missing'] = unnormalize(missing_values, mean, std, feature_idx)
+                    draw_data['missing'][original_missing_indices] = 0
+                    draw_data['missing'][row_indices] = 0
+
+                    draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
+
+                    # draws['real'][row_indices] = 0
+                    if data_folder is not None:
+                        draw_data_plot(draw_data, features[feature_idx], given_season, folder=data_folder, existing=i)
+                    if diff_folder is not None:
+                        graph_bar_diff_multi(diff_folder, draw_data['real'][row_indices], draw_data, f'Difference From Gorund Truth for LTE50 in {given_season} existing = {i+1}', np.arange(len(row_indices)), 'Days where LTE50 value is available', 'Degrees', given_season, 'LTE50', missing=row_indices, existing=i)
+
+            mse_1 /= trial_count
+            # mse_2 /= trial_count
+            draws_1.append(mse_1)
+            # draws_2.append(mse_2)
+            x_axis.append(i+1)
+
+
+        if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
+            os.makedirs(f'{forward_folder}/plots/LTE50/')
+
+        slide_or_not = 'slide'
+        if not slide:
+            slide_or_not = 'non-slide'
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws_1, 'tab:orange', label='BRITS', marker='o')
+        plt.title(f"Length of previous existing LTE50 vs Imputation MSE ({'same' if same else 'next'} day) for feature = {features[feature_idx]}, year={given_season}", fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.xlabel(f'Length of exisiting LTE50 values', fontsize=16)
+        plt.ylabel(f'MSE', fontsize=16)
+        plt.legend(fontsize=16)
+        plt.savefig(f"{forward_folder}/plots/LTE50/L-vs-MSE-brits-{'same' if same else 'next'}-{features[feature_idx]}-{given_season}-{slide_or_not}.png", dpi=300)
+        plt.close()
+
+
+
+        # plt.figure(figsize=(16,9))
+        # plt.plot(x_axis, draws_2, 'tab:orange', label='BRITS', marker='o')
+        # plt.title(f'Length of previous existing LTE50 vs Imputation MSE (next day) for feature = {features[feature_idx]}, year={given_season}', fontsize=20)
+        # plt.xticks(fontsize=16)
+        # plt.yticks(fontsize=16)
+        # plt.xlabel(f'Length of exisiting LTE50 values', fontsize=16)
+        # plt.ylabel(f'MSE', fontsize=16)
+        # plt.legend(fontsize=16)
+        # plt.savefig(f'{forward_folder}/plots/LTE50/L-vs-MSE-brits-next-{features[feature_idx]}-{given_season}-{slide_or_not}.png', dpi=300)
+        # plt.close()
 
 
 
@@ -749,7 +924,7 @@ def forward_prediction(forward_folder):
 ####################### Draw data plots #######################
 
 def do_data_plots(data_folder, missing_length, is_original=False):
-    print(f'Season array: {len(season_array)}')
+    # print(f'Season array: {len(season_array)}')
     filename = 'json/json_eval_3_LT'
     missing_num = missing_length
     if is_original:
@@ -759,6 +934,7 @@ def do_data_plots(data_folder, missing_length, is_original=False):
     for given_season in seasons.keys():
         season_idx = seasons[given_season]
         given_features = ['LTE50']#features
+        print(f"season: {given_season}")
         for given_feature in tqdm(given_features):
             fs = open(filename, 'w')
             X, Y = split_XY(season_df, max_length, season_array)
@@ -766,7 +942,7 @@ def do_data_plots(data_folder, missing_length, is_original=False):
             feature_idx = features.index(given_feature)
 
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-            print(f"feature: {given_feature}, season: {given_season}, season idx: {seasons[given_season]}, Original missing: {len(original_missing_indices)}")
+            # print(f"feature: {given_feature}, season: {given_season}, season idx: {seasons[given_season]}, Original missing: {len(original_missing_indices)}")
             
             if given_feature.split('_')[-1] not in feature_dependency.keys():
                 dependent_feature_ids = []
@@ -818,24 +994,33 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 
                 draw_data_plot(draws, features[feature_idx], given_season, folder=data_folder, is_original=is_original)
 
-                # graph_bar_diff_multi(draws['real'][row_indices], draws, f'Difference From Gorund Truth for {given_feature} in 2020-2021', np.arange(missing_num), 'Days', given_feature, '2020-2021', given_feature, missing=row_indices)
-
+                
 
 # eval_folder = 'eval_dir_LT/LT'
 # if not os.path.isdir(eval_folder):
 #     os.makedirs(eval_folder)
 # do_evaluation(eval_folder, 'cont', '2020-2021')
-data_plots_folder = 'data_plots_LT/LT'
-if not os.path.isdir(data_plots_folder):
-    os.makedirs(data_plots_folder)
-do_data_plots(data_plots_folder, 10, is_original=True)
-do_data_plots(data_plots_folder, 10, is_original=False)
+# data_plots_folder = 'data_plots_LT/LT'
+# if not os.path.isdir(data_plots_folder):
+#     os.makedirs(data_plots_folder)
+# do_data_plots(data_plots_folder, 10, is_original=True)
+# do_data_plots(data_plots_folder, 10, is_original=False)
 
-# forward_folder = 'forward_folder'
-# forward_prediction(forward_folder)
+forward_folder = 'forward_all_folder_lam_1'
+forward_prediction_LT_day(forward_folder)
+forward_prediction_LT_day(forward_folder, same=False)
+forward_prediction_LT_day(forward_folder, slide=False)
+forward_prediction_LT_day(forward_folder, slide=False, same=False)
 
 
+# data_plots_LT = f'{forward_folder}/data_plots'
 
+# if not os.path.isdir(data_plots_LT):
+#     os.makedirs(data_plots_LT)
 
+# diff_plots_LT = f'{forward_folder}/diffs'
 
+# if not os.path.isdir(diff_plots_LT):
+#     os.makedirs(diff_plots_LT)
 
+# forward_prediction_LT_day(forward_folder, data_folder=data_plots_LT, diff_folder=diff_plots_LT, slide=False)
