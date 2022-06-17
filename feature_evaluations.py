@@ -439,6 +439,7 @@ def train_evaluate_removed_features(mse_folder):
             fs.close()
 
             model = BRITS(RNN_HID_SIZE, IMPUTE_WEIGHT, LABEL_WEIGHT, len(curr_features))
+            model = model.to(device=device)
             model_path = f"{model_dir}/{feature}/"
             if not os.path.isdir(model_path):
                 os.makedirs(model_path)
@@ -463,6 +464,7 @@ def train_evaluate_removed_features(mse_folder):
                 'Transformer': {}
             }
             l_needed = []
+            model.eval()
             for season in seasons.keys():
                 print(f"For season: {season}")
                 season_idx = seasons[season]
