@@ -113,10 +113,10 @@ normalized_season_df = (normalized_season_df - mean) /std
 mice_impute = IterativeImputer(random_state=0, max_iter=20)
 mice_impute.fit(normalized_season_df[features].to_numpy())
 
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
 
-if os.path.exists('./model_BRITS_LT_lam.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS_LT_lam.model'))
+if os.path.exists('./model_BRITS_LT.model'):
+    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()

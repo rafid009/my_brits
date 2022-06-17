@@ -9,18 +9,19 @@ RNN_HID_SIZE = 64
 
 
 class BRITSModel(nn.Module):
-    def __init__(self, rnn_hid_size, impute_weight, label_weight):
+    def __init__(self, rnn_hid_size, impute_weight, label_weight, feature_len):
         super(BRITSModel, self).__init__()
 
         self.rnn_hid_size = rnn_hid_size
         self.impute_weight = impute_weight
         self.label_weight = label_weight
+        self.feature_len = feature_len
 
         self.build()
 
     def build(self):
-        self.rits_f = RITSModel(self.rnn_hid_size, self.impute_weight, self.label_weight)
-        self.rits_b = RITSModel(self.rnn_hid_size, self.impute_weight, self.label_weight)
+        self.rits_f = RITSModel(self.rnn_hid_size, self.impute_weight, self.label_weight, self.feature_len)
+        self.rits_b = RITSModel(self.rnn_hid_size, self.impute_weight, self.label_weight, self.feature_len)
 
     def forward(self, data):
         ret_f = self.rits_f(data, 'forward')

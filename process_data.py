@@ -3,54 +3,61 @@ import numpy as np
 
 # df = pd.read_csv('FrostMitigation_Merlot.csv')
 
-features = ['MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    'MIN_AT', # a
-    'AVG_AT', # average temp is AgWeather Network
-    'MAX_AT',  # a
-    'MIN_REL_HUMIDITY', # a
-    'AVG_REL_HUMIDITY', # a
-    'MAX_REL_HUMIDITY', # a
-    'MIN_DEWPT', # a
-    'AVG_DEWPT', # a
-    'MAX_DEWPT', # a
-    'P_INCHES', # precipitation # a
-    'WS_MPH',
-    'LTE50']
-
-# features = [
-#     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-#     'MIN_AT',
+# features = ['MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+#     'MIN_AT', # a
 #     'AVG_AT', # average temp is AgWeather Network
-#     'MAX_AT',
-#     'MIN_REL_HUMIDITY',
-#     'AVG_REL_HUMIDITY',
-#     'MAX_REL_HUMIDITY',
-#     'MIN_DEWPT',
-#     'AVG_DEWPT',
-#     'MAX_DEWPT',
-#     'P_INCHES', # precipitation
-#     'WS_MPH', # wind speed. if no sensor then value will be na
-#     'MAX_WS_MPH', 
-#     'LW_UNITY', # leaf wetness sensor
-#     'SR_WM2', # solar radiation # different from zengxian
-#     'MIN_ST8', # diff from zengxian
-#     'ST8', # soil temperature # diff from zengxian
-#     'MAX_ST8', # diff from zengxian
-#     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-#     'ETO', # evaporation of soil water lost to atmosphere
-#     'ETR', # ???
-#     'LTE50'
-# ]
+#     'MAX_AT',  # a
+#     'MIN_REL_HUMIDITY', # a
+#     'AVG_REL_HUMIDITY', # a
+#     'MAX_REL_HUMIDITY', # a
+#     'MIN_DEWPT', # a
+#     'AVG_DEWPT', # a
+#     'MAX_DEWPT', # a
+#     'P_INCHES', # precipitation # a
+#     'WS_MPH',
+#     'LTE50']
+
+features = [
+    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT',
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    'MIN_REL_HUMIDITY',
+    'AVG_REL_HUMIDITY',
+    'MAX_REL_HUMIDITY',
+    'MIN_DEWPT',
+    'AVG_DEWPT',
+    'MAX_DEWPT',
+    'P_INCHES', # precipitation
+    'WS_MPH', # wind speed. if no sensor then value will be na
+    'MAX_WS_MPH', 
+    'LW_UNITY', # leaf wetness sensor
+    'SR_WM2', # solar radiation # different from zengxian
+    'MIN_ST8', # diff from zengxian
+    'ST8', # soil temperature # diff from zengxian
+    'MAX_ST8', # diff from zengxian
+    #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    'ETO', # evaporation of soil water lost to atmosphere
+    'ETR', # ???
+    'LTE50'
+]
 label = ['LTE50']
 
 feature_dependency = {
   'AT': ['MEAN_AT', 'AVG_AT', 'MIN_AT', 'MAX_AT'],
   'HUMIDITY': ['MIN_REL_HUMIDITY', 'MAX_REL_HUMIDITY', 'AVG_REL_HUMIDITY'],
   'DEWPT': ['MIN_DEWPT', 'AVG_DEWPT', 'MAX_DEWPT'],
-  'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8']
+  'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8'],
+  'INCHES': [],
+  'MPH': ['WS_MPH', 'MAX_WS_MPH'], # wind speed. if no sensor then value will be na
+  'UNITY': [], # leaf wetness sensor
+  'WM2': [], # solar radiation # different from zengxian
+  'ETO': [], # evaporation of soil water lost to atmosphere
+  'ETR': [],
+  'LTE50': []
   }
 
-def preprocess_missing_values(df, is_dormant=True, is_year=False):
+def preprocess_missing_values(df, features, is_dormant=True, is_year=False):
   df['AVG_AT'].replace(-100, np.nan, inplace=True)
   df['MIN_AT'].replace(-100, np.nan, inplace=True)
   df['MAX_AT'].replace(-100, np.nan, inplace=True)
@@ -90,7 +97,7 @@ def preprocess_missing_values(df, is_dormant=True, is_year=False):
   return modified_df, dormant_seasons
 
 
-def get_seasons_data(modified_df, dormant_seasons, is_dormant=True, is_year=False):
+def get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True, is_year=False):
   seasons = []
   last_x = 0
   idx = -1
@@ -149,19 +156,6 @@ def get_seasons_data(modified_df, dormant_seasons, is_dormant=True, is_year=Fals
   #   season_df = pd.DataFrame(modified_df, copy=True)
   return season_df, seasons, season_max_length
 
-def get_non_null_LT(df):
-  # get all indexes where LT10 is not null
-#   idx_LT10_not_null = df[df['LT10'].notnull()].index.tolist()
-  try:
-    idx_LT50_not_null = df[df['LT50'].notnull()].index.tolist()
-  except KeyError:
-    idx_LT50_not_null = df[df['LTE50'].notnull()].index.tolist()
-#   idx_LT90_not_null = df[df['LT90'].notnull()].index.tolist()
-
-  idx_LT_not_null = set(idx_LT50_not_null) #& set(idx_LT90_not_null) # intersection where LT10, LT50, LT90 are not null
-  idx_LT_not_null = sorted(idx_LT_not_null)
-
-  return idx_LT_not_null
 
 def get_season_idx(season_array, index):
   for season_idx in range(len(season_array)):
@@ -184,7 +178,7 @@ def get_train_idx(season_array, idx_LT_not_null):
 
   return timeseries_idx_train
 
-def split_XY(df, max_season_len, seasons):#, x_mean, x_std):
+def split_XY(df, max_season_len, seasons, features):#, x_mean, x_std):
     X = []
     Y = []
     
@@ -212,7 +206,7 @@ def split_XY(df, max_season_len, seasons):#, x_mean, x_std):
     
     return X, Y
 
-def create_xy(df, timeseries_idx, max_length):
+def create_xy(df, timeseries_idx, max_length, features):
     x = []
     y = []
     actual_seq_lenghts = []

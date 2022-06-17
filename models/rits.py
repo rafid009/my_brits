@@ -101,25 +101,26 @@ class TemporalDecay(nn.Module):
         return gamma
 
 class RITSModel(nn.Module):
-    def __init__(self, rnn_hid_size, impute_weight, label_weight):
+    def __init__(self, rnn_hid_size, impute_weight, label_weight, feature_len=feature_len):
         super(RITSModel, self).__init__()
 
         self.rnn_hid_size = rnn_hid_size
         self.impute_weight = impute_weight
         self.label_weight = label_weight
+        self.feature_len = feature_len
 
         self.build()
 
     def build(self):
-        self.rnn_cell = nn.LSTMCell(feature_len * 2, self.rnn_hid_size)
+        self.rnn_cell = nn.LSTMCell(self.feature_len * 2, self.rnn_hid_size)
 
-        self.temp_decay_h = TemporalDecay(input_size = feature_len, output_size = self.rnn_hid_size, diag = False)
-        self.temp_decay_x = TemporalDecay(input_size = feature_len, output_size = feature_len, diag = True)
+        self.temp_decay_h = TemporalDecay(input_size = self.feature_len, output_size = self.rnn_hid_size, diag = False)
+        self.temp_decay_x = TemporalDecay(input_size = self.feature_len, output_size = self.feature_len, diag = True)
 
-        self.hist_reg = nn.Linear(self.rnn_hid_size, feature_len)
-        self.feat_reg = FeatureRegression(feature_len)
+        self.hist_reg = nn.Linear(self.rnn_hid_size, self.feature_len)
+        self.feat_reg = FeatureRegression(self.feature_len)
 
-        self.weight_combine = nn.Linear(feature_len * 2, feature_len)
+        self.weight_combine = nn.Linear(self.feature_len * 2, self.feature_len)
 
         self.dropout = nn.Dropout(p = 0.25)
         self.out = nn.Linear(self.rnn_hid_size, SEQ_LEN)

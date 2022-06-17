@@ -1,11 +1,7 @@
 import copy
 import os
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
-
 import numpy as np
 
 import time
@@ -15,26 +11,18 @@ from models.brits_i import BRITSModel as BRITS_I
 import data_loader
 from tqdm import tqdm
 
-batch_size = 16
-n_epochs = 4000
 
-# BRITS_I
-RNN_HID_SIZE = 64
-IMPUTE_WEIGHT = 0.5
-LABEL_WEIGHT = 1
-
-model_name = 'BRITS'
-model_path_name = 'BRITS'
-model_path = 'model_'+model_path_name+'_LT_lam_1.model'
-
-def train(model, data_file='./json/json_LT'):
+def train(model, n_epochs, batch_size, model_path, data_file='./json/json_LT'):
     start = time.time()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     data_iter = data_loader.get_loader(batch_size=batch_size, filename=data_file)
-
+    pre_mse = 9999999
+    count_diverge = 0
     for epoch in range(n_epochs):
         model.train()
+        if count_diverge > 3:
+            break
         with tqdm(data_iter, unit='batch') as tepoch:
             run_loss = 0.0
             tepoch.set_description(f"Epoch {epoch+1}/{n_epochs} [T]")
@@ -48,11 +36,16 @@ def train(model, data_file='./json/json_LT'):
                 # print('\r Progress epoch {}, {:.2f}%, average loss {}'.format(epoch, (idx + 1) * 100.0 / len(data_iter), run_loss / (idx + 1.0)))
 
             mse = evaluate(model, data_iter)
+            if pre_mse < mse:
+                count_diverge += 1
+            else:
+                count_diverge = 0
             tepoch.set_postfix(MSE=mse)
-        if (epoch + 1) % 100 == 0:
+        if (epoch + 1) % 100 == 0 and count_diverge == 0:
             torch.save(model.state_dict(), model_path)
     end = time.time()
     print(f"time taken for training: {end-start}s")
+    return model
 
 def evaluate(model, val_iter):
     model.eval()
@@ -90,8 +83,19 @@ def evaluate(model, val_iter):
 
 
 if __name__ == "__main__":
+    batch_size = 16
+    n_epochs = 4000
+
+    # BRITS_I
+    RNN_HID_SIZE = 64
+    IMPUTE_WEIGHT = 0.5
+    LABEL_WEIGHT = 1
+    model_name = 'BRITS'
+    model_path_name = 'BRITS'
+    model_path = 'model_'+model_path_name+'_LT.model'
+    n_features = 21
     if model_name == 'BRITS':
-        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
     else:
         model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
     if os.path.exists(model_path):
@@ -100,7 +104,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         model = model.cuda()
 
-    train(model)
+    train(model, n_epochs, batch_size, model_path)
 
 
 
