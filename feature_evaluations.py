@@ -450,8 +450,8 @@ def train_evaluate_removed_features(mse_folder):
             train(model, n_epochs, batch_size, model_path, filename)
 
             test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-            test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True)
-            season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True)
+            test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, curr_features, is_dormant=True)
+            season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, curr_features, is_dormant=True)
 
             result_mse_plots = {
                 'BRITS': [],
