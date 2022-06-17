@@ -523,13 +523,14 @@ def train_evaluate_removed_features(mse_folder):
                     result_mse_plots['BRITS'].append(brits_mse/total_count)
 
                 result_df = pd.DataFrame(results)
-                mse_folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results/'
+                mse_folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results'
                 if not os.path.isdir(mse_folder):
                     os.makedirs(mse_folder)
                 result_df.to_csv(f'{mse_folder}/results-mse-{season}.csv')
                 
-                if not os.path.isdir(f'{mse_folder}/plots/'):
-                    os.makedirs(f'{mse_folder}/plots/')
+                plots_folder = f'{mse_folder}/plots'
+                if not os.path.isdir(plots_folder):
+                    os.makedirs(plots_folder)
   
                 plt.figure(figsize=(16,9))
                 plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
@@ -539,7 +540,7 @@ def train_evaluate_removed_features(mse_folder):
                 plt.xlabel(f'Length of contiguous missing values', fontsize=20)
                 plt.ylabel(f'MSE', fontsize=20)
                 plt.legend()
-                plt.savefig(f'{mse_folder}/plots/L-vs-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
+                plt.savefig(f'{plots_folder}/L-vs-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
                 plt.close()
 
 
