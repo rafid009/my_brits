@@ -469,7 +469,7 @@ def train_evaluate_removed_features(mse_folder):
                 print(f"For season: {season}")
                 season_idx = seasons[season]
                 feature_idx = curr_features.index(feature)
-                X, Y = split_XY(season_df, max_length, season_array)
+                X, Y = split_XY(season_df, max_length, season_array, curr_features)
                 # print(f'X: {X.shape}, Y: {Y.shape}')
                 original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
 
