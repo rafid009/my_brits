@@ -409,8 +409,8 @@ def train_evaluate_removed_features(mse_folder):
         'ETR', # ???
         'LTE50'
     ]
-
-    for feature in feature_set:
+    eval_feats = ['LTE50']
+    for feature in eval_feats:
         to_remove = [f for f in features_to_remove if f != feature]
         to_remove.append('all')
         print(f"For feature={feature}")
