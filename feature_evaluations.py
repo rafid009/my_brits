@@ -419,8 +419,8 @@ def train_evaluate_removed_features(mse_folder):
                 dependent_feature_removes = []
             else:
                 dependent_feature_removes = [f for f in feature_dependency[r_feat.split('_')[-1]]]
-            curr_features = [f for f in feature_set if len(dependent_feature_removes) > 0 and f not in dependent_feature_removes]
-            print(f"current feature length: {len(curr_features)}")
+            curr_features = [f for f in feature_set if f not in dependent_feature_removes]
+            print(f"For removed: {r_feat}, current feature length: {len(curr_features)}")
             df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
             modified_df, dormant_seasons = preprocess_missing_values(df, curr_features, is_dormant=True)
             season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, curr_features, is_dormant=True)
