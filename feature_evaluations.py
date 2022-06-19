@@ -480,8 +480,6 @@ def train_evaluate_removed_features(mse_folder):
                     
                     total_count = 0
                     brits_mse = 0
-                    mice_mse = 0
-                    transformer_mse = 0
                     # iter = 1
                     for i in tqdm(range(iter)):
                         real_values = []
@@ -518,7 +516,7 @@ def train_evaluate_removed_features(mse_folder):
                         brits_mse += ((real_values - imputed_brits) ** 2).mean()
                         total_count += 1
                     l_needed.append(l)
-                    print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
+                    print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}")#\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
 
                     results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
 
