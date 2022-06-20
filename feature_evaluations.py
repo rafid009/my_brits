@@ -515,6 +515,8 @@ def train_evaluate_removed_features(mse_folder):
 
                         brits_mse += ((real_values - imputed_brits) ** 2).mean()
                         total_count += 1
+                    if total_count == 0:
+                        continue
                     l_needed.append(l)
                     print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}")#\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
 
