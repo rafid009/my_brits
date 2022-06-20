@@ -367,7 +367,8 @@ def train_evaluate_removed_features(mse_folder):
     batch_size = 16
     model_dir = './saved_models_greedy/'
 
-    L = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    # L = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    L = [i for i in range(1, 30, 2)]
 
     filename = 'json/json_eval_2'
     feature_set = [
