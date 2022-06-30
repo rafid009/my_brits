@@ -307,6 +307,89 @@ def parse_id(fs, x, y, mean, std, feature_impute_idx, length, features, trial_nu
     fs.write(rec + '\n')
     return indices
 
+def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, features, trial_num=-1, all=False, same=True):
+
+    idx_temp = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+    print(f"idx1: {idx_temp}")
+    print(f"existing LT: {existing_LT}")
+    idx1 = idx_temp * len(features) + feature_impute_idx
+
+    indices = idx1.tolist()
+
+    if trial_num != -1:
+        start_idx = indices[(trial_num + existing_LT + 1)] #np.random.choice(indices, 1)
+    else:
+        start_idx = indices[(existing_LT + 1)]
+    print(f"indices: {indices}")
+    start = indices.index(start_idx)
+    end = len(indices)
+    print(f"start: {start}, end: {end}")
+    indices = np.array(indices)[start:end]
+
+    # global real_values
+    # real_values = evals[indices]
+    if all:
+        print(f"x: {x.shape}")
+        x_copy = x.copy()
+
+        features_to_nan = [features.index(f) for f in features if features.index(f) != feature_impute_idx]
+        print(f'features: {features_to_nan}\nstart: {start_idx}')
+        # for i in inv_indices:
+        if trial_num != 0 and trial_num != -1:
+            x_copy[:idx_temp[trial_num], feature_impute_idx] = np.nan
+        features_to_nan
+        if trial_num != -1:
+            if same:
+                x_copy[(idx_temp[trial_num + existing_LT + 1] + 1):, features_to_nan] = np.nan
+            else:
+                x_copy[idx_temp[trial_num + existing_LT + 1]:, features_to_nan] = np.nan
+        else:
+            if same:
+                x_copy[(idx_temp[existing_LT + 1] + 1):, features_to_nan] = np.nan
+            else:
+                x_copy[idx_temp[existing_LT + 1], features_to_nan] = np.nan
+        if trial_num != -1:
+            print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
+        else:
+            print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
+        evals = x_copy
+    else:
+        evals = x
+
+    evals = (evals - mean) / std
+    print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
+    # print('eval: ', evals)
+    # print('eval shape: ', evals.shape)
+    shp = evals.shape
+    evals = evals.reshape(-1)
+
+    values = evals.copy()
+    if indices is not None:
+        values[indices] = np.nan
+    
+    masks = ~np.isnan(values)
+
+    eval_masks = (~np.isnan(values)) ^ (~np.isnan(evals))
+
+    evals = evals.reshape(shp)
+    values = values.reshape(shp)
+    print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
+    masks = masks.reshape(shp)
+    eval_masks = eval_masks.reshape(shp)
+    label = y.tolist() #out.loc[int(id_)]
+    # print(f'rec y: {list(y)}')
+    rec = {'label': label}
+
+    # prepare the model for both directions
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+
+    rec = json.dumps(rec)
+
+    fs.write(rec + '\n')
+    return indices
+
+
 def train_parse_id(x, y, fs, mean, std, features):
     # data = pd.read_csv('./raw/{}.txt'.format(id_))
     # accumulate the records within one hour
@@ -359,7 +442,7 @@ def train_parse_id(x, y, fs, mean, std, features):
 
 
 
-def train_evaluate_removed_features(mse_folder):
+def train_evaluate_removed_features(mse_folder, forward=False):
     RNN_HID_SIZE = 64
     IMPUTE_WEIGHT = 0.5
     LABEL_WEIGHT = 1
@@ -473,10 +556,13 @@ def train_evaluate_removed_features(mse_folder):
                 X, Y = split_XY(season_df, max_length, season_array, curr_features)
                 # print(f'X: {X.shape}, Y: {Y.shape}')
                 original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-
+                non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
+                L = [i for i in range(len(non_missing_indices)-1)]
                 for l in L:
-                    
-                    iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
+                    if forward:
+                        iter = len(non_missing_indices)-l-1
+                    else:
+                        iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
                     print(f"For length = {l}")
                     
                     total_count = 0
@@ -493,7 +579,11 @@ def train_evaluate_removed_features(mse_folder):
                         else:
                             dependent_feature_ids = [curr_features.index(f) for f in feature_dependency[feature.split('_')[-1]] if f != feature]
                         
-                        missing_indices = parse_id(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, dependent_features=dependent_feature_ids)
+                        if forward:
+                            missing_indices = forward_parse_id_day(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, all=True, same=True)
+                        else:
+                            missing_indices = parse_id(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, dependent_features=dependent_feature_ids)
+                        
                         fs.close()
 
                         if len(missing_indices) == 0:
@@ -514,7 +604,10 @@ def train_evaluate_removed_features(mse_folder):
 
                             real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
 
-                        brits_mse += ((real_values - imputed_brits) ** 2).mean()
+                        if forward:
+                            brits_mse += ((real_values[0] - imputed_brits[0]) ** 2)
+                        else:
+                            brits_mse += ((real_values - imputed_brits) ** 2).mean()
                         total_count += 1
                     if total_count == 0:
                         continue
@@ -526,10 +619,10 @@ def train_evaluate_removed_features(mse_folder):
                     result_mse_plots['BRITS'].append(brits_mse/total_count)
 
                 result_df = pd.DataFrame(results)
-                mse_folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results'
-                if not os.path.isdir(mse_folder):
-                    os.makedirs(mse_folder)
-                result_df.to_csv(f'{mse_folder}/results-mse-{season}.csv')
+                folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results'
+                if not os.path.isdir(folder):
+                    os.makedirs(folder)
+                result_df.to_csv(f'{folder}/results-mse-{season}.csv')
                 
                 plots_folder = f'{mse_folder}/plots'
                 if not os.path.isdir(plots_folder):
@@ -537,17 +630,26 @@ def train_evaluate_removed_features(mse_folder):
   
                 plt.figure(figsize=(16,9))
                 plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-                plt.title(f'Length of missing values vs Imputation MSE for feature = {feature}, year={season}', fontsize=20)
+                if forward:
+                    plt.title(f'Length of existing values vs Imputation MSE for feature = {feature}, year={season}', fontsize=20)
+                else:
+                    plt.title(f'Length of missing values vs Imputation MSE for feature = {feature}, year={season}', fontsize=20)
                 plt.xticks(fontsize=20)
                 plt.yticks(fontsize=20)
-                plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+                if forward:
+                    plt.xlabel(f'Length of existing observed values', fontsize=20)
+                else:
+                    plt.xlabel(f'Length of contiguous missing values', fontsize=20)
                 plt.ylabel(f'MSE', fontsize=20)
                 plt.legend()
-                plt.savefig(f'{plots_folder}/L-vs-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
+                if forward:
+                    plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
+                else:
+                    plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
                 plt.close()
 
 
 
 if __name__ == "__main__":
-    mse_folder = "MSE_PLOTS_greedy"
-    train_evaluate_removed_features(mse_folder)
+    mse_folder = "MSE_PLOTS_forward_remove"
+    train_evaluate_removed_features(mse_folder, forward=True)
