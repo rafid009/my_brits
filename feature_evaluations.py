@@ -348,16 +348,16 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, f
                 x_copy[(idx_temp[existing_LT + 1] + 1):, features_to_nan] = np.nan
             else:
                 x_copy[idx_temp[existing_LT + 1], features_to_nan] = np.nan
-        if trial_num != -1:
-            print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
-        else:
-            print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
+        # if trial_num != -1:
+        #     print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
+        # else:
+        #     print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
         evals = x_copy
     else:
         evals = x
 
     evals = (evals - mean) / std
-    print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
+    # print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
     # print('eval: ', evals)
     # print('eval shape: ', evals.shape)
     shp = evals.shape
@@ -373,7 +373,7 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, f
 
     evals = evals.reshape(shp)
     values = values.reshape(shp)
-    print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
+    # print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
     masks = masks.reshape(shp)
     eval_masks = eval_masks.reshape(shp)
     label = y.tolist() #out.loc[int(id_)]
@@ -381,8 +381,8 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, f
     rec = {'label': label}
 
     # prepare the model for both directions
-    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
-    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward', features=features)
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward', features=features)
 
     rec = json.dumps(rec)
 
