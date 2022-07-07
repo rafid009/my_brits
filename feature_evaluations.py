@@ -446,7 +446,7 @@ def train_evaluate_removed_features(mse_folder, forward=False):
     RNN_HID_SIZE = 64
     IMPUTE_WEIGHT = 0.5
     LABEL_WEIGHT = 1
-    n_epochs = 4000
+    n_epochs = 4200
     batch_size = 16
     model_dir = './saved_models_greedy/'
 
@@ -454,30 +454,44 @@ def train_evaluate_removed_features(mse_folder, forward=False):
     L = [i for i in range(1, 30, 2)]
 
     filename = 'json/json_eval_2'
-    feature_set = [
-        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-        'MIN_AT',
-        'AVG_AT', # average temp is AgWeather Network
-        'MAX_AT',
-        'MIN_REL_HUMIDITY',
-        'AVG_REL_HUMIDITY',
-        'MAX_REL_HUMIDITY',
-        'MIN_DEWPT',
-        'AVG_DEWPT',
-        'MAX_DEWPT',
-        'P_INCHES', # precipitation
-        'WS_MPH', # wind speed. if no sensor then value will be na
-        'MAX_WS_MPH', 
-        'LW_UNITY', # leaf wetness sensor
-        'SR_WM2', # solar radiation # different from zengxian
-        'MIN_ST8', # diff from zengxian
-        'ST8', # soil temperature # diff from zengxian
-        'MAX_ST8', # diff from zengxian
-        #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        'ETO', # evaporation of soil water lost to atmosphere
-        'ETR', # ???
-        'LTE50'
-    ]
+    # feature_set = [
+    #     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    #     'MIN_AT',
+    #     'AVG_AT', # average temp is AgWeather Network
+    #     'MAX_AT',
+    #     'MIN_REL_HUMIDITY',
+    #     'AVG_REL_HUMIDITY',
+    #     'MAX_REL_HUMIDITY',
+    #     'MIN_DEWPT',
+    #     'AVG_DEWPT',
+    #     'MAX_DEWPT',
+    #     'P_INCHES', # precipitation
+    #     'WS_MPH', # wind speed. if no sensor then value will be na
+    #     'MAX_WS_MPH', 
+    #     'LW_UNITY', # leaf wetness sensor
+    #     'SR_WM2', # solar radiation # different from zengxian
+    #     'MIN_ST8', # diff from zengxian
+    #     'ST8', # soil temperature # diff from zengxian
+    #     'MAX_ST8', # diff from zengxian
+    #     #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    #     'ETO', # evaporation of soil water lost to atmosphere
+    #     'ETR', # ???
+    #     'LTE50'
+    # ]
+
+    feature_set = ['MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT', # a
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',  # a
+    'MIN_REL_HUMIDITY', # a
+    'AVG_REL_HUMIDITY', # a
+    'MAX_REL_HUMIDITY', # a
+    'MIN_DEWPT', # a
+    'AVG_DEWPT', # a
+    'MAX_DEWPT', # a
+    'P_INCHES', # precipitation # a
+    'WS_MPH',
+    'LTE50']
 
     features_to_remove = [
         'MEAN_AT',
@@ -485,13 +499,13 @@ def train_evaluate_removed_features(mse_folder, forward=False):
         'MIN_DEWPT',
         'P_INCHES', # precipitation
         'WS_MPH', # wind speed. if no sensor then value will be na
-        'LW_UNITY', # leaf wetness sensor
-        'SR_WM2', # solar radiation # different from zengxian
-        'ST8', # soil temperature # diff from zengxian
+        # 'LW_UNITY', # leaf wetness sensor
+        # 'SR_WM2', # solar radiation # different from zengxian
+        # 'ST8', # soil temperature # diff from zengxian
         #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        'ETO', # evaporation of soil water lost to atmosphere
-        'ETR', # ???
-        'LTE50'
+        # 'ETO', # evaporation of soil water lost to atmosphere
+        # 'ETR', # ???
+        # 'LTE50'
     ]
     eval_feats = ['LTE50']
     for feature in eval_feats:
@@ -524,7 +538,7 @@ def train_evaluate_removed_features(mse_folder, forward=False):
 
             model = BRITS(RNN_HID_SIZE, IMPUTE_WEIGHT, LABEL_WEIGHT, len(curr_features))
             model = model.to(device=device)
-            model_path = f"{model_dir}/{feature}/"
+            model_path = f"{model_dir}/{r_feat}/"
             if not os.path.isdir(model_path):
                 os.makedirs(model_path)
             model_file_names = ''
@@ -536,20 +550,20 @@ def train_evaluate_removed_features(mse_folder, forward=False):
             test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
             test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, curr_features, is_dormant=True)
             season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, curr_features, is_dormant=True)
-
-            result_mse_plots = {
-                'BRITS': [],
-                'MICE': [],
-                'Transformer': []
-            }
-            results = {
-                'BRITS': {},
-                'MICE': {},
-                'Transformer': {}
-            }
-            l_needed = []
+            
             model.eval()
             for season in seasons.keys():
+                result_mse_plots = {
+                    'BRITS': [],
+                    'MICE': [],
+                    'Transformer': []
+                }
+                results = {
+                    'BRITS': {},
+                    'MICE': {},
+                    'Transformer': {}
+                }
+                l_needed = []
                 print(f"For season: {season}")
                 season_idx = seasons[season]
                 feature_idx = curr_features.index(feature)
@@ -624,7 +638,7 @@ def train_evaluate_removed_features(mse_folder, forward=False):
                     os.makedirs(folder)
                 result_df.to_csv(f'{folder}/results-mse-{season}.csv')
                 
-                plots_folder = f'{mse_folder}/plots'
+                plots_folder = f'{folder}/plots'
                 if not os.path.isdir(plots_folder):
                     os.makedirs(plots_folder)
   
@@ -643,13 +657,13 @@ def train_evaluate_removed_features(mse_folder, forward=False):
                 plt.ylabel(f'MSE', fontsize=20)
                 plt.legend()
                 if forward:
-                    plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
+                    plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{r_feat}-{season}.png', dpi=300)
                 else:
-                    plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-{season}.png', dpi=300)
+                    plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{r_feat}-{season}.png', dpi=300)
                 plt.close()
 
 
 
 if __name__ == "__main__":
-    mse_folder = "MSE_PLOTS_forward_remove"
+    mse_folder = "MSE_PLOTS_forward_remove_13"
     train_evaluate_removed_features(mse_folder, forward=True)

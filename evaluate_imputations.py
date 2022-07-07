@@ -98,8 +98,8 @@ std = []
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#False, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 train_season_df = season_df.drop(season_array[-1], axis=0)
 train_season_df = train_season_df.drop(season_array[-2], axis=0)
 
@@ -108,10 +108,10 @@ mean, std = get_mean_std(train_season_df, features)
 
 ############## Load Models ##############
 
-normalized_season_df = train_season_df[features].copy()
-normalized_season_df = (normalized_season_df - mean) /std
-mice_impute = IterativeImputer(random_state=0, max_iter=20)
-mice_impute.fit(normalized_season_df[features].to_numpy())
+# normalized_season_df = train_season_df[features].copy()
+# normalized_season_df = (normalized_season_df - mean) /std
+# mice_impute = IterativeImputer(random_state=0, max_iter=20)
+# mice_impute.fit(normalized_season_df[features].to_numpy())
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
 
@@ -401,9 +401,9 @@ given_features = [
 ]
 
 test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, is_dormant=True)#, is_year=True)
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
-season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, is_dormant=True)#, is_year=True)
+season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
 
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
@@ -455,7 +455,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids)
                 fs.close()
                 if len(missing_indices) == 0:
-                    print(f"0 missing added")
+                    # print(f"0 missing added")
                     continue
                 # print(f"i: {i}\nmissing indices: {missing_indices}")
                 val_iter = data_loader.get_loader(batch_size=1, filename=filename)
@@ -725,8 +725,8 @@ def forward_prediction(forward_folder):
 def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1, all=False, same=True):
 
     idx_temp = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
-    print(f"idx1: {idx_temp}")
-    print(f"existing LT: {existing_LT}")
+    # print(f"idx1: {idx_temp}")
+    # print(f"existing LT: {existing_LT}")
     idx1 = idx_temp * len(features) + feature_impute_idx
 
     indices = idx1.tolist()
@@ -735,22 +735,22 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
         start_idx = indices[(trial_num + existing_LT + 1)] #np.random.choice(indices, 1)
     else:
         start_idx = indices[(existing_LT + 1)]
-    print(f"indices: {indices}")
+    # print(f"indices: {indices}")
     start = indices.index(start_idx)
     end = len(indices)
-    print(f"start: {start}, end: {end}")
+    # print(f"start: {start}, end: {end}")
     indices = np.array(indices)[start:end]
 
     # global real_values
     # real_values = evals[indices]
     if all:
-        print(f"x: {x.shape}")
+        # print(f"x: {x.shape}")
         x_copy = x.copy()
         # inv_indices = (indices - feature_impute_idx)//len(features)
         # if length > 1:
         # print('inv: ', inv_indices)
-        features_to_nan = [features.index(f) for f in features if features.index(f) != feature_impute_idx]
-        print(f'features: {features_to_nan}\nstart: {start_idx}')
+        features_to_nan = [features.index(f) for f in features if features.index(f) != feature_impute_idx and f != 'SEASON_JDAY']
+        # print(f'features: {features_to_nan}\nstart: {start_idx}')
         # for i in inv_indices:
         if trial_num != 0 and trial_num != -1:
             x_copy[:idx_temp[trial_num], feature_impute_idx] = np.nan
@@ -765,16 +765,16 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
                 x_copy[(idx_temp[existing_LT + 1] + 1):, features_to_nan] = np.nan
             else:
                 x_copy[idx_temp[existing_LT + 1], features_to_nan] = np.nan
-        if trial_num != -1:
-            print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
-        else:
-            print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
+        # if trial_num != -1:
+        #     print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
+        # else:
+        #     print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
         evals = x_copy
     else:
         evals = x
 
     evals = (evals - mean) / std
-    print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
+    # print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
     # print('eval: ', evals)
     # print('eval shape: ', evals.shape)
     shp = evals.shape
@@ -790,7 +790,7 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
 
     evals = evals.reshape(shp)
     values = values.reshape(shp)
-    print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
+    # print(f"values: {values[~np.isnan(values[:, feature_impute_idx]), feature_impute_idx]}")
     masks = masks.reshape(shp)
     eval_masks = eval_masks.reshape(shp)
     label = y.tolist() #out.loc[int(id_)]
@@ -812,7 +812,7 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
 def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder=None, diff_folder=None):
     filename = 'json/json_eval_forward_LT'
     feature_idx = features.index('LTE50')
-    X, Y = split_XY(season_df, max_length, season_array)
+    X, Y = split_XY(season_df, max_length, season_array, features)
     season_names = ['2020-2021', '2021-2022']
     for given_season in season_names:
         season_idx = seasons[given_season]
@@ -822,14 +822,15 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
         draw_data = {}
         # draws_2 = []
         x_axis = []
+        season_mse = []
         print(f"\n\nseason: {given_season}")
         for i in range(len(non_missing_indices)-1):
-            print(f"i = {i}")
+            # print(f"i = {i}")
             mse_1 = 0
             # mse_2 = 0
             trial_count = 0
             if slide:
-                num_trials = len(non_missing_indices)-i-1
+                num_trials = len(non_missing_indices)-i-3
             else:
                 num_trials = 1
             for trial in tqdm(range(num_trials)):
@@ -852,8 +853,9 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                     imputation_brits = np.squeeze(imputation_brits)
                     imputed_brits = imputation_brits[row_indices, feature_idx]
                     real_values = eval_[row_indices, feature_idx]
-                    print(f"same_mse: {((real_values[0] - imputed_brits[0]) ** 2)}")
+                    # print(f"same_mse: {((real_values[0] - imputed_brits[0]) ** 2)}")
                     mse_1 += ((real_values[0] - imputed_brits[0]) ** 2)
+                    season_mse.append(((real_values[0] - imputed_brits[0]) ** 2))
                     # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
                     trial_count += 1
 
@@ -883,24 +885,25 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
             draws_1.append(mse_1)
             # draws_2.append(mse_2)
             x_axis.append(i+1)
+        print(f"For season = {given_season}, mse = {np.array(season_mse).mean()}")
 
 
-        if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
-            os.makedirs(f'{forward_folder}/plots/LTE50/')
+        # if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
+        #     os.makedirs(f'{forward_folder}/plots/LTE50/')
 
-        slide_or_not = 'slide'
-        if not slide:
-            slide_or_not = 'non-slide'
-        plt.figure(figsize=(16,9))
-        plt.plot(x_axis, draws_1, 'tab:orange', label='BRITS', marker='o')
-        plt.title(f"Length of previous existing LTE50 vs Imputation MSE ({'same' if same else 'next'} day) for feature = {features[feature_idx]}, year={given_season}", fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of exisiting LTE50 values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend(fontsize=16)
-        plt.savefig(f"{forward_folder}/plots/LTE50/L-vs-MSE-brits-{'same' if same else 'next'}-{features[feature_idx]}-{given_season}-{slide_or_not}.png", dpi=300)
-        plt.close()
+        # slide_or_not = 'slide'
+        # if not slide:
+        #     slide_or_not = 'non-slide'
+        # plt.figure(figsize=(16,9))
+        # plt.plot(x_axis, draws_1, 'tab:orange', label='BRITS', marker='o')
+        # plt.title(f"Length of previous existing LTE50 vs Imputation MSE ({'same' if same else 'next'} day) for feature = {features[feature_idx]}, year={given_season}", fontsize=20)
+        # plt.xticks(fontsize=16)
+        # plt.yticks(fontsize=16)
+        # plt.xlabel(f'Length of exisiting LTE50 values', fontsize=16)
+        # plt.ylabel(f'MSE', fontsize=16)
+        # plt.legend(fontsize=16)
+        # plt.savefig(f"{forward_folder}/plots/LTE50/L-vs-MSE-brits-{'same' if same else 'next'}-{features[feature_idx]}-{given_season}-{slide_or_not}.png", dpi=300)
+        # plt.close()
 
 
 
@@ -1006,11 +1009,11 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # do_data_plots(data_plots_folder, 10, is_original=True)
 # do_data_plots(data_plots_folder, 10, is_original=False)
 
-forward_folder = 'forward_all_folder_lam_1'
-forward_prediction_LT_day(forward_folder)
-forward_prediction_LT_day(forward_folder, same=False)
+forward_folder = 'forward_all_folder_JDAY'
 forward_prediction_LT_day(forward_folder, slide=False)
-forward_prediction_LT_day(forward_folder, slide=False, same=False)
+# forward_prediction_LT_day(forward_folder, same=False)
+# forward_prediction_LT_day(forward_folder, slide=False)
+# forward_prediction_LT_day(forward_folder, slide=False, same=False)
 
 
 # data_plots_LT = f'{forward_folder}/data_plots'

@@ -13,7 +13,7 @@ attributes = features
 folder = './json/'
 if not os.path.exists(folder):
     os.makedirs(folder)
-fs = open(folder+'json_LT', 'w')
+fs = open(folder+'json_without_LT', 'w')
 
 # def to_time_bin(x):
 #     h, m = map(int, x.split(':'))
@@ -118,11 +118,11 @@ def parse_id(x, y):
 
 
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#False, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 # idx_LT_not_null = get_non_null_LT(season_df)
 # train_idx = get_train_idx(season_array, idx_LT_not_null)
-X, Y = split_XY(season_df, max_length, season_array)
+X, Y = split_XY(season_df, max_length, season_array, features)
 print(f"X: {X.shape}")
 X = X[:-2]
 Y = Y[:-2]
@@ -141,7 +141,7 @@ std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
 np.save('mean.npy', mean)
 np.save('std.npy', std)
 
-for i in range(X.shape[0] - 1):
+for i in range(X.shape[0]):
     parse_id(X[i], Y[i])
 
 fs.close()
