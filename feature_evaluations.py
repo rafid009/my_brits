@@ -952,5 +952,5 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
 
 
 if __name__ == "__main__":
-    mse_folder = "MSE_PLOTS_forward_remove_13"
-    train_evaluate_removed_features(mse_folder, forward=True)
+    mse_folder = "MSE_PLOTS_forward_increase_13"
+    train_evaluate_increasing_features(mse_folder, forward=True)
