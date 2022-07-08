@@ -662,6 +662,293 @@ def train_evaluate_removed_features(mse_folder, forward=False):
                     plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{r_feat}-{season}.png', dpi=300)
                 plt.close()
 
+def train_evaluate_increasing_features(mse_plot_folder, forward=True):
+    RNN_HID_SIZE = 64
+    IMPUTE_WEIGHT = 0.5
+    LABEL_WEIGHT = 1
+    n_epochs = 4200
+    batch_size = 16
+    model_dir = './saved_models_greedy/'
+
+    # L = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    L = [i for i in range(1, 30, 2)]
+
+    filename = 'json/json_eval_2'
+    # all_feature_set = [
+    #     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    #     'MIN_AT',
+    #     'AVG_AT', # average temp is AgWeather Network
+    #     'MAX_AT',
+    #     'MIN_REL_HUMIDITY',
+    #     'AVG_REL_HUMIDITY',
+    #     'MAX_REL_HUMIDITY',
+    #     'MIN_DEWPT',
+    #     'AVG_DEWPT',
+    #     'MAX_DEWPT',
+    #     'P_INCHES', # precipitation
+    #     'WS_MPH', # wind speed. if no sensor then value will be na
+    #     'MAX_WS_MPH', 
+    #     'LW_UNITY', # leaf wetness sensor
+    #     'SR_WM2', # solar radiation # different from zengxian
+    #     'MIN_ST8', # diff from zengxian
+    #     'ST8', # soil temperature # diff from zengxian
+    #     'MAX_ST8', # diff from zengxian
+    #     #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    #     'ETO', # evaporation of soil water lost to atmosphere
+    #     'ETR', # ???
+    #     'LTE50'
+    # ]
+
+    # all_feature_set = ['MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    # 'MIN_AT', # a
+    # 'AVG_AT', # average temp is AgWeather Network
+    # 'MAX_AT',  # a
+    # 'MIN_REL_HUMIDITY', # a
+    # 'AVG_REL_HUMIDITY', # a
+    # 'MAX_REL_HUMIDITY', # a
+    # 'MIN_DEWPT', # a
+    # 'AVG_DEWPT', # a
+    # 'MAX_DEWPT', # a
+    # 'P_INCHES', # precipitation # a
+    # 'WS_MPH',
+    # 'LTE50']
+
+    feature_combinations = {
+        'hum': [
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY',
+            'LTE50'
+        ],
+        'hum-dew': [
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY', # a
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT',
+            'LTE50'
+        ],
+        'temp-hum-dew': [
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',  # a
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY', # a
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT', # a
+            'LTE50'
+        ],
+        'temp': [
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',
+            'LTE50'
+        ],
+        'dew': [
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT',
+            'LTE50'
+        ],
+        'not_Pr': [
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',  # a
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY', # a
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT', # a
+            'WS_MPH',
+            'LTE50'
+        ],
+        'not_Ws': [
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',  # a
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY', # a
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT', # a
+            'P_INCHES',
+            'LTE50'
+        ],
+        'temp_hum': [
+            'MIN_REL_HUMIDITY', # a
+            'AVG_REL_HUMIDITY', # a
+            'MAX_REL_HUMIDITY',
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',
+            'LTE50'
+        ],
+        'temp_dew': [
+            'MIN_DEWPT', # a
+            'AVG_DEWPT', # a
+            'MAX_DEWPT',
+            'MEAN_AT', 
+            'MIN_AT', # a
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',
+            'LTE50'
+        ]
+    }
+
+    eval_feats = ['LTE50']
+    for feature in eval_feats:
+        print(f"For feature={feature}")
+        for curr_key in feature_combinations.keys():
+            # dependent_feature_removes = [f for f in feature_dependency[r_feat.split('_')[-1]]]
+            curr_features = feature_combinations[curr_key] #[f for f in feature_set if f not in dependent_feature_removes]
+            print(f"Forfeatures: {curr_key}, current feature length: {len(curr_features)}")
+            df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+            modified_df, dormant_seasons = preprocess_missing_values(df, curr_features, is_dormant=True)
+            season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, curr_features, is_dormant=True)
+            train_season_df = season_df.drop(season_array[-1], axis=0)
+            train_season_df = train_season_df.drop(season_array[-2], axis=0)
+
+            mean, std = get_mean_std(train_season_df, curr_features)
+
+            X, Y = split_XY(season_df, max_length, season_array, curr_features)
+            X = X[:-2]
+            Y = Y[:-2]
+            fs = open(filename, 'w')
+            for i in range(X.shape[0] - 1):
+                train_parse_id(X[i], Y[i], fs, mean, std, curr_features)
+
+            fs.close()
+
+            model = BRITS(RNN_HID_SIZE, IMPUTE_WEIGHT, LABEL_WEIGHT, len(curr_features))
+            model = model.to(device=device)
+            model_path = f"{model_dir}/{curr_key}/"
+            if not os.path.isdir(model_path):
+                os.makedirs(model_path)
+
+            model_path = f"{model_path}/model-{curr_key}LT.pth"
+            train(model, n_epochs, batch_size, model_path, filename)
+
+            test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+            test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, curr_features, is_dormant=True)
+            season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, curr_features, is_dormant=True)
+            
+            model.eval()
+            for season in seasons.keys():
+                result_mse_plots = {
+                    'BRITS': [],
+                }
+                results = {
+                    'BRITS': {},
+                }
+                l_needed = []
+                print(f"For season: {season}")
+                season_idx = seasons[season]
+                feature_idx = curr_features.index(feature)
+                X, Y = split_XY(season_df, max_length, season_array, curr_features)
+                # print(f'X: {X.shape}, Y: {Y.shape}')
+                original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
+                non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
+                L = [i for i in range(len(non_missing_indices)-1)]
+                for l in L:
+                    if forward:
+                        iter = len(non_missing_indices)-l-1
+                    else:
+                        iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
+                    print(f"For length = {l}")
+                    
+                    total_count = 0
+                    brits_mse = 0
+                    # iter = 1
+                    for i in tqdm(range(iter)):
+                        real_values = []
+                        imputed_brits = []
+                        
+                        fs = open(filename, 'w')
+
+                        if feature.split('_')[-1] not in feature_dependency.keys():
+                            dependent_feature_ids = []
+                        else:
+                            dependent_feature_ids = [curr_features.index(f) for f in feature_dependency[feature.split('_')[-1]] if f != feature]
+                        
+                        if forward:
+                            missing_indices = forward_parse_id_day(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, all=True, same=True)
+                        else:
+                            missing_indices = parse_id(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, dependent_features=dependent_feature_ids)
+                        
+                        fs.close()
+
+                        if len(missing_indices) == 0:
+                            continue
+                        val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+
+                        for idx, data in enumerate(val_iter):
+                            data = utils.to_var(data)
+                            row_indices = missing_indices // len(curr_features)
+
+                            ret = model.run_on_batch(data, None)
+                            eval_ = ret['evals'].data.cpu().numpy()
+                            eval_ = np.squeeze(eval_)
+                            imputation_brits = ret['imputations'].data.cpu().numpy()
+                            imputation_brits = np.squeeze(imputation_brits)
+
+                            imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
+
+                            real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
+
+                        if forward:
+                            brits_mse += ((real_values[0] - imputed_brits[0]) ** 2)
+                        else:
+                            brits_mse += ((real_values - imputed_brits) ** 2).mean()
+                        total_count += 1
+                    if total_count == 0:
+                        continue
+                    l_needed.append(l)
+                    print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}")#\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
+
+                    results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
+
+                    result_mse_plots['BRITS'].append(brits_mse/total_count)
+
+                result_df = pd.DataFrame(results)
+                folder = f'{mse_folder}/{feature}/remove-{curr_key}/mse_results'
+                if not os.path.isdir(folder):
+                    os.makedirs(folder)
+                result_df.to_csv(f'{folder}/results-mse-{season}.csv')
+                
+                plots_folder = f'{folder}/plots'
+                if not os.path.isdir(plots_folder):
+                    os.makedirs(plots_folder)
+  
+                plt.figure(figsize=(16,9))
+                plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+                if forward:
+                    plt.title(f'Length of existing values vs Imputation MSE for feature = {feature}, year={season}', fontsize=20)
+                else:
+                    plt.title(f'Length of missing values vs Imputation MSE for feature = {feature}, year={season}', fontsize=20)
+                plt.xticks(fontsize=20)
+                plt.yticks(fontsize=20)
+                if forward:
+                    plt.xlabel(f'Length of existing observed values', fontsize=20)
+                else:
+                    plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+                plt.ylabel(f'MSE', fontsize=20)
+                plt.legend()
+                if forward:
+                    plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{curr_key}-{season}.png', dpi=300)
+                else:
+                    plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{curr_key}-{season}.png', dpi=300)
+                plt.close()
+
 
 
 if __name__ == "__main__":
