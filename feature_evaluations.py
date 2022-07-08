@@ -714,93 +714,189 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
     # 'LTE50']
 
     feature_combinations = {
-        'hum': [
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
+        # 'hum': [
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY',
+        #     'LTE50'
+        # ],
+        # 'hum-dew': [
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY', # a
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT',
+        #     'LTE50'
+        # ],
+        # 'temp-hum-dew': [
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',  # a
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY', # a
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT', # a
+        #     'LTE50'
+        # ],
+        # 'temp': [
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',
+        #     'LTE50'
+        # ],
+        # 'dew': [
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT',
+        #     'LTE50'
+        # ],
+        # 'not_Pr': [
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',  # a
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY', # a
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT', # a
+        #     'WS_MPH',
+        #     'LTE50'
+        # ],
+        # 'not_Ws': [
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',  # a
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY', # a
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT', # a
+        #     'P_INCHES',
+        #     'LTE50'
+        # ],
+        # 'temp_hum': [
+        #     'MIN_REL_HUMIDITY', # a
+        #     'AVG_REL_HUMIDITY', # a
+        #     'MAX_REL_HUMIDITY',
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',
+        #     'LTE50'
+        # ],
+        # 'temp_dew': [
+        #     'MIN_DEWPT', # a
+        #     'AVG_DEWPT', # a
+        #     'MAX_DEWPT',
+        #     'MEAN_AT', 
+        #     'MIN_AT', # a
+        #     'AVG_AT', # average temp is AgWeather Network
+        #     'MAX_AT',
+        #     'LTE50'
+        # ]
+        'all': [
+            'MEAN_AT', 
+            'MIN_AT',
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',
+            'MIN_REL_HUMIDITY',
+            'AVG_REL_HUMIDITY',
             'MAX_REL_HUMIDITY',
-            'LTE50'
-        ],
-        'hum-dew': [
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
-            'MAX_REL_HUMIDITY', # a
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
+            'MIN_DEWPT',
+            'AVG_DEWPT',
             'MAX_DEWPT',
+            'P_INCHES', # precipitation
+            'WS_MPH', # wind speed. if no sensor then value will be na
+            'MAX_WS_MPH', 
+            'LW_UNITY', # leaf wetness sensor
+            'SR_WM2', # solar radiation # different from zengxian
+            'MIN_ST8', # diff from zengxian
+            'ST8', # soil temperature # diff from zengxian
+            'MAX_ST8', # diff from zengxian
+            #'MSLP_HPA', # barrometric pressure # diff from zengxian
+            'ETO', # evaporation of soil water lost to atmosphere
+            'ETR', # ???
             'LTE50'
         ],
-        'temp-hum-dew': [
+        'not_ET_LW_SR': [
             'MEAN_AT', 
-            'MIN_AT', # a
-            'AVG_AT', # average temp is AgWeather Network
-            'MAX_AT',  # a
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
-            'MAX_REL_HUMIDITY', # a
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
-            'MAX_DEWPT', # a
-            'LTE50'
-        ],
-        'temp': [
-            'MEAN_AT', 
-            'MIN_AT', # a
+            'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network
             'MAX_AT',
-            'LTE50'
-        ],
-        'dew': [
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
-            'MAX_DEWPT',
-            'LTE50'
-        ],
-        'not_Pr': [
-            'MEAN_AT', 
-            'MIN_AT', # a
-            'AVG_AT', # average temp is AgWeather Network
-            'MAX_AT',  # a
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
-            'MAX_REL_HUMIDITY', # a
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
-            'MAX_DEWPT', # a
-            'WS_MPH',
-            'LTE50'
-        ],
-        'not_Ws': [
-            'MEAN_AT', 
-            'MIN_AT', # a
-            'AVG_AT', # average temp is AgWeather Network
-            'MAX_AT',  # a
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
-            'MAX_REL_HUMIDITY', # a
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
-            'MAX_DEWPT', # a
-            'P_INCHES',
-            'LTE50'
-        ],
-        'temp_hum': [
-            'MIN_REL_HUMIDITY', # a
-            'AVG_REL_HUMIDITY', # a
+            'MIN_REL_HUMIDITY',
+            'AVG_REL_HUMIDITY',
             'MAX_REL_HUMIDITY',
-            'MEAN_AT', 
-            'MIN_AT', # a
-            'AVG_AT', # average temp is AgWeather Network
-            'MAX_AT',
+            'MIN_DEWPT',
+            'AVG_DEWPT',
+            'MAX_DEWPT',
+            'P_INCHES', # precipitation
+            'WS_MPH', # wind speed. if no sensor then value will be na
+            'MAX_WS_MPH', 
+            # 'LW_UNITY', # leaf wetness sensor
+            'SR_WM2', # solar radiation # different from zengxian
+            'MIN_ST8', # diff from zengxian
+            'ST8', # soil temperature # diff from zengxian
+            'MAX_ST8', # diff from zengxian
+            #'MSLP_HPA', # barrometric pressure # diff from zengxian
+            # 'ETO', # evaporation of soil water lost to atmosphere
+            # 'ETR', # ???
             'LTE50'
         ],
-        'temp_dew': [
-            'MIN_DEWPT', # a
-            'AVG_DEWPT', # a
-            'MAX_DEWPT',
+        'not_ST_SR_LW': [
             'MEAN_AT', 
-            'MIN_AT', # a
+            'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network
             'MAX_AT',
+            'MIN_REL_HUMIDITY',
+            'AVG_REL_HUMIDITY',
+            'MAX_REL_HUMIDITY',
+            'MIN_DEWPT',
+            'AVG_DEWPT',
+            'MAX_DEWPT',
+            'P_INCHES', # precipitation
+            'WS_MPH', # wind speed. if no sensor then value will be na
+            'MAX_WS_MPH', 
+            # 'LW_UNITY', # leaf wetness sensor
+            # 'SR_WM2', # solar radiation # different from zengxian
+            # 'MIN_ST8', # diff from zengxian
+            # 'ST8', # soil temperature # diff from zengxian
+            # 'MAX_ST8', # diff from zengxian
+            #'MSLP_HPA', # barrometric pressure # diff from zengxian
+            'ETO', # evaporation of soil water lost to atmosphere
+            'ETR', # ???
+            'LTE50'
+        ],
+        'not_ST_SR': [
+            'MEAN_AT', 
+            'MIN_AT',
+            'AVG_AT', # average temp is AgWeather Network
+            'MAX_AT',
+            'MIN_REL_HUMIDITY',
+            'AVG_REL_HUMIDITY',
+            'MAX_REL_HUMIDITY',
+            'MIN_DEWPT',
+            'AVG_DEWPT',
+            'MAX_DEWPT',
+            'P_INCHES', # precipitation
+            'WS_MPH', # wind speed. if no sensor then value will be na
+            'MAX_WS_MPH', 
+            'LW_UNITY', # leaf wetness sensor
+            # 'SR_WM2', # solar radiation # different from zengxian
+            # 'MIN_ST8', # diff from zengxian
+            # 'ST8', # soil temperature # diff from zengxian
+            # 'MAX_ST8', # diff from zengxian
+            #'MSLP_HPA', # barrometric pressure # diff from zengxian
+            'ETO', # evaporation of soil water lost to atmosphere
+            'ETR', # ???
             'LTE50'
         ]
     }
@@ -923,7 +1019,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
                 folder = f'{mse_folder}/{feature}/remove-{curr_key}/mse_results'
                 if not os.path.isdir(folder):
                     os.makedirs(folder)
-                result_df.to_csv(f'{folder}/results-mse-{season}.csv')
+                result_df.to_csv(f'{folder}/results-mse-{curr_key}-{season}.csv')
                 
                 plots_folder = f'{folder}/plots'
                 if not os.path.isdir(plots_folder):
@@ -952,5 +1048,5 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
 
 
 if __name__ == "__main__":
-    mse_folder = "MSE_PLOTS_forward_increase_13"
+    mse_folder = "MSE_PLOTS_forward_increase_21"
     train_evaluate_increasing_features(mse_folder, forward=True)
