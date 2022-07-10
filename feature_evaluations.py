@@ -907,7 +907,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
         for curr_key in feature_combinations.keys():
             # dependent_feature_removes = [f for f in feature_dependency[r_feat.split('_')[-1]]]
             curr_features = feature_combinations[curr_key] #[f for f in feature_set if f not in dependent_feature_removes]
-            print(f"Forfeatures: {curr_key}, current feature length: {len(curr_features)}")
+            print(f"For features: {curr_key}, current feature length: {len(curr_features)}")
             df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
             modified_df, dormant_seasons = preprocess_missing_values(df, curr_features, is_dormant=True)
             season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, curr_features, is_dormant=True)
