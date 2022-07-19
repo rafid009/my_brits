@@ -21,10 +21,7 @@ IMPUTE_WEIGHT = 0.3
 LABEL_WEIGHT = 1
 
 
-folder = './json/test/'
-if not os.path.exists(folder):
-    os.makedirs(folder)
-fs = open(folder+'json', 'w')
+
 
 real_values = None
 
@@ -88,7 +85,7 @@ def draw_data_trend(df_t, df_c, f, interp_name, i):
     plt.savefig(f"subplots/{f}-{interp_name}-{i}.png", dpi=300)
     plt.close()
 
-def parse_rec(values, masks, evals, eval_masks, dir_):
+def parse_rec(values, masks, evals, eval_masks, dir_, features):
     deltas = parse_delta(masks, dir_)
 
     # only used in GRU-D
@@ -112,7 +109,7 @@ def unnormalize(X, mean, std, feature_idx=-1):
     else:
         return (X * std[feature_idx]) + mean[feature_idx]
 
-def parse_id(x, y):
+def parse_id(x, y, fs, mean, std, features):
     # data = pd.read_csv('./raw/{}.txt'.format(id_))
     # accumulate the records within one hour
     # data['Time'] = data['Time'].apply(lambda x: to_time_bin(x))
@@ -127,24 +124,17 @@ def parse_id(x, y):
     # print('eval: ', evals)
     # print('eval shape: ', evals.shape)
     shp = evals.shape
-    
-    # idx1 = np.where(~np.isnan(evals[:,features_impute[0]]))[0]
-    # idx2 = np.where(~np.isnan(evals[:,features_impute[1]]))[0]
-    # idx1 = idx1 * len(features) + features_impute[0]
-    # idx2 = idx2 * len(features) + features_impute[1]
-    # exit()
 
     evals = evals.reshape(-1)
+
     # randomly eliminate 10% values as the imputation ground-truth
     # print('not null: ',np.where(~np.isnan(evals)))
-    # indices = np.concatenate((idx1, idx2)).tolist()
-    # indices = np.random.choice(indices, len(indices) // 10)
+    indices = np.where(~np.isnan(evals))[0].tolist()
+    indices = np.random.choice(indices, len(indices) // 20)
     
-    # global real_values
-    # real_values = evals[indices]
 
     values = evals.copy()
-    # values[indices] = np.nan
+    values[indices] = np.nan
 
     masks = ~np.isnan(values)
 
@@ -160,8 +150,8 @@ def parse_id(x, y):
     rec = {'label': label}
 
     # prepare the model for both directions
-    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
-    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward', features=features)
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward', features=features)
     # for key in rec.keys():
     #     print(f"{key}: {type(rec[key])}")# and {rec[key].shape}")
     rec = json.dumps(rec)
@@ -169,57 +159,60 @@ def parse_id(x, y):
     fs.write(rec + '\n')
 
 train_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
-print('Now train')
-train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, is_dormant=False, is_year=True)
-train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, is_dormant=False, is_year=True)
-train_season_df = train_season_df.drop(train_season_array[-1], axis=0)
-train_season_df = train_season_df.drop(train_season_array[-2], axis=0)
-train_season_df = train_season_df.drop(train_season_array[-3], axis=0)
+# print('Now train')
+train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, features, is_dormant=True)#, is_year=True)
+train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, features, is_dormant=True)#, is_year=True)
+# train_season_df = train_season_df.drop(train_season_array[-1], axis=0)
+# train_season_df = train_season_df.drop(train_season_array[-2], axis=0)
+# train_season_df = train_season_df.drop(train_season_array[-3], axis=0)
 # train_season_df = train_season_df.drop(train_season_array[-4], axis=0)
 mean, std = get_mean_std(train_season_df, features)
 
-normalized_season_df = train_season_df[features].copy()
-# print(f"norm: {normalized_season_df.shape}, mean: {mean.shape}, std: {std.shape}")
-normalized_season_df = (normalized_season_df - mean) /std
+# normalized_season_df = train_season_df[features].copy()
+# # print(f"norm: {normalized_season_df.shape}, mean: {mean.shape}, std: {std.shape}")
+# normalized_season_df = (normalized_season_df - mean) /std
 
-mice_impute = IterativeImputer(random_state=0, max_iter=20)
-mice_impute.fit(normalized_season_df[features])
+# mice_impute = IterativeImputer(random_state=0, max_iter=20)
+# mice_impute.fit(normalized_season_df[features])
 
 
 print('Now test')
 test_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
-modified_df, dormant_seasons = preprocess_missing_values(test_df, is_dormant=False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=False, is_year=True)
+modified_df, dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
+season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#, is_year=True)
 # print('season array: ', len(season_array), '\n', season_array)
 
-test_normalized_df = season_df[features].copy()
-test_normalized_df = (test_normalized_df - mean) /std
-test_imputed_mice = mice_impute.transform(test_normalized_df[features])
-test_imputed = unnormalize(test_imputed_mice, mean, std)
+# test_normalized_df = season_df[features].copy()
+# test_normalized_df = (test_normalized_df - mean) /std
+# test_imputed_mice = mice_impute.transform(test_normalized_df[features])
+# test_imputed = unnormalize(test_imputed_mice, mean, std)
 
-print(f"{test_df.iloc[11824]}")
+# print(f"{test_df.iloc[11824]}")
 
-mice_df = test_df.copy()
-mice_df[features] = np.round(test_imputed, 2)
-mice_df.iloc[11824:] = test_df.iloc[11824:] 
-mice_df.to_csv('ColdHardiness_Grape_Merlot_imputed_yearly_mice.csv', index=False)
+# mice_df = test_df.copy()
+# mice_df[features] = np.round(test_imputed, 2)
+# mice_df.iloc[11824:] = test_df.iloc[11824:] 
+# mice_df.to_csv('ColdHardiness_Grape_Merlot_imputed_yearly_mice.csv', index=False)
 
-X, Y = split_XY(season_df, max_length, season_array)
-
+X, Y = split_XY(season_df, max_length, season_array, features)
+folder = './json/test/'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+fs = open(folder+'json', 'w')
 print('X: ', X.shape)
 zero_pads = []
 for i in range(X.shape[0]):
     indices = np.where(~X[i].any(axis=1))[0]
     # print('zero pads: ', indices, '\n\n')
     zero_pads.append(indices)
-    parse_id(X[i], Y[i])
+    parse_id(X[i], Y[i], fs, mean, std, features)
 fs.close()
 
 
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
-if os.path.exists('./model_BRITS.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS.model'))
+if os.path.exists('./model_BRITS_LT.model'):
+    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
 
 model_brits.eval()
 
@@ -242,12 +235,13 @@ for idx, data in enumerate(val_iter):
             imputed_array_brits = np.round(without_paddings, 2)
         else:
             imputed_array_brits = np.concatenate((imputed_array_brits, np.round(without_paddings, 2)), axis=0)
+print(f"season indices: {len(season_df.index.tolist())}")
 brits_df = test_df.copy()
-brits_df[features] = imputed_array_brits
-brits_df.iloc[11824:] = test_df.iloc[11824:] 
-print(f"test: {test_df.iloc[12088]}")
-print(f"brits: {brits_df.iloc[12088]}")
-brits_df.to_csv('ColdHardiness_Grape_Merlot_imputed_yearly_brits.csv', index=False)
+brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
+# brits_df.iloc[11824:] = test_df.iloc[11824:] 
+# print(f"test: {test_df.iloc[12088]}")
+# print(f"brits: {brits_df.iloc[12088]}")
+brits_df.to_csv('ColdHardiness_Grape_Merlot_imputed_brits_LT.csv', index=False)
 
 
 

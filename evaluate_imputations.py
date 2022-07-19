@@ -21,7 +21,11 @@ from tqdm import tqdm
 from transformer.src.transformer import run_transformer
 import warnings
 import matplotlib
-
+from pypots.data import load_specific_dataset, mcar, masked_fill
+from pypots.imputation import SAITS
+from pypots.utils.metrics import cal_mae, cal_mse
+from process_data import *
+import pickle
 
 warnings.filterwarnings("ignore")
 matplotlib.rc('xtick', labelsize=20) 
@@ -118,8 +122,12 @@ model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, labe
 if os.path.exists('./model_BRITS_LT.model'):
     model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
 
+saits_file = "./model_saits_e1000.model"
+model_saits = pickle.load(open(saits_file, 'rb'))
+
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
+
 
 model_brits.eval()
 
@@ -174,7 +182,7 @@ def draw_data_trend(df_t, df_c, f, interp_name, i):
 
 def draw_data_plot(results, f, season, folder='subplots', is_original=False, existing=-1):
     
-    plt.figure(figsize=(32,18))
+    plt.figure(figsize=(32,20))
     plt.title(f"For feature = {f} in Season {season} existing LT = {existing}", fontsize=30)
     if is_original:
         ax = plt.subplot(211)
@@ -199,7 +207,7 @@ def draw_data_plot(results, f, season, folder='subplots', is_original=False, exi
         # ax.xticks(fontsize=20)
         # ax.yticks(fontsize=20)
     else:
-        ax = plt.subplot(311)
+        ax = plt.subplot(411)
         ax.set_title('Feature = '+f+' Season = '+season+' original data', fontsize=27)
         plt.plot(np.arange(results['real'].shape[0]), results['real'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
@@ -207,7 +215,7 @@ def draw_data_plot(results, f, season, folder='subplots', is_original=False, exi
         # ax.xticks(fontsize=20)
         # ax.yticks(fontsize=20)
 
-        ax = plt.subplot(312)
+        ax = plt.subplot(412)
         ax.set_title('Feature = '+f+' Season = '+season+' missing data', fontsize=27)
         plt.plot(np.arange(results['missing'].shape[0]), results['missing'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
@@ -215,13 +223,13 @@ def draw_data_plot(results, f, season, folder='subplots', is_original=False, exi
         # ax.xticks(fontsize=20)
         # ax.yticks(fontsize=20)
 
-        ax = plt.subplot(313)
-        # ax.set_title('Feature = '+f+' Season = '+season_idx+' imputed by MICE', fontsize=20)
-        # plt.plot(np.arange(results['MICE'].shape[0]), results['MICE'], 'tab:blue')
-        # ax.set_xlabel('Days', fontsize=16)
-        # ax.set_ylabel('Values', fontsize=16)
+        ax = plt.subplot(413)
+        ax.set_title('Feature = '+f+' Season = '+season+' imputed by SAITS', fontsize=20)
+        plt.plot(np.arange(results['SAITS'].shape[0]), results['SAITS'], 'tab:blue')
+        ax.set_xlabel('Days', fontsize=25)
+        ax.set_ylabel('Values', fontsize=25)
 
-        # ax = plt.subplot(414)
+        ax = plt.subplot(414)
         ax.set_title('Feature = '+f+' Season = '+season+' imputed by BRITS', fontsize=27)
         plt.plot(np.arange(results['BRITS'].shape[0]), results['BRITS'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
@@ -362,10 +370,10 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
-    return indices
+    return indices, values
 
 # given_feature = 'AVG_REL_HUMIDITY'
-L = [i for i in range(1, 30)]
+L = [i for i in range(1, 31, 2)]
 # L = [1, 5, 10, 20]#, 70, 100, 150, 200]
 iter = 30
 
@@ -408,41 +416,65 @@ season_df, season_array, max_length = get_seasons_data(test_modified_df, test_do
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
 
-def do_evaluation(mse_folder, eval_type, eval_season='2021'):
+def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
     filename = 'json/json_eval_2_LT'
+
+    given_features = [
+        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        'MIN_AT',
+        'AVG_AT', # average temp is AgWeather Network
+        'MAX_AT',
+        'MIN_REL_HUMIDITY',
+        'AVG_REL_HUMIDITY',
+        'MAX_REL_HUMIDITY',
+        'MIN_DEWPT',
+        'AVG_DEWPT',
+        'MAX_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'MIN_ST8', # diff from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MAX_ST8', # diff from zengxian
+        #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR',
+        'LTE50' # ???
+    ]
+
+    L = [i for i in range(1, 31, 2)]
     for given_feature in given_features:
         result_mse_plots = {
         'BRITS': [],
-        'MICE': [],
-        'Transformer': []
+        'SAITS': [],
         }
         results = {
             'BRITS': {},
-            'MICE': {},
-            'Transformer': {}
+            'SAITS': {},
         }
+        l_needed = []
         for l in L:
             # season_idx = seasons[eval_season]
-            season_idx = -2
+            season_idx = seasons[eval_season]
             feature_idx = features.index(given_feature)
-            X, Y = split_XY(season_df, max_length, season_array)
+            X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             if eval_type != 'random':
-                iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)
+                iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
             print(f"For feature = {given_feature} and length = {l}")
             # print(f"original miss: {original_missing_indices.shape[0]}\n{original_missing_indices}\nseason: {len(season_array[season_idx])}")
             total_count = 0
             brits_mse = 0
-            mice_mse = 0
-            transformer_mse = 0
+            saits_mse = 0
             neg = 0
             for i in tqdm(range(iter)):
                 # i.set_description(f"For {given_feature} & L = {l}")
                 real_values = []
                 imputed_brits = []
-                imputed_mice = []
-                imputed_transformer = []
-
+                imputed_saits = []
+                
                 fs = open(filename, 'w')
 
                 if given_feature.split('_')[-1] not in feature_dependency.keys():
@@ -452,7 +484,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                 if eval_type == 'random':
                     missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids, random_start=True)
                 else:
-                    missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids)
+                    missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids)
                 fs.close()
                 if len(missing_indices) == 0:
                     # print(f"0 missing added")
@@ -469,85 +501,80 @@ def do_evaluation(mse_folder, eval_type, eval_season='2021'):
                     eval_ = np.squeeze(eval_)
                     imputation_brits = ret['imputations'].data.cpu().numpy()
                     imputation_brits = np.squeeze(imputation_brits)
-                    # imputation_brits = unnormalize(imputation_brits, mean, std, -1)
-
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    imputation_mice = mice_impute.transform(ret_eval)
-
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    trans_test_df = pd.DataFrame(ret_eval, columns=features)
-                    add_season_id('./transformer/data_dir', trans_test_df)
-
-                    transformer_preds = run_transformer(params)
-                    # print(f'trasformer preds: {transformer_preds.shape}')
-                    
-                    imputation_transformer = np.squeeze(transformer_preds)
-                    # print(f"trans: {imputation_transformer.shape}")
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].data.cpu().numpy()
-                    # print(f'trans preds: {imputed_transformer}')
-                    
-
                     imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
                     
-                    imputed_mice = imputation_mice[row_indices, feature_idx]#unnormalize(imputation_mice[row_indices, feature_idx], mean, std, feature_idx)
+                    Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
+                    # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
+                    
+                    # Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
+                    imputation_saits = model_saits.impute(Xeval)
+                    # print(f"SAITS imputation: {imputation_saits}")
+                    imputation_saits = np.squeeze(imputation_saits)
+                    imputed_saits = imputation_saits[row_indices, feature_idx]
+
                     
                     real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
 
                 brits_mse += ((real_values - imputed_brits) ** 2).mean()
 
-                mice_mse += ((real_values - imputed_mice) ** 2).mean()
-
-                transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
+                saits_mse += ((real_values - imputed_saits) ** 2).mean()
                 total_count += 1
+                
             if total_count <= 0:
                 neg+=1
                 continue
-            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tTransformer: {transformer_mse/total_count}")
+            l_needed.append(l)
+            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tSAITS: {saits_mse/total_count}")
 
             results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
-            results['MICE'][l] = mice_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
-            results['Transformer'][l] = transformer_mse/total_count
-
+            results['SAITS'][l] = saits_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
+            
             result_mse_plots['BRITS'].append(brits_mse/total_count)
-            result_mse_plots['MICE'].append(mice_mse/total_count)
-            result_mse_plots['Transformer'].append(transformer_mse/total_count)
+            result_mse_plots['SAITS'].append(saits_mse/total_count)
             
         end_time = time.time()
         result_df = pd.DataFrame(results)
-        if not os.path.isdir(f'{mse_folder}/{eval_type}/imputation_results/'+given_feature):
-            os.makedirs(f'{mse_folder}/{eval_type}/imputation_results/'+given_feature)
-        result_df.to_csv(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{given_feature}_results_impute.csv')
-        result_df.to_latex(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{given_feature}_results_impute.tex')
+        if not os.path.isdir(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}'):
+            os.makedirs(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}')
+        result_df.to_csv(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.csv')
+        # result_df.to_latex(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.tex')
 
-        if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}'):
-            os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}')
+        if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}'):
+            os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}')
 
-        
+        # x_axis = 
         plt.figure(figsize=(16,9))
-        plt.plot(L[:(-neg-1)], result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
-        plt.plot(L[:(-neg-1)], result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-        plt.plot(L[:(-neg-1)], result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+        plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+        plt.plot(l_needed, result_mse_plots['SAITS'], 'tab:blue', label='SAITS', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
-        plt.legend(fontsize=16)
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-all-models-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend(fontsize=20)
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-BRITS-SAITS-{features[feature_idx]}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
-        plt.plot(L[:(-neg-1)], result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+        plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        plt.ylabel(f'MSE', fontsize=16)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-BRITS-{features[feature_idx]}.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(16,9))
+        plt.plot(l_needed, result_mse_plots['SAITS'], 'tab:blue', label='SAITS', marker='o')
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-SAITS-{features[feature_idx]}.png', dpi=300)
         plt.close()
 
         # plt.figure(figsize=(16,9))
@@ -680,6 +707,10 @@ def forward_prediction(forward_folder):
                 imputation_brits = ret['imputations'].data.cpu().numpy()
                 imputation_brits = np.squeeze(imputation_brits)
                 imputed_brits = imputation_brits[row_indices, feature_idx]
+
+                ret_eval = copy.deepcopy(eval_)
+                ret_eval[row_indices, feature_idx] = np.nan
+
                 real_values = eval_[row_indices, feature_idx]
 
                 brits_mse = ((real_values - imputed_brits) ** 2).mean()
@@ -804,7 +835,7 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
-    return indices
+    return indices, values
 
 
 
@@ -812,31 +843,41 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
 def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder=None, diff_folder=None):
     filename = 'json/json_eval_forward_LT'
     feature_idx = features.index('LTE50')
-    X, Y = split_XY(season_df, max_length, season_array, features)
+    X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
     season_names = ['2020-2021', '2021-2022']
     for given_season in season_names:
         season_idx = seasons[given_season]
         non_missing_indices = np.where(~np.isnan(X[season_idx, :, feature_idx]))[0]
         original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-        draws_1 = []
+        draws_1_brits = []
+        draws_1_saits = []
+        draws_2_brits = []
+        draws_2_saits = []
         draw_data = {}
         # draws_2 = []
         x_axis = []
-        season_mse = []
+        season_mse_brits = []
+        season_mse_saits = []
+        season_mse_2_brits = []
+        season_mse_2_saits = []
         print(f"\n\nseason: {given_season}")
         for i in range(len(non_missing_indices)-1):
             # print(f"i = {i}")
-            mse_1 = 0
+            mse_1_brits = 0
+            mse_1_saits = 0
+            mse_2_brits = 0
+            mse_2_saits = 0
             # mse_2 = 0
             trial_count = 0
             if slide:
-                num_trials = len(non_missing_indices)-i-3
+                num_trials = len(non_missing_indices)-i-3 - pads[season_idx]
             else:
                 num_trials = 1
             for trial in tqdm(range(num_trials)):
                 fs = open(filename, 'w')
-                missing_indices = forward_parse_id_day(fs, X[season_idx], Y[season_idx], feature_idx, i, trial_num=trial, all=True, same=same)
-
+                
+                missing_indices, Xeval = forward_parse_id_day(fs, X[season_idx], Y[season_idx], feature_idx, i, trial_num=trial, all=True, same=same)
+                
                 fs.close()
                 if len(missing_indices) == 0:
                     continue
@@ -852,10 +893,30 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                     imputation_brits = ret['imputations'].data.cpu().numpy()
                     imputation_brits = np.squeeze(imputation_brits)
                     imputed_brits = imputation_brits[row_indices, feature_idx]
+
+                    Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
+                    print(f"Xeval: {Xeval}")
+                    # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
+                    
+                    # Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
+                    imputation_saits = model_saits.impute(Xeval)
+                    # print(f"SAITS imputation: {imputation_saits}")
+                    imputation_saits = np.squeeze(imputation_saits)
+                    imputed_saits = imputation_saits[row_indices, feature_idx]
+
                     real_values = eval_[row_indices, feature_idx]
                     # print(f"same_mse: {((real_values[0] - imputed_brits[0]) ** 2)}")
-                    mse_1 += ((real_values[0] - imputed_brits[0]) ** 2)
-                    season_mse.append(((real_values[0] - imputed_brits[0]) ** 2))
+                    mse_1_brits += ((real_values[0] - imputed_brits[0]) ** 2)
+                    season_mse_brits.append(((real_values[0] - imputed_brits[0]) ** 2))
+
+                    mse_2_brits += ((real_values[1] - imputed_brits[1]) ** 2)
+                    season_mse_2_brits.append(((real_values[1] - imputed_brits[1]) ** 2))
+
+                    mse_1_saits += ((real_values[0] - imputed_saits[0]) ** 2)
+                    season_mse_saits.append(((real_values[0] - imputed_saits[0]) ** 2))
+
+                    mse_2_saits += ((real_values[1] - imputed_saits[1]) ** 2)
+                    season_mse_2_saits.append(((real_values[1] - imputed_saits[1]) ** 2))
                     # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
                     trial_count += 1
 
@@ -873,19 +934,86 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                     draw_data['missing'][row_indices] = 0
 
                     draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
+                    draw_data['SAITS'] = unnormalize(imputation_saits[:, feature_idx], mean, std, feature_idx)
 
                     # draws['real'][row_indices] = 0
                     if data_folder is not None:
                         draw_data_plot(draw_data, features[feature_idx], given_season, folder=data_folder, existing=i)
                     if diff_folder is not None:
                         graph_bar_diff_multi(diff_folder, draw_data['real'][row_indices], draw_data, f'Difference From Gorund Truth for LTE50 in {given_season} existing = {i+1}', np.arange(len(row_indices)), 'Days where LTE50 value is available', 'Degrees', given_season, 'LTE50', missing=row_indices, existing=i)
+            if trial_count <= 0:
+                continue
+            mse_1_brits /= trial_count
+            mse_1_saits /= trial_count
 
-            mse_1 /= trial_count
+            mse_2_brits /= trial_count
+            mse_2_saits /= trial_count
             # mse_2 /= trial_count
-            draws_1.append(mse_1)
+            draws_1_brits.append(mse_1_brits)
+            draws_1_saits.append(mse_1_saits)
+
+            draws_2_brits.append(mse_2_brits)
+            draws_2_saits.append(mse_2_saits)
             # draws_2.append(mse_2)
             x_axis.append(i+1)
-        print(f"For season = {given_season}, mse = {np.array(season_mse).mean()}")
+        print(f"For season = {given_season}, BRITS mse = {np.array(season_mse_brits).mean()}, SAITS mse = {np.array(season_mse_saits).mean()}")
+
+        # result_df = pd.DataFrame(results)
+        # folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results'
+        # if not os.path.isdir(folder):
+        #     os.makedirs(folder)
+        # result_df.to_csv(f'{folder}/results-mse-{season}.csv')
+        
+        plots_folder = f'{forward_folder}/plots'
+        if not os.path.isdir(plots_folder):
+            os.makedirs(plots_folder)
+
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws_1_brits, 'tab:orange', label='BRITS', marker='o')
+        plt.plot(x_axis, draws_1_saits, 'tab:blue', label='SAITS', marker='o')
+        plt.title(f'Length of existing values vs Imputation MSE for feature = LTE50, year={given_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of existing observed values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-SAITS-{given_season}.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws_2_brits, 'tab:orange', label='BRITS', marker='o')
+        plt.plot(x_axis, draws_2_saits, 'tab:blue', label='SAITS', marker='o')
+        plt.title(f'Length of existing values vs Imputation MSE for feature = LTE50, year={given_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of existing observed values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{plots_folder}/forward-LT-MSE-BRITS-SAITS-next-{given_season}.png', dpi=300)
+        plt.close()
+
+
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws_1_saits, 'tab:blue', label='SAITS', marker='o')
+        plt.title(f'Length of existing values vs Imputation MSE for feature = LTE50, year={given_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of existing observed values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{plots_folder}/forward-LT-MSE-SAITS-{given_season}.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(16,9))
+        plt.plot(x_axis, draws_2_saits, 'tab:blue', label='SAITS', marker='o')
+        plt.title(f'Length of existing values vs Imputation MSE for feature = LTE50, year={given_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of existing observed values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{plots_folder}/forward-LT-MSE-SAITS-next-{given_season}.png', dpi=300)
+        plt.close()
 
 
         # if not os.path.isdir(f'{forward_folder}/plots/LTE50/'):
@@ -999,18 +1127,24 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 
                 
 
-# eval_folder = 'eval_dir_LT/LT'
-# if not os.path.isdir(eval_folder):
-#     os.makedirs(eval_folder)
-# do_evaluation(eval_folder, 'cont', '2020-2021')
+eval_folder = 'eval_dir_LT_brits_saits_13/'
+if not os.path.isdir(eval_folder):
+    os.makedirs(eval_folder)
+do_evaluation(eval_folder, 'cont', '2020-2021')
+do_evaluation(eval_folder, 'cont', '2021-2022')
 # data_plots_folder = 'data_plots_LT/LT'
 # if not os.path.isdir(data_plots_folder):
 #     os.makedirs(data_plots_folder)
 # do_data_plots(data_plots_folder, 10, is_original=True)
 # do_data_plots(data_plots_folder, 10, is_original=False)
 
-forward_folder = 'forward_all_folder_JDAY'
-forward_prediction_LT_day(forward_folder, slide=False)
+forward_folder = 'forward_LT_brits_saits_13'
+forward_data_folder = 'forward_LT_data_brits_saits_13'
+forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
+
+forward_folder = 'forward_LT_brits_saits_13_1'
+forward_data_folder = 'forward_LT_data_brits_saits_13_1'
+forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder)
 # forward_prediction_LT_day(forward_folder, same=False)
 # forward_prediction_LT_day(forward_folder, slide=False)
 # forward_prediction_LT_day(forward_folder, slide=False, same=False)

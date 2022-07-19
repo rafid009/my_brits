@@ -77,8 +77,8 @@ def preprocess_missing_values(df, features, is_dormant=True, is_year=False):
   modified_df['SR_WM2'].replace(0, np.nan, inplace=True)
   modified_df['WS_MPH'].replace(0, np.nan, inplace=True)
   modified_df['MAX_WS_MPH'].replace(0, np.nan, inplace=True)
-  # modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
-  # modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
+  modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
+  modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
 
   start_idx = df[df['DATE'] == '2007-07-21'].index.tolist()[0]
   end_idx = df[df['DATE'] == '2007-12-30'].index.tolist()[0]
@@ -179,14 +179,14 @@ def get_train_idx(season_array, idx_LT_not_null):
 
   return timeseries_idx_train
 
-def split_XY(df, max_season_len, seasons, features):#, x_mean, x_std):
+def split_XY(df, max_season_len, seasons, features, is_pad=False):#, x_mean, x_std):
     X = []
     Y = []
-    
+    pads = []
     for i, season in enumerate(seasons):
         x = (df[features].loc[season, :]).to_numpy()
-
-        x = np.concatenate((x, np.zeros((max_season_len - len(season), len(features)))), axis = 0)
+        paddings = np.zeros((max_season_len - len(season), len(features)))
+        x = np.concatenate((x, paddings), axis = 0)
 
         add_array = np.zeros((max_season_len - len(season), len(label)))
         add_array[:] = np.NaN
@@ -197,6 +197,7 @@ def split_XY(df, max_season_len, seasons, features):#, x_mean, x_std):
 
         X.append(x)
         Y.append(y)
+        pads.append(len(paddings))
 
     X = np.array(X)
     Y = np.array(Y)
@@ -205,7 +206,10 @@ def split_XY(df, max_season_len, seasons, features):#, x_mean, x_std):
         
     # x[:, :, norm_features_idx]  = (x[:, :, norm_features_idx] - x_mean) / x_std # normalize
     
-    return X, Y
+    if is_pad:
+      return X, Y, pads
+    else:
+      return X, Y
 
 def create_xy(df, timeseries_idx, max_length, features):
     x = []
