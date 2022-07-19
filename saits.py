@@ -33,7 +33,7 @@ X = masked_fill(X, 1 - missing_mask, np.nan)
 saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=1000, patience=100)
 saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
 
-filename = 'model_saits_e1000.model'
+filename = 'model_saits_e1000_13.model'
 pickle.dump(saits, open(filename, 'wb'))
 
 imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values

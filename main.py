@@ -92,7 +92,7 @@ if __name__ == "__main__":
     LABEL_WEIGHT = 1
     model_name = 'BRITS'
     model_path_name = 'BRITS'
-    model_path = 'model_'+model_path_name+'_without_LT_13.model'
+    model_path = 'model_'+model_path_name+'_LT_13.model'
     n_features = 13
     if model_name == 'BRITS':
         model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)

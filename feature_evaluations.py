@@ -674,7 +674,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
     model_dir = './saved_models_greedy/'
 
     # L = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    L = [i for i in range(1, 30, 2)]
+    L = [i for i in range(1, 30)]
 
     filename = 'json/json_eval_2'
     # all_feature_set = [
@@ -972,7 +972,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
             X_saits = masked_fill(X_saits, 1 - missing_mask, np.nan)
             # Model training. This is PyPOTS showtime. 
             saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=1000, patience=100)
-            saits = saits.to(device=device)
+            # saits = saits.to(device=device)
             saits.fit(X_saits)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
             
             model_path = f"{model_dir}/{curr_key}/"
