@@ -309,7 +309,7 @@ def parse_id(fs, x, y, mean, std, feature_impute_idx, length, features, trial_nu
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
-    return indices, values
+    return indices, values, evals
 
 def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, features, trial_num=-1, all=False, same=True):
 
@@ -391,7 +391,7 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, f
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
-    return indices, values
+    return indices, values, evals
 
 
 def train_parse_id(x, y, fs, mean, std, features):
@@ -995,7 +995,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
             test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, curr_features, is_dormant=True)
             season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, curr_features, is_dormant=True)
             
-            model.eval()
+            # model.eval()
             for season in seasons.keys():
                 result_mse_plots = {
                     'BRITS': [],
@@ -1035,9 +1035,9 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
                             dependent_feature_ids = [curr_features.index(f) for f in feature_dependency[feature.split('_')[-1]] if f != feature]
                         
                         if forward:
-                            missing_indices, Xeval = forward_parse_id_day(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, all=True, same=True)
+                            missing_indices, Xeval, eval_ = forward_parse_id_day(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, all=True, same=True)
                         else:
-                            missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, dependent_features=dependent_feature_ids)
+                            missing_indices, Xeval, eval_ = parse_id(fs, X[season_idx], Y[season_idx], mean, std, feature_idx, l, curr_features, trial_num=i, dependent_features=dependent_feature_ids)
                         
                         fs.close()
 
@@ -1049,8 +1049,8 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
                             data = utils.to_var(data)
                             row_indices = missing_indices // len(curr_features)
 
-                            ret = model.run_on_batch(data, None)
-                            eval_ = ret['evals'].data.cpu().numpy()
+                            # ret = model.run_on_batch(data, None)
+                            # eval_ = ret['evals'].data.cpu().numpy()
                             eval_ = np.squeeze(eval_)
                             # imputation_brits = ret['imputations'].data.cpu().numpy()
                             # imputation_brits = np.squeeze(imputation_brits)
