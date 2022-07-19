@@ -665,7 +665,7 @@ def train_evaluate_removed_features(mse_folder, forward=False):
                     plt.savefig(f'{plots_folder}/cont-miss-LT-MSE-BRITS-{curr_features[feature_idx]}-remove-{r_feat}-{season}.png', dpi=300)
                 plt.close()
 
-def train_evaluate_increasing_features(mse_plot_folder, forward=True):
+def train_evaluate_increasing_features(mse_folder, forward=True):
     RNN_HID_SIZE = 64
     IMPUTE_WEIGHT = 0.5
     LABEL_WEIGHT = 1
@@ -677,44 +677,6 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
     L = [i for i in range(1, 30)]
 
     filename = 'json/json_eval_2'
-    # all_feature_set = [
-    #     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    #     'MIN_AT',
-    #     'AVG_AT', # average temp is AgWeather Network
-    #     'MAX_AT',
-    #     'MIN_REL_HUMIDITY',
-    #     'AVG_REL_HUMIDITY',
-    #     'MAX_REL_HUMIDITY',
-    #     'MIN_DEWPT',
-    #     'AVG_DEWPT',
-    #     'MAX_DEWPT',
-    #     'P_INCHES', # precipitation
-    #     'WS_MPH', # wind speed. if no sensor then value will be na
-    #     'MAX_WS_MPH', 
-    #     'LW_UNITY', # leaf wetness sensor
-    #     'SR_WM2', # solar radiation # different from zengxian
-    #     'MIN_ST8', # diff from zengxian
-    #     'ST8', # soil temperature # diff from zengxian
-    #     'MAX_ST8', # diff from zengxian
-    #     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    #     'ETO', # evaporation of soil water lost to atmosphere
-    #     'ETR', # ???
-    #     'LTE50'
-    # ]
-
-    # all_feature_set = ['MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    # 'MIN_AT', # a
-    # 'AVG_AT', # average temp is AgWeather Network
-    # 'MAX_AT',  # a
-    # 'MIN_REL_HUMIDITY', # a
-    # 'AVG_REL_HUMIDITY', # a
-    # 'MAX_REL_HUMIDITY', # a
-    # 'MIN_DEWPT', # a
-    # 'AVG_DEWPT', # a
-    # 'MAX_DEWPT', # a
-    # 'P_INCHES', # precipitation # a
-    # 'WS_MPH',
-    # 'LTE50']
 
     feature_combinations = {
         'hum': [
@@ -998,10 +960,10 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
             # model.eval()
             for season in seasons.keys():
                 result_mse_plots = {
-                    'BRITS': [],
+                    'SAITS': [],
                 }
                 results = {
-                    'BRITS': {},
+                    'SAITS': {},
                 }
                 l_needed = []
                 print(f"For season: {season}")
@@ -1014,9 +976,9 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
                 L = [i for i in range(len(non_missing_indices)-1)]
                 for l in L:
                     if forward:
-                        iter = len(non_missing_indices)-l-1-pads
+                        iter = len(non_missing_indices)-l-1-pads[season_idx]
                     else:
-                        iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)-pads
+                        iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices)-pads[season_idx]
                     print(f"For length = {l}")
                     
                     total_count = 0
