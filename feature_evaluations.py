@@ -971,7 +971,7 @@ def train_evaluate_increasing_features(mse_plot_folder, forward=True):
             X_intact, X_saits, missing_mask, indicating_mask = mcar(X_saits, 0.1) # hold out 10% observed values as ground truth
             X_saits = masked_fill(X_saits, 1 - missing_mask, np.nan)
             # Model training. This is PyPOTS showtime. 
-            saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=1000, patience=100)
+            saits = SAITS(n_steps=252, n_features=len(curr_features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=1000, patience=100)
             # saits = saits.to(device=device)
             saits.fit(X_saits)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
             
