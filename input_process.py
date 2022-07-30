@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import os
-import re
 import numpy as np
 import pandas as pd
 from process_data import *
@@ -116,7 +115,6 @@ def parse_id(x, y):
 
     fs.write(rec + '\n')
 
-
 df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
@@ -141,8 +139,13 @@ std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
 np.save('mean.npy', mean)
 np.save('std.npy', std)
 
-for i in range(X.shape[0]):
-    parse_id(X[i], Y[i])
+def prepare_brits_input():
+    
 
-fs.close()
+    for i in range(X.shape[0]):
+        parse_id(X[i], Y[i])
 
+    fs.close()
+
+if __name__ == "__main__":
+    prepare_brits_input()

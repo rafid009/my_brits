@@ -720,7 +720,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             'MAX_DEWPT',
             'LTE50'
         ],
-        'not_Pr': [
+        'not_Pr(13)': [
             'MEAN_AT', 
             'MIN_AT', # a
             'AVG_AT', # average temp is AgWeather Network
@@ -748,7 +748,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             'WS_MPH',
             'LTE50'
         ],
-        'not_Ws': [
+        'not_Ws(13)': [
             'MEAN_AT', 
             'MIN_AT', # a
             'AVG_AT', # average temp is AgWeather Network
@@ -806,7 +806,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             'ETR', # ???
             'LTE50'
         ],
-        'not_Precipitation': [
+        'not_Pr(21)': [
             'MEAN_AT', 
             'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network
@@ -830,7 +830,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             'ETR', # ???
             'LTE50'
         ], 
-        'not_ET_LW_SR': [
+        'not_ET_LW_SR(21)': [
             'MEAN_AT', 
             'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network
@@ -854,7 +854,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             # 'ETR', # ???
             'LTE50'
         ],
-        'not_ST_SR_LW': [
+        'not_ST_SR_LW(21)': [
             'MEAN_AT', 
             'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network
@@ -878,7 +878,7 @@ def train_evaluate_increasing_features(mse_folder, forward=True):
             'ETR', # ???
             'LTE50'
         ],
-        'not_ST_SR': [
+        'not_ST_SR(21)': [
             'MEAN_AT', 
             'MIN_AT',
             'AVG_AT', # average temp is AgWeather Network

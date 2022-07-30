@@ -117,12 +117,12 @@ mean, std = get_mean_std(train_season_df, features)
 # mice_impute = IterativeImputer(random_state=0, max_iter=20)
 # mice_impute.fit(normalized_season_df[features].to_numpy())
 
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=13)
 
 if os.path.exists('./model_BRITS_LT.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
+    model_brits.load_state_dict(torch.load('./model_BRITS_LT_13.model'))
 
-saits_file = "./model_saits_e1000.model"
+saits_file = "./model_saits_e1000_13.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 if torch.cuda.is_available():
@@ -419,32 +419,46 @@ plot_mse_folder = 'overlapping_mse/'
 def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
     filename = 'json/json_eval_2_LT'
 
-    given_features = [
-        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-        'MIN_AT',
-        'AVG_AT', # average temp is AgWeather Network
-        'MAX_AT',
-        'MIN_REL_HUMIDITY',
-        'AVG_REL_HUMIDITY',
-        'MAX_REL_HUMIDITY',
-        'MIN_DEWPT',
-        'AVG_DEWPT',
-        'MAX_DEWPT',
-        'P_INCHES', # precipitation
-        'WS_MPH', # wind speed. if no sensor then value will be na
-        'MAX_WS_MPH', 
-        'LW_UNITY', # leaf wetness sensor
-        'SR_WM2', # solar radiation # different from zengxian
-        'MIN_ST8', # diff from zengxian
-        'ST8', # soil temperature # diff from zengxian
-        'MAX_ST8', # diff from zengxian
-        #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        'ETO', # evaporation of soil water lost to atmosphere
-        'ETR',
-        'LTE50' # ???
-    ]
+    # given_features = [
+    #     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    #     'MIN_AT',
+    #     'AVG_AT', # average temp is AgWeather Network
+    #     'MAX_AT',
+    #     'MIN_REL_HUMIDITY',
+    #     'AVG_REL_HUMIDITY',
+    #     'MAX_REL_HUMIDITY',
+    #     'MIN_DEWPT',
+    #     'AVG_DEWPT',
+    #     'MAX_DEWPT',
+    #     'P_INCHES', # precipitation
+    #     'WS_MPH', # wind speed. if no sensor then value will be na
+    #     'MAX_WS_MPH', 
+    #     'LW_UNITY', # leaf wetness sensor
+    #     'SR_WM2', # solar radiation # different from zengxian
+    #     'MIN_ST8', # diff from zengxian
+    #     'ST8', # soil temperature # diff from zengxian
+    #     'MAX_ST8', # diff from zengxian
+    #     #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    #     'ETO', # evaporation of soil water lost to atmosphere
+    #     'ETR',
+    #     'LTE50' # ???
+    # ]
 
-    L = [i for i in range(1, 31, 2)]
+    given_features = [
+        # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        # 'MIN_AT', # a
+        # 'AVG_AT', # average temp is AgWeather Network
+        # 'MAX_AT',  # a
+        # 'MIN_REL_HUMIDITY', # a
+        # 'AVG_REL_HUMIDITY', # a
+        # 'MAX_REL_HUMIDITY', # a
+        # 'MIN_DEWPT', # a
+        # 'AVG_DEWPT', # a
+        # 'MAX_DEWPT', # a
+        # 'P_INCHES', # precipitation # a
+        # 'WS_MPH',
+        'LTE50']
+    L = [i for i in range(1, 31)]
     for given_feature in given_features:
         result_mse_plots = {
         'BRITS': [],
@@ -480,7 +494,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                 if given_feature.split('_')[-1] not in feature_dependency.keys():
                     dependent_feature_ids = []
                 else:
-                    dependent_feature_ids = [features.index(f) for f in feature_dependency[given_feature.split('_')[-1]] if f != given_feature]
+                    dependent_feature_ids = [features.index(f) for f in feature_dependency[given_feature.split('_')[-1]] if (f != given_feature) and (f in features)]
                 if eval_type == 'random':
                     missing_indices = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, l, i, dependent_feature_ids, random_start=True)
                 else:
@@ -861,7 +875,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
         season_mse_2_brits = []
         season_mse_2_saits = []
         print(f"\n\nseason: {given_season}")
-        for i in range(len(non_missing_indices)-1):
+        for i in range(len(non_missing_indices)-2):
             # print(f"i = {i}")
             mse_1_brits = 0
             mse_1_saits = 0
@@ -895,7 +909,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                     imputed_brits = imputation_brits[row_indices, feature_idx]
 
                     Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
-                    print(f"Xeval: {Xeval}")
+                    # print(f"Xeval: {Xeval}")
                     # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
                     
                     # Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
@@ -909,11 +923,12 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                     mse_1_brits += ((real_values[0] - imputed_brits[0]) ** 2)
                     season_mse_brits.append(((real_values[0] - imputed_brits[0]) ** 2))
 
-                    mse_2_brits += ((real_values[1] - imputed_brits[1]) ** 2)
-                    season_mse_2_brits.append(((real_values[1] - imputed_brits[1]) ** 2))
 
                     mse_1_saits += ((real_values[0] - imputed_saits[0]) ** 2)
                     season_mse_saits.append(((real_values[0] - imputed_saits[0]) ** 2))
+
+                    mse_2_brits += ((real_values[1] - imputed_brits[1]) ** 2)
+                    season_mse_2_brits.append(((real_values[1] - imputed_brits[1]) ** 2))
 
                     mse_2_saits += ((real_values[1] - imputed_saits[1]) ** 2)
                     season_mse_2_saits.append(((real_values[1] - imputed_saits[1]) ** 2))
@@ -1127,11 +1142,11 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 
                 
 
-eval_folder = 'eval_dir_LT_brits_saits_13/'
-if not os.path.isdir(eval_folder):
-    os.makedirs(eval_folder)
-do_evaluation(eval_folder, 'cont', '2020-2021')
-do_evaluation(eval_folder, 'cont', '2021-2022')
+# eval_folder = 'eval_dir_LT_brits_saits_13/'
+# if not os.path.isdir(eval_folder):
+#     os.makedirs(eval_folder)
+# do_evaluation(eval_folder, 'cont', '2020-2021')
+# do_evaluation(eval_folder, 'cont', '2021-2022')
 # data_plots_folder = 'data_plots_LT/LT'
 # if not os.path.isdir(data_plots_folder):
 #     os.makedirs(data_plots_folder)
