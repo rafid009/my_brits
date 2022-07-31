@@ -18,10 +18,10 @@ import time
 from naomi.model import *
 from naomi.helpers import run_test
 from tqdm import tqdm
-from transformer.src.transformer import run_transformer
+from transformer.src.transformer import run_transformer, add_season_id_and_save
 import warnings
 import matplotlib
-from pypots.data import load_specific_dataset, mcar, masked_fill
+from pypots.data import mcar, masked_fill
 from pypots.imputation import SAITS
 from pypots.utils.metrics import cal_mae, cal_mse
 from process_data import *
@@ -77,12 +77,12 @@ IMPUTE_WEIGHT = 0.5
 LABEL_WEIGHT = 1
 
 
-def add_season_id(data_folder, season_df):
-    season_df['season_id'] = 0
-    for season_id in range(len(season_array)):
-        for idx in season_array[season_id]:
-            train_season_df.loc[idx, 'season_id'] = season_id
-    season_df.to_csv(f'{data_folder}/ColdHardiness_Grape_Merlot_test.csv', index=False)
+# def add_season_id(data_folder, season_df):
+#     season_df['season_id'] = 0
+#     for season_id in range(len(season_array)):
+#         for idx in season_array[season_id]:
+#             train_season_df.loc[idx, 'season_id'] = season_id
+#     season_df.to_csv(f'{data_folder}/ColdHardiness_Grape_Merlot_test.csv', index=False)
 
 folder = './json/'
 file = 'json_eval_2_LT'
@@ -118,19 +118,94 @@ mean, std = get_mean_std(train_season_df, features)
 # mice_impute = IterativeImputer(random_state=0, max_iter=20)
 # mice_impute.fit(normalized_season_df[features].to_numpy())
 
+model_dir = "./model_abstract"
+
+############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=13)
-
-if os.path.exists('./model_BRITS_LT.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS_LT_13.model'))
-
-saits_file = "./model_saits_e1000_13.model"
-model_saits = pickle.load(open(saits_file, 'rb'))
+model_brits_path = f"{model_dir}/model_BRITS_LT.model"
+if os.path.exists(model_brits_path):
+    model_brits.load_state_dict(torch.load(model_brits_path))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
-
-
 model_brits.eval()
+
+############## Load SAITS ##############
+saits_file = f"{model_dir}/model_saits_e1000_21.model"
+model_saits = pickle.load(open(saits_file, 'rb'))
+
+
+############## Load MICE ##############
+mice_file = f"{model_dir}/model_mice.model"
+model_mice = pickle.load(open(mice_file, 'rb'))
+
+############## Load MVTS ##############
+params = {
+    'config_filepath': None, 
+    'output_dir': './output', 
+    'data_dir': './data_dir/', 
+    'load_model': './transformer/output/SeasonData_pretrained_2022-05-09_15-57-06_MoQ/checkpoints/model_best.pth', 
+    'resume': False, 
+    'change_output': False, 
+    'save_all': False, 
+    'experiment_name': 'SeasonData_pretrained',
+    'comment': 'pretraining through imputation', 
+    'no_timestamp': False, 
+    'records_file': 'Imputation_records.csv', 
+    'console': False, 
+    'print_interval': 1, 
+    'gpu': '-1', 
+    'n_proc': 1, 
+    'num_workers': 0, 
+    'seed': None, 
+    'limit_size': None, 
+    'test_only': 'testset', 
+    'data_class': 'agaid', 
+    'labels': None, 
+    'test_from': './test_rows.txt', 
+    'test_ratio': 0, 
+    'val_ratio': 0, 
+    'pattern': 'Merlot', 
+    'val_pattern': None, 
+    'test_pattern': None, 
+    'normalization': 'standardization', 
+    'norm_from': None, 
+    'subsample_factor': None, 
+    'task': 'imputation', 
+    'masking_ratio': 0.15, 
+    'mean_mask_length': 10.0, 
+    'mask_mode': 'separate', 
+    'mask_distribution': 'geometric', 
+    'exclude_feats': None, 
+    'mask_feats': [0, 1], 
+    'start_hint': 0.0, 
+    'end_hint': 0.0, 
+    'harden': True, 
+    'epochs': 1000, 
+    'val_interval': 2, 
+    'optimizer': 'Adam', 
+    'lr': 0.0009, 
+    'lr_step': [1000000], 
+    'lr_factor': [0.1], 
+    'batch_size': 16, 
+    'l2_reg': 0, 
+    'global_reg': False, 
+    'key_metric': 'loss', 
+    'freeze': False, 
+    'model': 'transformer', 
+    'max_seq_len': 252, 
+    'data_window_len': None, 
+    'd_model': 128, 
+    'dim_feedforward': 256, 
+    'num_heads': 8, 
+    'num_layers': 3, 
+    'dropout': 0.1, 
+    'pos_encoding': 'learnable', 
+    'activation': 'relu', 
+    'normalization_layer': 'BatchNorm'
+}
+
+
 
 ############## Draw Functions ##############
 def graph_bar_diff_multi(diff_folder, GT_values, result_dict, title, x, xlabel, ylabel, season, feature, drop_linear=False, missing=None, existing=-1):
@@ -374,7 +449,7 @@ def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_featu
     return indices, values
 
 # given_feature = 'AVG_REL_HUMIDITY'
-L = [i for i in range(1, 31, 2)]
+L = [i for i in range(1, 31, 1)]
 # L = [1, 5, 10, 20]#, 70, 100, 150, 200]
 iter = 30
 
@@ -385,27 +460,27 @@ start_time = time.time()
 # given_features = features
 
 given_features = [
-    # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    # 'MIN_AT',
-    # 'AVG_AT', # average temp is AgWeather Network
-    # 'MAX_AT',
-    # 'MIN_REL_HUMIDITY',
-    # 'AVG_REL_HUMIDITY',
-    # 'MAX_REL_HUMIDITY',
-    # 'MIN_DEWPT',
-    # 'AVG_DEWPT',
-    # 'MAX_DEWPT',
-    # 'P_INCHES', # precipitation
-    # 'WS_MPH', # wind speed. if no sensor then value will be na
-    # 'MAX_WS_MPH', 
-    # 'LW_UNITY', # leaf wetness sensor
-    # 'SR_WM2', # solar radiation # different from zengxian
-    # 'MIN_ST8', # diff from zengxian
-    # 'ST8', # soil temperature # diff from zengxian
-    # 'MAX_ST8', # diff from zengxian
-    # #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    # 'ETO', # evaporation of soil water lost to atmosphere
-    # 'ETR',
+    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT',
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    'MIN_REL_HUMIDITY',
+    'AVG_REL_HUMIDITY',
+    'MAX_REL_HUMIDITY',
+    'MIN_DEWPT',
+    'AVG_DEWPT',
+    'MAX_DEWPT',
+    'P_INCHES', # precipitation
+    'WS_MPH', # wind speed. if no sensor then value will be na
+    'MAX_WS_MPH', 
+    'LW_UNITY', # leaf wetness sensor
+    'SR_WM2', # solar radiation # different from zengxian
+    'MIN_ST8', # diff from zengxian
+    'ST8', # soil temperature # diff from zengxian
+    'MAX_ST8', # diff from zengxian
+    #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    'ETO', # evaporation of soil water lost to atmosphere
+    'ETR',
     'LTE50' # ???
 ]
 
@@ -420,32 +495,32 @@ plot_mse_folder = 'overlapping_mse/'
 def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
     filename = 'json/json_eval_2_LT'
 
-    # given_features = [
-    #     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-    #     'MIN_AT',
-    #     'AVG_AT', # average temp is AgWeather Network
-    #     'MAX_AT',
-    #     'MIN_REL_HUMIDITY',
-    #     'AVG_REL_HUMIDITY',
-    #     'MAX_REL_HUMIDITY',
-    #     'MIN_DEWPT',
-    #     'AVG_DEWPT',
-    #     'MAX_DEWPT',
-    #     'P_INCHES', # precipitation
-    #     'WS_MPH', # wind speed. if no sensor then value will be na
-    #     'MAX_WS_MPH', 
-    #     'LW_UNITY', # leaf wetness sensor
-    #     'SR_WM2', # solar radiation # different from zengxian
-    #     'MIN_ST8', # diff from zengxian
-    #     'ST8', # soil temperature # diff from zengxian
-    #     'MAX_ST8', # diff from zengxian
-    #     #'MSLP_HPA', # barrometric pressure # diff from zengxian
-    #     'ETO', # evaporation of soil water lost to atmosphere
-    #     'ETR',
-    #     'LTE50' # ???
-    # ]
-
     given_features = [
+        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        'MIN_AT',
+        'AVG_AT', # average temp is AgWeather Network
+        'MAX_AT',
+        'MIN_REL_HUMIDITY',
+        'AVG_REL_HUMIDITY',
+        'MAX_REL_HUMIDITY',
+        'MIN_DEWPT',
+        'AVG_DEWPT',
+        'MAX_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'MIN_ST8', # diff from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MAX_ST8', # diff from zengxian
+        #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR',
+        'LTE50' # ???
+    ]
+
+    # given_features = [
         # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
         # 'MIN_AT', # a
         # 'AVG_AT', # average temp is AgWeather Network
@@ -458,16 +533,24 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         # 'MAX_DEWPT', # a
         # 'P_INCHES', # precipitation # a
         # 'WS_MPH',
-        'LTE50']
+        # 'LTE50']
     L = [i for i in range(1, 31)]
     for given_feature in given_features:
         result_mse_plots = {
         'BRITS': [],
         'SAITS': [],
+        'MICE': [],
+        'MVTS': [],
+        'MEAN': [],
+        'MEDIAN': []
         }
         results = {
             'BRITS': {},
             'SAITS': {},
+            'MICE': [],
+            'MVTS': [],
+            'MEAN': [],
+            'MEDIAN': []
         }
         l_needed = []
         for l in L:
@@ -526,6 +609,15 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                     # print(f"SAITS imputation: {imputation_saits}")
                     imputation_saits = np.squeeze(imputation_saits)
                     imputed_saits = imputation_saits[row_indices, feature_idx]
+
+                    ret_eval = copy.deepcopy(eval_)
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    imputation_mice = mice_impute.transform(ret_eval)
+                    
+                    ret_eval = copy.deepcopy(eval_)
+                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    trans_test_df = pd.DataFrame(ret_eval, columns=features)
 
                     
                     real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)

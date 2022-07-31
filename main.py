@@ -241,8 +241,8 @@ if __name__ == "__main__":
 
     data_folder = './transformer/data_dir'
     df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-    modified_df, dormant_seasons = preprocess_missing_values(df, is_dormant=True)#False, is_year=True)
-    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, is_dormant=True)#False, is_year=True)
+    modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
+    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
     season_df['season_id'] = 0
 
