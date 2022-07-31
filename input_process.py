@@ -136,12 +136,12 @@ print(f"X: {X.shape}")
 
 mean = np.array(mean) #np.mean(season_df[attributes].to_numpy(), axis=0)
 std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
-np.save('mean.npy', mean)
-np.save('std.npy', std)
 
-def prepare_brits_input():
+
+def prepare_brits_input(model_dir='./model_abstract'):
     
-
+    np.save('mean.npy', mean)
+    np.save('std.npy', std)
     for i in range(X.shape[0]):
         parse_id(X[i], Y[i])
 

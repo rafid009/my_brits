@@ -34,9 +34,15 @@ from transformer.src.models.ts_transformer import model_factory
 from transformer.src.models.loss import get_loss_module
 from transformer.src.optimizers import get_optimizer
 
+def add_season_id_and_save(data_folder, season_df, season_array, filename):
+    season_df['season_id'] = 0
+    for season_id in range(len(season_array)):
+        for idx in season_array[season_id]:
+            season_df.loc[idx, 'season_id'] = season_id
+    season_df.to_csv(f'{data_folder}/{filename}', index=False)
 
 def run_transformer(config):
-
+    config = setup(config)
     total_epoch_time = 0
     total_eval_time = 0
 
