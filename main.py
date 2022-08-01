@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     train_season_df = season_df.drop(season_array[-1], axis=0)
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    add_season_id_and_save(data_folder, train_season_df, season_array, 'ColdHardiness_Grape_Merlot_train.csv')
+    add_season_id_and_save(data_folder, train_season_df, season_array[:-2], 'ColdHardiness_Grape_Merlot_train.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
 

@@ -190,7 +190,7 @@ def validate(val_evaluator, tensorboard_writer, config, best_metrics, best_value
     with torch.no_grad():
         p = val_evaluator.evaluate(epoch, keep_all=True)
         print(f"p = {len(p)}")
-        print(p)
+        # print(p)
         aggr_metrics, per_batch = val_evaluator.evaluate(epoch, keep_all=True)
     eval_runtime = time.time() - eval_start_time
     # logger.info("Validation runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(eval_runtime)))

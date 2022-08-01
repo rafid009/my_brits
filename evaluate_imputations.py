@@ -122,7 +122,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
-model_brits_path = "model_BRITS_LT.model"#f"{model_dir}/model_BRITS_LT.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
 
@@ -131,13 +131,13 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = "model_saits_e1000.model"#f"{model_dir}/model_saits_e1000_21.model"
+saits_file = f"{model_dir}/model_saits_e1000_21.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-# mice_file = f"{model_dir}/model_mice.model"
-# model_mice = pickle.load(open(mice_file, 'rb'))
+mice_file = f"{model_dir}/model_mice.model"
+model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
 params = {
@@ -206,7 +206,7 @@ params = {
 }
 
 ############## Load MEAN ##############
-# model_mean = np.load(f"{model_dir}/mean.npy")
+model_mean = np.load(f"{model_dir}/mean.npy")
 
 
 ############## Draw Functions ##############
@@ -635,12 +635,8 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                     imputed_mean = copy.deepcopy(eval_)
                     imputed_mean = unnormalize(ret_eval, mean, std, feature_idx)
                     imputed_mean[row_indices, feature_idx] = (imputed_mean[row_indices, feature_idx] - model_mean[feature_idx]) / std[feature_idx]
-
-
                     
-                    
-                    real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
-
+                    real_values = eval_[row_indices, feature_idx]
 
                 brits_mse += ((real_values - imputed_brits) ** 2).mean()
                 saits_mse += ((real_values - imputed_saits) ** 2).mean()
@@ -712,27 +708,27 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-SAITS-{features[feature_idx]}.png', dpi=300)
         plt.close()
 
-        # plt.figure(figsize=(16,9))
-        # plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
-        # plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        # plt.xticks(fontsize=16)
-        # plt.yticks(fontsize=16)
-        # plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        # plt.ylabel(f'MSE', fontsize=16)
-        # plt.legend()
-        # plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        # plt.close()
+        plt.figure(figsize=(16,9))
+        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.close()
 
-        # plt.figure(figsize=(16,9))
-        # plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
-        # plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
-        # plt.xticks(fontsize=16)
-        # plt.yticks(fontsize=16)
-        # plt.xlabel(f'Length of contiguous missing values', fontsize=16)
-        # plt.ylabel(f'MSE', fontsize=16)
-        # plt.legend()
-        # plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
-        # plt.close()
+        plt.figure(figsize=(16,9))
+        plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=20)
+        plt.ylabel(f'MSE', fontsize=20)
+        plt.legend()
+        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.close()
 
 
 def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1, all=False):
@@ -931,18 +927,13 @@ def forward_parse_id_day(fs, x, y, feature_impute_idx, existing_LT, trial_num=-1
                 x_copy[(idx_temp[existing_LT + 1] + 1):, features_to_nan] = np.nan
             else:
                 x_copy[idx_temp[existing_LT + 1], features_to_nan] = np.nan
-        # if trial_num != -1:
-        #     print(f"index exist: {idx_temp[trial_num + existing_LT + 1]}")#\nx copy: {x_copy}")
-        # else:
-        #     print(f"index exist: {idx_temp[existing_LT + 1]}")#\nx copy: {x_copy}")
+
         evals = x_copy
     else:
         evals = x
 
     evals = (evals - mean) / std
-    # print(f"eval: {evals[~np.isnan(evals[:, feature_impute_idx]), feature_impute_idx]}")
-    # print('eval: ', evals)
-    # print('eval shape: ', evals.shape)
+
     shp = evals.shape
     evals = evals.reshape(-1)
 
