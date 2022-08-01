@@ -144,7 +144,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/SeasonData_pretrained_2022-05-09_15-57-06_MoQ/checkpoints/model_best.pth', 
+    'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -162,10 +162,10 @@ params = {
     'test_only': 'testset', 
     'data_class': 'agaid', 
     'labels': None, 
-    'test_from': './test_indices.txt', 
+    'test_from': './transformers/test_indices.txt', 
     'test_ratio': 0, 
     'val_ratio': 0, 
-    'pattern': 'Merlot', 
+    'pattern': 'Merlot_test', 
     'val_pattern': None, 
     'test_pattern': None, 
     'normalization': 'standardization', 
@@ -561,8 +561,8 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
             feature_idx = features.index(given_feature)
             X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
-            if eval_type != 'random':
-                iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
+            
+            iter = len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
             print(f"For feature = {given_feature} and length = {l}")
             # print(f"original miss: {original_missing_indices.shape[0]}\n{original_missing_indices}\nseason: {len(season_array[season_idx])}")
             total_count = 0
@@ -665,13 +665,14 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
             
         end_time = time.time()
         result_df = pd.DataFrame(results)
-        if not os.path.isdir(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}'):
-            os.makedirs(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}')
-        result_df.to_csv(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.csv')
+        if not os.path.isdir(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}'):
+            os.makedirs(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}')
+        result_df.to_csv(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.csv')
         # result_df.to_latex(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.tex')
 
-        if not os.path.isdir(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}'):
-            os.makedirs(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}')
+        plot_folder = f'{mse_folder}/plots/{eval_season}'
+        if not os.path.isdir(plot_folder):
+            os.makedirs(plot_folder)
 
         # x_axis = 
         plt.figure(figsize=(16,9))
@@ -683,7 +684,22 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=20)
         plt.ylabel(f'MSE', fontsize=20)
         plt.legend(fontsize=20)
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-BRITS-SAITS-{features[feature_idx]}.png', dpi=300)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-BRITS-SAITS-{given_feature}.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(20,13))
+        plt.plot(l_needed, result_mse_plots['BRITS'], 'tab:orange', label='BRITS', marker='o')
+        plt.plot(l_needed, result_mse_plots['SAITS'], 'tab:blue', label='SAITS', marker='o')
+        plt.plot(l_needed, result_mse_plots['MVTS'], 'tab:cyan', label='MVTS', marker='o')
+        plt.plot(l_needed, result_mse_plots['MICE'], 'tab:purple', label='MICE', marker='o')
+        plt.plot(l_needed, result_mse_plots['MEAN'], 'm', label='MEAN', marker='o')
+        plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.xlabel(f'Length of contiguous missing values', fontsize=24)
+        plt.ylabel(f'MSE', fontsize=24)
+        plt.legend(fontsize=24)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-all-{given_feature}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
@@ -694,7 +710,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=20)
         plt.ylabel(f'MSE', fontsize=20)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-BRITS-{features[feature_idx]}.png', dpi=300)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-BRITS-{given_feature}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
@@ -705,29 +721,29 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         plt.xlabel(f'Length of contiguous missing values', fontsize=20)
         plt.ylabel(f'MSE', fontsize=20)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/{eval_season}/L-vs-MSE-SAITS-{features[feature_idx]}.png', dpi=300)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-SAITS-{given_feature}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['Transformer'], 'tab:blue', label='Transformer', marker='o')
+        plt.plot(l_needed, result_mse_plots['MVTS'], 'tab:cyan', label='MVTS', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         plt.xlabel(f'Length of contiguous missing values', fontsize=20)
         plt.ylabel(f'MSE', fontsize=20)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-BRITS-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-MVTS-{given_feature}.png', dpi=300)
         plt.close()
 
         plt.figure(figsize=(16,9))
-        plt.plot(L, result_mse_plots['MICE'], 'tab:cyan', label='MICE', marker='o')
+        plt.plot(l_needed, result_mse_plots['MICE'], 'tab:purple', label='MICE', marker='o')
         plt.title(f'Length of missing values vs Imputation MSE for feature = {features[feature_idx]}, year={eval_season}', fontsize=20)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         plt.xlabel(f'Length of contiguous missing values', fontsize=20)
         plt.ylabel(f'MSE', fontsize=20)
         plt.legend()
-        plt.savefig(f'{mse_folder}/{eval_type}/plots/{given_feature}/L-vs-MSE-MICE-{features[feature_idx]}-{len(L)}.png', dpi=300)
+        plt.savefig(f'{plot_folder}/L-vs-MSE-MICE-{given_feature}.png', dpi=300)
         plt.close()
 
 
@@ -1254,11 +1270,11 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 
                 
 
-# eval_folder = 'eval_dir_LT_brits_saits_13/'
-# if not os.path.isdir(eval_folder):
-#     os.makedirs(eval_folder)
-# do_evaluation(eval_folder, 'cont', '2020-2021')
-# do_evaluation(eval_folder, 'cont', '2021-2022')
+eval_folder = 'eval_dir_abstract/'
+if not os.path.isdir(eval_folder):
+    os.makedirs(eval_folder)
+do_evaluation(eval_folder, 'cont', '2020-2021')
+do_evaluation(eval_folder, 'cont', '2021-2022')
 # data_plots_folder = 'data_plots_LT/LT'
 # if not os.path.isdir(data_plots_folder):
 #     os.makedirs(data_plots_folder)
@@ -1269,9 +1285,9 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # forward_data_folder = 'forward_LT_data_brits_saits_13'
 # forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
-forward_folder = 'forward_LT_brits_saits_21'
-forward_data_folder = 'forward_LT_data_brits_saits_21'
-forward_prediction_LT_day(forward_folder, slide=False)#, data_folder=forward_data_folder)
+# forward_folder = 'forward_LT_brits_saits_21'
+# forward_data_folder = 'forward_LT_data_brits_saits_21'
+# forward_prediction_LT_day(forward_folder, slide=False)#, data_folder=forward_data_folder)
 # forward_prediction_LT_day(forward_folder, same=False)
 # forward_prediction_LT_day(forward_folder, slide=False)
 # forward_prediction_LT_day(forward_folder, slide=False, same=False)

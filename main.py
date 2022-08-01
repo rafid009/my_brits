@@ -182,7 +182,7 @@ if __name__ == "__main__":
         'resume': False, 
         'change_output': False, 
         'save_all': False, 
-        'experiment_name': 'Transformer Imputation Training', 
+        'experiment_name': 'Transformer_Imputation_Training', 
         'comment': 'pretraining through imputation', 
         'no_timestamp': False, 
         'records_file': 'Imputation_records.csv', 
