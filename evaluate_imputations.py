@@ -121,8 +121,8 @@ mean, std = get_mean_std(train_season_df, features)
 model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=13)
-model_brits_path = f"{model_dir}/model_BRITS_LT.model"
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
+model_brits_path = "model_BRITS_LT.model"#f"{model_dir}/model_BRITS_LT.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
 
@@ -131,30 +131,30 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_e1000_21.model"
+saits_file = "model_saits_e1000.model"#f"{model_dir}/model_saits_e1000_21.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice.model"
-model_mice = pickle.load(open(mice_file, 'rb'))
+# mice_file = f"{model_dir}/model_mice.model"
+# model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
 params = {
     'config_filepath': None, 
-    'output_dir': './output', 
-    'data_dir': './data_dir/', 
+    'output_dir': './transformer/output', 
+    'data_dir': './transformer/data_dir/', 
     'load_model': './transformer/output/SeasonData_pretrained_2022-05-09_15-57-06_MoQ/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
-    'experiment_name': 'SeasonData_pretrained',
-    'comment': 'pretraining through imputation', 
+    'experiment_name': 'MVTS test',
+    'comment': 'imputation test', 
     'no_timestamp': False, 
     'records_file': 'Imputation_records.csv', 
     'console': False, 
     'print_interval': 1, 
-    'gpu': '-1', 
+    'gpu': '0', 
     'n_proc': 1, 
     'num_workers': 0, 
     'seed': None, 
@@ -162,7 +162,7 @@ params = {
     'test_only': 'testset', 
     'data_class': 'agaid', 
     'labels': None, 
-    'test_from': './test_rows.txt', 
+    'test_from': './test_indices.txt', 
     'test_ratio': 0, 
     'val_ratio': 0, 
     'pattern': 'Merlot', 
@@ -205,6 +205,8 @@ params = {
     'normalization_layer': 'BatchNorm'
 }
 
+############## Load MEAN ##############
+# model_mean = np.load(f"{model_dir}/mean.npy")
 
 
 ############## Draw Functions ##############
@@ -566,6 +568,9 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
             total_count = 0
             brits_mse = 0
             saits_mse = 0
+            mice_mse = 0
+            transformer_mse = 0
+            mean_mse = 0
             neg = 0
             for i in tqdm(range(iter)):
                 # i.set_description(f"For {given_feature} & L = {l}")
@@ -612,19 +617,36 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
 
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval[row_indices, feature_idx] = np.nan
-                    imputation_mice = mice_impute.transform(ret_eval)
+                    imputation_mice = model_mice.transform(ret_eval)
+                    imputed_mice = imputation_mice[row_indices, feature_idx]
                     
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                     ret_eval[row_indices, feature_idx] = np.nan
-                    trans_test_df = pd.DataFrame(ret_eval, columns=features)
+                    test_df = pd.DataFrame(ret_eval, columns=features)
+                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
 
+                    transformer_preds = run_transformer(params)
+                    # print(f'trasformer preds: {transformer_preds.shape}')
+                    
+                    imputation_transformer = np.squeeze(transformer_preds)
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+
+                    imputed_mean = copy.deepcopy(eval_)
+                    imputed_mean = unnormalize(ret_eval, mean, std, feature_idx)
+                    imputed_mean[row_indices, feature_idx] = (imputed_mean[row_indices, feature_idx] - model_mean[feature_idx]) / std[feature_idx]
+
+
+                    
                     
                     real_values = eval_[row_indices, feature_idx]#unnormalize(eval_[row_indices, feature_idx], mean, std, feature_idx)
 
-                brits_mse += ((real_values - imputed_brits) ** 2).mean()
 
+                brits_mse += ((real_values - imputed_brits) ** 2).mean()
                 saits_mse += ((real_values - imputed_saits) ** 2).mean()
+                mice_mse += ((real_values - imputed_mice) ** 2).mean()
+                transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
+                mean_mse += ((real_values - imputed_mean) ** 2).mean()
                 total_count += 1
                 
             if total_count <= 0:
@@ -635,9 +657,15 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
 
             results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
             results['SAITS'][l] = saits_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
-            
+            results['MICE'][l] = mice_mse/total_count
+            results['MVTS'][l] = transformer_mse/total_count
+            results['MEAN'][l] = mean_mse/total_count
+
             result_mse_plots['BRITS'].append(brits_mse/total_count)
             result_mse_plots['SAITS'].append(saits_mse/total_count)
+            result_mse_plots['MICE'].append(mice_mse/total_count)
+            result_mse_plots['MVTS'].append(transformer_mse/total_count)
+            result_mse_plots['MEAN'].append(mean_mse/total_count)
             
         end_time = time.time()
         result_df = pd.DataFrame(results)
@@ -1246,13 +1274,13 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # do_data_plots(data_plots_folder, 10, is_original=True)
 # do_data_plots(data_plots_folder, 10, is_original=False)
 
-forward_folder = 'forward_LT_brits_saits_13'
-forward_data_folder = 'forward_LT_data_brits_saits_13'
-forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
+# forward_folder = 'forward_LT_brits_saits_13'
+# forward_data_folder = 'forward_LT_data_brits_saits_13'
+# forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
-forward_folder = 'forward_LT_brits_saits_13_1'
-forward_data_folder = 'forward_LT_data_brits_saits_13_1'
-forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder)
+forward_folder = 'forward_LT_brits_saits_21'
+forward_data_folder = 'forward_LT_data_brits_saits_21'
+forward_prediction_LT_day(forward_folder, slide=False)#, data_folder=forward_data_folder)
 # forward_prediction_LT_day(forward_folder, same=False)
 # forward_prediction_LT_day(forward_folder, slide=False)
 # forward_prediction_LT_day(forward_folder, slide=False, same=False)

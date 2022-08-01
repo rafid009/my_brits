@@ -140,8 +140,8 @@ std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
 
 def prepare_brits_input(model_dir='./model_abstract'):
     
-    np.save('mean.npy', mean)
-    np.save('std.npy', std)
+    np.save(f'{model_dir}/mean.npy', mean)
+    np.save(f'{model_dir}/std.npy', std)
     for i in range(X.shape[0]):
         parse_id(X[i], Y[i])
 
