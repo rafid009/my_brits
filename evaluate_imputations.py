@@ -699,7 +699,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
 
                     imputed_mean = copy.deepcopy(eval_)
                     imputed_mean = unnormalize(ret_eval, mean, std, feature_idx)
-                    imputed_mean[row_indices, feature_idx] = (imputed_mean[row_indices, feature_idx] - model_mean[feature_idx]) / std[feature_idx]
+                    imputed_mean = (imputed_mean[row_indices, feature_idx] - model_mean[feature_idx]) / std[feature_idx]
                     
                     real_values = eval_[row_indices, feature_idx]
 
