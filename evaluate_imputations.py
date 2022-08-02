@@ -142,7 +142,7 @@ model_mice = pickle.load(open(mice_file, 'rb'))
 ############## Load MVTS ##############
 params = {
     'config_filepath': None, 
-    'output_dir': './transformer/output', 
+    'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
     'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
     'resume': False, 
@@ -626,6 +626,71 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                     test_df = pd.DataFrame(ret_eval, columns=features)
                     add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
 
+                    params = {
+                        'config_filepath': None, 
+                        'output_dir': './transformer/output/', 
+                        'data_dir': './transformer/data_dir/', 
+                        'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
+                        'resume': False, 
+                        'change_output': False, 
+                        'save_all': False, 
+                        'experiment_name': 'MVTS_test',
+                        'comment': 'imputation test', 
+                        'no_timestamp': False, 
+                        'records_file': 'Imputation_records.csv', 
+                        'console': False, 
+                        'print_interval': 1, 
+                        'gpu': '0', 
+                        'n_proc': 1, 
+                        'num_workers': 0, 
+                        'seed': None, 
+                        'limit_size': None, 
+                        'test_only': 'testset', 
+                        'data_class': 'agaid', 
+                        'labels': None, 
+                        'test_from': './transformer/test_indices.txt', 
+                        'test_ratio': 0, 
+                        'val_ratio': 0, 
+                        'pattern': None, 
+                        'val_pattern': None, 
+                        'test_pattern': 'Merlot_test', 
+                        'normalization': 'standardization', 
+                        'norm_from': None, 
+                        'subsample_factor': None, 
+                        'task': 'imputation', 
+                        'masking_ratio': 0.15, 
+                        'mean_mask_length': 10.0, 
+                        'mask_mode': 'separate', 
+                        'mask_distribution': 'geometric', 
+                        'exclude_feats': None, 
+                        'mask_feats': [0, 1], 
+                        'start_hint': 0.0, 
+                        'end_hint': 0.0, 
+                        'harden': True, 
+                        'epochs': 1000, 
+                        'val_interval': 2, 
+                        'optimizer': 'Adam', 
+                        'lr': 0.0009, 
+                        'lr_step': [1000000], 
+                        'lr_factor': [0.1], 
+                        'batch_size': 16, 
+                        'l2_reg': 0, 
+                        'global_reg': False, 
+                        'key_metric': 'loss', 
+                        'freeze': False, 
+                        'model': 'transformer', 
+                        'max_seq_len': 252, 
+                        'data_window_len': None, 
+                        'd_model': 128, 
+                        'dim_feedforward': 256, 
+                        'num_heads': 8, 
+                        'num_layers': 3, 
+                        'dropout': 0.1, 
+                        'pos_encoding': 'learnable', 
+                        'activation': 'relu', 
+                        'normalization_layer': 'BatchNorm'
+                    }
+
                     transformer_preds = run_transformer(params)
                     # print(f'trasformer preds: {transformer_preds.shape}')
                     
@@ -665,9 +730,9 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
             
         end_time = time.time()
         result_df = pd.DataFrame(results)
-        if not os.path.isdir(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}'):
-            os.makedirs(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}')
-        result_df.to_csv(f'{mse_folder}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.csv')
+        if not os.path.isdir(f'{mse_folder}/imputation_results/{eval_season}'):
+            os.makedirs(f'{mse_folder}/imputation_results/{eval_season}')
+        result_df.to_csv(f'{mse_folder}/imputation_results/{eval_season}/{given_feature}_results_impute.csv')
         # result_df.to_latex(f'{mse_folder}/{eval_type}/imputation_results/{given_feature}/{eval_season}/{given_feature}_results_impute.tex')
 
         plot_folder = f'{mse_folder}/plots/{eval_season}'
