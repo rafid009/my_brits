@@ -549,10 +549,10 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         results = {
             'BRITS': {},
             'SAITS': {},
-            'MICE': [],
-            'MVTS': [],
-            'MEAN': [],
-            'MEDIAN': []
+            'MICE': {},
+            'MVTS': {},
+            'MEAN': {},
+            'MEDIAN': {}
         }
         l_needed = []
         for l in L:
@@ -714,7 +714,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                 neg+=1
                 continue
             l_needed.append(l)
-            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tSAITS: {saits_mse/total_count}")
+            print(f"AVG MSE for {iter} runs (sliding window of Length = {l}):\n\tBRITS: {brits_mse/total_count}\n\tSAITS: {saits_mse/total_count}\n\tMVTS: {transformer_mse/total_count}\n\tMICE: {mice_mse/total_count}\n\tMEAN: {mean_mse/total_count}")
 
             results['BRITS'][l] = brits_mse/total_count# f"MSE: {brits_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_brits)),5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_brits)), 5)}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_brits)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_brits)), 5)}",
             results['SAITS'][l] = saits_mse/total_count# f"MSE: {mice_mse}\\MIN (diff GT): {np.round(np.min(np.abs(diff_mice)), 5)}\\MAX (diff GT): {np.round(np.max(np.abs(diff_mice)))}\\MEAN (diff GT): {np.round(np.mean(np.abs(diff_mice)), 5)}\\STD (diff GT): {np.round(np.std(np.abs(diff_mice)))}",
