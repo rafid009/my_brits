@@ -433,7 +433,7 @@ class BaseData(object):
 #         df = pd.read_csv(filepath)
 #         return df
 
-MAX_LEN_SEQ = 366
+MAX_LEN_SEQ = 252
 
 class SeasonData(BaseData):
     """
