@@ -503,14 +503,14 @@ class SeasonData(BaseData):
         if len(input_paths) == 0:
             raise Exception("No .csv files found using pattern: '{}'".format(pattern))
 
-        if self.n_proc > 1:
-            # Load in parallel
-            _n_proc = min(self.n_proc, len(input_paths))  # no more than file_names needed here
-            logger.info("Loading {} datasets files using {} parallel processes ...".format(len(input_paths), _n_proc))
-            with Pool(processes=_n_proc) as pool:
-                all_df = pd.concat(pool.map(SeasonData.load_single(), input_paths))
-        else:  # read 1 file at a time
-            all_df = pd.concat(SeasonData.load_single(path) for path in input_paths)
+        # if self.n_proc > 1:
+        #     # Load in parallel
+        #     _n_proc = min(self.n_proc, len(input_paths))  # no more than file_names needed here
+        #     logger.info("Loading {} datasets files using {} parallel processes ...".format(len(input_paths), _n_proc))
+        #     with Pool(processes=_n_proc) as pool:
+        #         all_df = pd.concat(pool.map(SeasonData.load_single(), input_paths))
+        # else:  # read 1 file at a time
+        all_df = pd.concat(SeasonData.load_single(path) for path in input_paths)
 
         return all_df
 
