@@ -162,7 +162,7 @@ params = {
     'test_only': 'testset', 
     'data_class': 'agaid', 
     'labels': None, 
-    'test_from': './transformers/test_indices.txt', 
+    'test_from': './transformer/test_indices.txt', 
     'test_ratio': 0, 
     'val_ratio': 0, 
     'pattern': 'Merlot_test', 
