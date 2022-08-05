@@ -323,7 +323,7 @@ def draw_data_plot(results, f, season, folder='subplots', is_original=False, exi
 
         ax = plt.subplot(616)
         ax.set_title('Feature = '+f+' Season = '+season+' imputed by MVTS', fontsize=27)
-        plt.plot(np.arange(results['MVTS'].shape[0]), results['MVTS'].cpu(), 'tab:blue')
+        plt.plot(np.arange(results['MVTS'].shape[0]), results['MVTS'].cpu().detach().numpy(), 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
 
