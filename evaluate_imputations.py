@@ -1,4 +1,5 @@
 import copy
+from turtle import color
 from cvxpy import real
 import numpy as np
 import pandas as pd
@@ -220,12 +221,16 @@ def graph_bar_diff_multi(diff_folder, GT_values, result_dict, title, x, xlabel, 
     width = 0.3
     pos = 0
     remove_keys = ['real', 'missing']
+
+    colors = ['tab:orange', 'tab:blue', 'tab:cyan', 'tab:purple']
     # if drop_linear:
     #   remove_keys.append('LinearInterp')
+    i = 0
     for key, value in plot_dict.items():
         if key not in remove_keys:
             # print(f"x = {len(x)}, value = {len(value)}")
-            plt.bar(x + pos + 5, value, width, label = key)
+            plt.bar(x + pos + 5, value, width, label = key, color=colors[i])
+            i += 1
             pos += width
 
     plt.xlabel(xlabel, fontsize=16)
@@ -1673,12 +1678,13 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
 forward_folder = 'forward_LT_abstract_1'
-forward_data_folder = 'forward_LT_data_abstract_1'
-forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder)
-forward_folder = 'forward_LT_abstract_2'
+forward_data_folder = f"{forward_folder}/data"
+forward_diff_folder = f"{forward_folder}/diff"
+forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder, diff_folder=forward_diff_folder)
+# forward_folder = 'forward_LT_abstract_2'
 # forward_prediction_LT_day(forward_folder, same=False)
 # forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder)
-forward_prediction_LT_day(forward_folder, slide=True)#, data_folder=forward_data_folder)#, same=False)
+# forward_prediction_LT_day(forward_folder, slide=True)#, data_folder=forward_data_folder)#, same=False)
 
 
 # data_plots_LT = f'{forward_folder}/data_plots'
