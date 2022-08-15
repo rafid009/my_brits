@@ -238,7 +238,7 @@ impute_model = 'linear_synth'
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 800
+    'epochs': 1000
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -249,14 +249,14 @@ print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1)
+evaluate(model, x_test, y_test, 1, criterion)
 
 
 impute_model = 'brits_synth' 
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 800
+    'epochs': 1000
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -267,14 +267,14 @@ print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1)
+evaluate(model, x_test, y_test, 1, criterion)
 
 
 impute_model = 'saits_synth' 
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 800
+    'epochs': 1000
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -285,13 +285,13 @@ print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1)
+evaluate(model, x_test, y_test, 1, criterion)
 
 impute_model = 'mice_synth' 
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 800
+    'epochs': 1000
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -302,13 +302,13 @@ print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1)
+evaluate(model, x_test, y_test, 1, criterion)
 
 impute_model = 'mvts_synth' 
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 800
+    'epochs': 1000
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -319,4 +319,4 @@ print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1)
+evaluate(model, x_test, y_test, 1, criterion)
