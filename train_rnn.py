@@ -51,7 +51,7 @@ def initialize_input(impute_model, n_random, imputed=True):
         input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_imputed"
         df = pd.read_csv(f"{input_file}_{impute_model}_{n_random}.csv")
     else:
-        input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_new_synthetic"
+        input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
         df = pd.read_csv(f"{input_file}_{n_random}.csv")
     if imputed:
         modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True, imputed=True)#False, is_year=True)
