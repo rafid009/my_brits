@@ -147,7 +147,7 @@ def random_synthetic_missing(season_df, features, n_random=0.2):
 if __name__ == "__main__":
     n_features = 19
     model_dir = "./model_abstract"
-    n_random = 0.2
+    n_random = 0.4
 
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir)
