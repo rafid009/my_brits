@@ -1,4 +1,6 @@
+import copy
 import os
+from turtle import clear
 import torch
 import torch.optim as optim
 import numpy as np
@@ -23,6 +25,32 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+features = [
+    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT',
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    'MIN_REL_HUMIDITY',
+    'AVG_REL_HUMIDITY',
+    'MAX_REL_HUMIDITY',
+    'MIN_DEWPT',
+    'AVG_DEWPT',
+    'MAX_DEWPT',
+    # 'P_INCHES', # precipitation
+    'WS_MPH', # wind speed. if no sensor then value will be na
+    'MAX_WS_MPH', 
+    # 'LW_UNITY', # leaf wetness sensor
+    'SR_WM2', # solar radiation # different from zengxian
+    'MIN_ST8', # diff from zengxian
+    'ST8', # soil temperature # diff from zengxian
+    'MAX_ST8', # diff from zengxian
+    #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    'ETO', # evaporation of soil water lost to atmosphere
+    'ETR', # ???
+    'LTE50'
+    # 'SEASON_JDAY'
+]
 
 def train(model, n_epochs, batch_size, model_path, data_file='./json/json_LT'):
     start = time.time()
@@ -92,96 +120,141 @@ def evaluate(model, val_iter):
     # np.save('./result/label', save_label)
     return mse
 
+def random_synthetic_missing(season_df, features, n_random=0.2):
+    indices_to_choose_from = season_df.index
+    df_copy = season_df.copy()
 
+    actual_features = {
+        'AT': ['MEAN_AT', 'AVG_AT', 'MIN_AT', 'MAX_AT'],
+        'HUMIDITY': ['MIN_REL_HUMIDITY', 'MAX_REL_HUMIDITY', 'AVG_REL_HUMIDITY'],
+        'DEWPT': ['MIN_DEWPT', 'AVG_DEWPT', 'MAX_DEWPT'],
+        'ST8': ['MIN_ST8', 'ST8', 'MAX_ST8'],
+        # 'INCHES': ['P_INCHES'],
+        'MPH': ['WS_MPH', 'MAX_WS_MPH'], # wind speed. if no sensor then value will be na
+        # 'UNITY': ['LW_UNITY'], # leaf wetness sensor
+        'WM2': ['SR_WM2'], # solar radiation # different from zengxian
+        'ETO': ['ETO'], # evaporation of soil water lost to atmosphere
+        'ETR': ['ETR']
+    }
+
+    for feature in actual_features.keys():
+        if feature == 'LTE50':
+            continue
+        indices = np.random.choice(indices_to_choose_from, size=int(len(indices_to_choose_from) * n_random), replace=False, ).tolist()
+        df_copy.loc[indices, actual_features[feature]] = np.nan
+    return df_copy#.to_numpy()
 
 if __name__ == "__main__":
-    n_features = 21
+    n_features = 19
     model_dir = "./model_abstract"
+    n_random = 0.2
 
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir)
+    complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
-    # # BRITS
-    # print(f"=========== BRITS Training Starts ===========")
-    # prepare_brits_input()
-    # batch_size = 16
-    # n_epochs = 4000
-    # RNN_HID_SIZE = 64
-    # IMPUTE_WEIGHT = 0.5
-    # LABEL_WEIGHT = 1
-    # model_name = 'BRITS'
-    # model_path_name = 'BRITS'
-    # model_path = f'{model_dir}/model_'+model_path_name+'_LT.model'
+    # BRITS
+    print(f"=========== BRITS Training Starts ===========")
+    df_synth = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
+    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
-    # if model_name == 'BRITS':
-    #     model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
-    # else:
-    #     model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-    # if os.path.exists(model_path):
-    #     model.load_state_dict(torch.load(model_path))
+    train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+    for s in complete_seasons[:-2]:
+        s_copy = copy.deepcopy(season_array[s])
+        train_season_complete.extend(s_copy)
 
-    # if torch.cuda.is_available():
-    #     model = model.cuda()
+    season_df = season_df.loc[train_season_complete]
+    # print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
+    df_synth.loc[season_df.index.tolist(), :] = random_synthetic_missing(season_df, features, n_random=n_random)
 
-    # train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
-    # print(f"=========== BRITS Training Ends ===========")
+    df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
+    
 
-    # # SAITS
-    # print(f"=========== SAITS Training Starts ===========")
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
+    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    
+    train_season_df = season_df.drop(season_array[-1], axis=0)
+    train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    mean, std = get_mean_std(season_df, features)
+    
+    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
+    batch_size = 16
+    n_epochs = 4000
+    RNN_HID_SIZE = 64
+    IMPUTE_WEIGHT = 0.5
+    LABEL_WEIGHT = 1
+    model_name = 'BRITS'
+    model_path_name = 'BRITS'
+    model_path = f'{model_dir}/model_{model_path_name}_LT_synth_{n_random}.model'
+    
+    if model_name == 'BRITS':
+        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
+    else:
+        model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
 
-    # df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-    # modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
-    # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-    # train_season_df = season_df.drop(season_array[-1], axis=0)
-    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    # mean, std = get_mean_std(season_df, features)
+    if torch.cuda.is_available():
+        model = model.cuda()
 
-    # X, Y = split_XY(season_df, max_length, season_array, features)
+    train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
+    print(f"=========== BRITS Training Ends ===========")
 
-    # num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
+    # SAITS
+    print(f"=========== SAITS Training Starts ===========")
 
-    # X = X[:-2]
-    # Y = Y[:-2]
+    
 
-    # for i in range(X.shape[0]):
-    #     X[i] = (X[i] - mean)/std
-    # # print(f"X: {X.shape}")
-    # # X = X.reshape(num_samples, 48, -1)
-    # X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
-    # X = masked_fill(X, 1 - missing_mask, np.nan)
-    # # Model training. This is PyPOTS showtime. 
-    # saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=1000, patience=100)
-    # saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
+    X, Y = split_XY(season_df, max_length, season_array, features)
 
-    # filename = f'{model_dir}/model_saits_e1000_21.model'
-    # pickle.dump(saits, open(filename, 'wb'))
+    num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
 
-    # imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
-    # mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
-    # print(f"SAITS Validation MSE: {mse}")
-    # print(f"=========== SAITS Training Ends ===========")
+    X = X[complete_seasons[:-2]]
+    Y = Y[complete_seasons[:-2]]
+
+    for i in range(X.shape[0]):
+        X[i] = (X[i] - mean)/std
+
+    filename = f'{model_dir}/model_saits_synth_{n_random}.model'
+    # print(f"X: {X.shape}")
+    # X = X.reshape(num_samples, 48, -1)
+    X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
+    X = masked_fill(X, 1 - missing_mask, np.nan)
+    # Model training. This is PyPOTS showtime. 
+    saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=2000, patience=100)
+
+    saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
+    pickle.dump(saits, open(filename, 'wb'))
+
+    imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
+    mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
+    print(f"SAITS Validation MSE: {mse}")
+    print(f"=========== SAITS Training Ends ===========")
 
     # # MICE
-    # print(f"=========== MICE Training Starts ===========")
-    # normalized_season_df = train_season_df[features].copy()
-    # normalized_season_df = (normalized_season_df - mean) /std
-    # mice_impute = IterativeImputer(random_state=0, max_iter=20)
-    # mice_impute.fit(normalized_season_df[features].to_numpy())
-    # filename = f'{model_dir}/model_mice.model'
-    # pickle.dump(mice_impute, open(filename, 'wb'))
+    print(f"=========== MICE Training Starts ===========")
+    
+    train_complete_season_df = train_season_df.loc[train_season_complete]
+    normalized_season_df = train_complete_season_df[features].copy()
+    normalized_season_df = (normalized_season_df - mean) /std
+    mice_impute = IterativeImputer(random_state=0, max_iter=30)
+    mice_impute.fit(normalized_season_df[features].to_numpy())
+    filename = f'{model_dir}/model_mice_synth_{n_random}.model'
+    pickle.dump(mice_impute, open(filename, 'wb'))
 
-    # print(f"=========== MICE Training Ends ===========")
+    print(f"=========== MICE Training Ends ===========")
 
     # MVTS
     print(f"=========== MVTS Training Starts ===========")
     params = {
         'config_filepath': None, 
-        'output_dir': './transformer/output', 
-        'data_dir': './transformer/data_dir/', 
-        'load_model': None, 
-        'resume': False, 
-        'change_output': False, 
-        'save_all': False, 
+        'output_dir': './transformer/output',
+        'data_dir': './transformer/data_dir/',
+        'load_model': None,
+        'resume': False,
+        'change_output': False,
+        'save_all': False,
         'experiment_name': 'Transformer_Imputation_Training', 
         'comment': 'pretraining through imputation', 
         'no_timestamp': False, 
@@ -199,7 +272,7 @@ if __name__ == "__main__":
         'test_from': None, 
         'test_ratio': 0, 
         'val_ratio': 0.1, 
-        'pattern': 'Merlot_train', 
+        'pattern': 'Merlot_synth', 
         'val_pattern': None, 
         'test_pattern': None, 
         'normalization': 'standardization', 
@@ -215,7 +288,7 @@ if __name__ == "__main__":
         'start_hint': 0.0, 
         'end_hint': 0.0, 
         'harden': True, 
-        'epochs': 500, 
+        'epochs': 1500, 
         'val_interval': 2, 
         'optimizer': 'Adam', 
         'lr': 0.0009, 
@@ -240,15 +313,16 @@ if __name__ == "__main__":
     }
 
     data_folder = './transformer/data_dir'
-    df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-    modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
-    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    # df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+    # modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
+    # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
     season_df['season_id'] = 0
 
     train_season_df = season_df.drop(season_array[-1], axis=0)
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    add_season_id_and_save(data_folder, train_season_df, season_array[:-2], 'ColdHardiness_Grape_Merlot_train.csv')
+    train_season_complete = [season_array[s] for s in complete_seasons[:-2]]
+    add_season_id_and_save(data_folder, train_season_df, train_season_complete, 'ColdHardiness_Grape_Merlot_synth_transformer.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
 

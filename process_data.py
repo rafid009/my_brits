@@ -28,10 +28,10 @@ features = [
     'MIN_DEWPT',
     'AVG_DEWPT',
     'MAX_DEWPT',
-    'P_INCHES', # precipitation
+    # 'P_INCHES', # precipitation
     'WS_MPH', # wind speed. if no sensor then value will be na
     'MAX_WS_MPH', 
-    'LW_UNITY', # leaf wetness sensor
+    # 'LW_UNITY', # leaf wetness sensor
     'SR_WM2', # solar radiation # different from zengxian
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
@@ -58,37 +58,35 @@ feature_dependency = {
   'LTE50': []
   }
 
-def preprocess_missing_values(df, features, is_dormant=True, is_year=False):
-  df['AVG_AT'].replace(-100, np.nan, inplace=True)
-  df['MIN_AT'].replace(-100, np.nan, inplace=True)
-  df['MAX_AT'].replace(-100, np.nan, inplace=True)
-  df['MEAN_AT'].replace(-100, np.nan, inplace=True)
+def preprocess_missing_values(df, features, is_dormant=True, is_year=False, imputed=False, not_original=False):
 
-  missing_data_features = []
-  for feature in features:
-    if df[feature].isna().any():
-      missing_data_features.append(feature)
 
   modified_df = df.copy()
 
-  modified_df['MIN_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
-  modified_df['MAX_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
-  modified_df['AVG_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
-  modified_df['SR_WM2'].replace(0, np.nan, inplace=True)
-  modified_df['WS_MPH'].replace(0, np.nan, inplace=True)
-  modified_df['MAX_WS_MPH'].replace(0, np.nan, inplace=True)
-  modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
-  modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
+  if not imputed:
+    df['AVG_AT'].replace(-100, np.nan, inplace=True)
+    df['MIN_AT'].replace(-100, np.nan, inplace=True)
+    df['MAX_AT'].replace(-100, np.nan, inplace=True)
+    df['MEAN_AT'].replace(-100, np.nan, inplace=True)
+    modified_df['MIN_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
+    modified_df['MAX_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
+    modified_df['AVG_REL_HUMIDITY'].replace(0, np.nan, inplace=True)
+    modified_df['SR_WM2'].replace(0, np.nan, inplace=True)
+    modified_df['WS_MPH'].replace(0, np.nan, inplace=True)
+    modified_df['MAX_WS_MPH'].replace(0, np.nan, inplace=True)
+    # modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
+    # modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
 
-  start_idx = df[df['DATE'] == '2007-07-21'].index.tolist()[0]
-  end_idx = df[df['DATE'] == '2007-12-30'].index.tolist()[0]
+    if not not_original:
+      start_idx = df[df['DATE'] == '2007-07-21'].index.tolist()[0]
+      end_idx = df[df['DATE'] == '2007-12-30'].index.tolist()[0]
 
-  start_idx += 1
-  for i in range(start_idx, end_idx + 1):
-    modified_df.at[i, 'MIN_DEWPT'] = np.nan
-    modified_df.at[i, 'MAX_DEWPT'] = np.nan
-    modified_df.at[i, 'AVG_DEWPT'] = np.nan
-  # print(f"is dormant: {is_dormant}")
+      start_idx += 1
+      for i in range(start_idx, end_idx + 1):
+        modified_df.at[i, 'MIN_DEWPT'] = np.nan
+        modified_df.at[i, 'MAX_DEWPT'] = np.nan
+        modified_df.at[i, 'AVG_DEWPT'] = np.nan
+      # print(f"is dormant: {is_dormant}")
   if is_year:
     dormant_seasons = modified_df.index.tolist()
   elif is_dormant:
@@ -97,6 +95,30 @@ def preprocess_missing_values(df, features, is_dormant=True, is_year=False):
     dormant_seasons = modified_df.index.tolist()
   return modified_df, dormant_seasons
 
+def get_FG(df: pd.DataFrame, feature_LTE, pred_ferguson, season_indices):
+  # df_copy = df.copy()
+  # df_copy = df_copy.interpolate(method='linear', limit_direction='both')
+  season_array = df[[feature_LTE, pred_ferguson]].loc[season_indices, :].to_numpy()
+  non_null_indices = np.where((~np.isnan(season_array[:,0])) & (~np.isnan(season_array[:,1])))[0]
+  mse = ((season_array[non_null_indices, 0] - season_array[non_null_indices, 1]) ** 2).mean()
+  return mse, season_array[:, 1]
+  
+
+
+
+    # FG_model = []
+    # for i, season in enumerate(seasons):
+    #     if i == 32 or i == 33: # last 2 seasons for testing
+    #         _y = df[[column]].loc[season, :].to_numpy()
+
+    #         add_array = np.zeros((season_max_length - len(season), 1))
+    #         add_array[:] = np.NaN
+
+    #         _y = np.concatenate((_y, add_array), axis=0)
+
+    #         FG_model.append(_y)
+    # print(FG_model[0].shape, FG_model[1].shape)
+    # return FG_model[0].flatten(), FG_model[1].flatten() # 2020-2021 / 2021-2022
 
 def get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True, is_year=False):
   seasons = []
@@ -184,7 +206,7 @@ def split_XY(df, max_season_len, seasons, features, is_pad=False):#, x_mean, x_s
     Y = []
     pads = []
     for i, season in enumerate(seasons):
-        x = (df[features].loc[season, :]).to_numpy()
+        x = (df.loc[season, features]).to_numpy()
         paddings = np.zeros((max_season_len - len(season), len(features)))
         x = np.concatenate((x, paddings), axis = 0)
 

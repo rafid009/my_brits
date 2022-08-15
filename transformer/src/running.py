@@ -11,7 +11,6 @@ import time
 import pickle
 from functools import partial
 
-import ipdb
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
@@ -92,7 +91,7 @@ def setup(args):
     with open(os.path.join(output_dir, 'configuration.json'), 'w') as fp:
         json.dump(config, fp, indent=4, sort_keys=True)
 
-    logger.info("Stored configuration file in '{}'".format(output_dir))
+    # logger.info("Stored configuration file in '{}'".format(output_dir))
 
     return config
 

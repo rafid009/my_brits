@@ -14,7 +14,17 @@ import utils
 import data_loader
 import matplotlib.pyplot as plt
 from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import KNNImputer, IterativeImputer
+from sklearn.impute import IterativeImputer
+from pypots.data import mcar, masked_fill
+from pypots.imputation import SAITS
+from pypots.utils.metrics import cal_mae, cal_mse
+from transformer.src.transformer import run_transformer, add_season_id_and_save
+import pickle 
+import warnings
+import sys
+warnings.filterwarnings("ignore")
+
+np.set_printoptions(threshold=sys.maxsize)
 
 RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.3
@@ -157,13 +167,25 @@ def parse_id(x, y, fs, mean, std, features):
     rec = json.dumps(rec)
 
     fs.write(rec + '\n')
+    return values
+complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
-train_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
+model_name = 'mice_synth'
+
+train_df = pd.read_csv("ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv")
 # print('Now train')
 train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, features, is_dormant=True)#, is_year=True)
 train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, features, is_dormant=True)#, is_year=True)
-# train_season_df = train_season_df.drop(train_season_array[-1], axis=0)
-# train_season_df = train_season_df.drop(train_season_array[-2], axis=0)
+train_season_array = [train_season_array[i] for i in complete_seasons]
+
+train_complete = []
+for i in range(len(train_season_array)):
+    indices = copy.deepcopy(train_season_array[i])
+    train_complete.extend(indices)
+
+train_season_df = train_season_df.loc[train_complete]
+train_season_df = train_season_df.drop(train_season_array[-1], axis=0)
+train_season_df = train_season_df.drop(train_season_array[-2], axis=0)
 # train_season_df = train_season_df.drop(train_season_array[-3], axis=0)
 # train_season_df = train_season_df.drop(train_season_array[-4], axis=0)
 mean, std = get_mean_std(train_season_df, features)
@@ -177,15 +199,18 @@ mean, std = get_mean_std(train_season_df, features)
 
 
 print('Now test')
-test_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
+test_df = pd.read_csv("ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv")
 modified_df, dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#, is_year=True)
+season_array = [season_array[i] for i in complete_seasons]
+seasons_complete = []
+for i in range(len(season_array)):
+    indices = copy.deepcopy(season_array[i])
+    seasons_complete.extend(indices)
+season_df = season_df.loc[seasons_complete]
 # print('season array: ', len(season_array), '\n', season_array)
 
-# test_normalized_df = season_df[features].copy()
-# test_normalized_df = (test_normalized_df - mean) /std
-# test_imputed_mice = mice_impute.transform(test_normalized_df[features])
-# test_imputed = unnormalize(test_imputed_mice, mean, std)
+
 
 # print(f"{test_df.iloc[11824]}")
 
@@ -201,47 +226,153 @@ if not os.path.exists(folder):
 fs = open(folder+'json', 'w')
 print('X: ', X.shape)
 zero_pads = []
+Xeval = copy.deepcopy(X)
 for i in range(X.shape[0]):
     indices = np.where(~X[i].any(axis=1))[0]
     # print('zero pads: ', indices, '\n\n')
     zero_pads.append(indices)
-    parse_id(X[i], Y[i], fs, mean, std, features)
+    Xeval[i] = parse_id(X[i], Y[i], fs, mean, std, features)
 fs.close()
 
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
-if os.path.exists('./model_BRITS_LT.model'):
-    model_brits.load_state_dict(torch.load('./model_BRITS_LT.model'))
+if os.path.exists('./model_abstract/model_BRITS_LT_synth_0.2.model'):
+    model_brits.load_state_dict(torch.load('./model_abstract/model_BRITS_LT_synth_0.2.model'))
 
 model_brits.eval()
+
+saits_file = './model_abstract/model_saits_synth_0.2.model'
+model_saits = pickle.load(open(saits_file, 'rb'))
+
+mice_file = './model_abstract/model_mice_synth_0.2.model'
+model_mice = pickle.load(open(mice_file, 'rb'))
+
+test_normalized_df = season_df[features].copy()
+test_normalized_df = (test_normalized_df - mean) /std
+test_imputed_mice = model_mice.transform(test_normalized_df[features])
+test_imputed = unnormalize(test_imputed_mice, mean, std)
+
+add_season_id_and_save('./transformer/data_dir', season_df[features], season_array=season_array, filename='ColdHardiness_Grape_Merlot_test.csv')
+
+params = {
+    'config_filepath': None, 
+    'output_dir': './transformer/output/', 
+    'data_dir': './transformer/data_dir/', 
+    'load_model': './transformer/output/mvts-model-synth/checkpoints/model_best.pth', 
+    'resume': False, 
+    'change_output': False, 
+    'save_all': False, 
+    'experiment_name': 'MVTS_test',
+    'comment': 'imputation test', 
+    'no_timestamp': False, 
+    'records_file': 'Imputation_records.csv', 
+    'console': False, 
+    'print_interval': 1, 
+    'gpu': '0', 
+    'n_proc': 1, 
+    'num_workers': 0, 
+    'seed': None, 
+    'limit_size': None, 
+    'test_only': 'testset', 
+    'data_class': 'agaid', 
+    'labels': None, 
+    'test_from': './transformer/test_indices.txt', 
+    'test_ratio': 0, 
+    'val_ratio': 0, 
+    'pattern': None, 
+    'val_pattern': None, 
+    'test_pattern': 'Merlot_test', 
+    'normalization': 'standardization', 
+    'norm_from': None, 
+    'subsample_factor': None, 
+    'task': 'imputation', 
+    'masking_ratio': 0.15, 
+    'mean_mask_length': 10.0, 
+    'mask_mode': 'separate', 
+    'mask_distribution': 'geometric', 
+    'exclude_feats': None, 
+    'mask_feats': [0, 1], 
+    'start_hint': 0.0, 
+    'end_hint': 0.0, 
+    'harden': True, 
+    'epochs': 1000, 
+    'val_interval': 2, 
+    'optimizer': 'Adam', 
+    'lr': 0.0009, 
+    'lr_step': [1000000], 
+    'lr_factor': [0.1], 
+    'batch_size': len(X), 
+    'l2_reg': 0, 
+    'global_reg': False, 
+    'key_metric': 'loss', 
+    'freeze': False, 
+    'model': 'transformer', 
+    'max_seq_len': 252, 
+    'data_window_len': None, 
+    'd_model': 128, 
+    'dim_feedforward': 256, 
+    'num_heads': 8, 
+    'num_layers': 3, 
+    'dropout': 0.1, 
+    'pos_encoding': 'learnable', 
+    'activation': 'relu', 
+    'normalization_layer': 'BatchNorm'
+}
+
+
 
 print('season array loader: ', len(season_array))
 val_iter = data_loader.get_loader(batch_size=len(season_array), filename=folder + 'json', shuffle=False)
 
 imputed_array_brits = None
 for idx, data in enumerate(val_iter):
-    data = utils.to_var(data)
-    ret = model_brits.run_on_batch(data, None)
-    eval_ = ret['evals'].data.cpu().numpy()
-    print('idx: ', idx, ' eval: ', eval_.shape)
-    imputation_brits = ret['imputations'].data.cpu().numpy()
-    imputation_brits = unnormalize(imputation_brits, mean, std)
-    print(f"brits imputed seasons: {len(imputation_brits)}")
-    for i in range(imputation_brits.shape[0]):
-        # print(imputation_brits[i])
-        without_paddings = np.delete(imputation_brits[i], zero_pads[i], 0)
-        if imputed_array_brits is None:
-            imputed_array_brits = np.round(without_paddings, 2)
-        else:
-            imputed_array_brits = np.concatenate((imputed_array_brits, np.round(without_paddings, 2)), axis=0)
+    pass
+    # transformer_preds = run_transformer(params)
+    # transformer_preds = unnormalize(transformer_preds.detach().numpy(), mean, std)
+    # print(f"mvts: {transformer_preds.shape}")
+    # print(f'season_df: {season_df[features].shape}')
+    # data = utils.to_var(data)
+    # ret = model_brits.run_on_batch(data, None)
+    # eval_ = ret['evals'].data.cpu().numpy()
+    # # print('idx: ', idx, ' eval: ', eval_.shape)
+    # imputation_brits = ret['imputations'].data.cpu().numpy()
+    # imputation_brits = unnormalize(imputation_brits, mean, std)
+    # print(f"imputed brits: {np.isnan(imputation_brits).sum()}")
+    # print(f"brits imputed seasons: {len(imputation_brits)}")
+
+    # Xeval = np.reshape(Xeval, (len(season_array), Xeval.shape[1], Xeval.shape[2]))
+    # # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
+    
+    # # Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
+    # imputation_saits = model_saits.impute(Xeval)
+    # imputation_saits = unnormalize(imputation_saits, mean, std)
+
+    # imputation_mice = model_mice.transform(season_df[features].to_numpy())
+
+    
+    # for i in range(imputation_saits.shape[0]):
+    #     # print(imputation_brits[i])
+    #     without_paddings = np.delete(imputation_saits[i], zero_pads[i], 0)
+    #     # print(f"without pd: {without_paddings}")
+    #     if imputed_array_brits is None:
+    #         imputed_array_brits = np.round(without_paddings, 2)
+    #     else:
+    #         imputed_array_brits = np.concatenate((imputed_array_brits, np.round(without_paddings, 2)), axis=0)
 print(f"season indices: {len(season_df.index.tolist())}")
 brits_df = test_df.copy()
-brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
+# print(f"{model_name} final: {imputed_array_brits.shape}")
+brits_df.loc[season_df.index.tolist(), features] = test_imputed#imputed_array_brits
 # brits_df.iloc[11824:] = test_df.iloc[11824:] 
 # print(f"test: {test_df.iloc[12088]}")
 # print(f"brits: {brits_df.iloc[12088]}")
-brits_df.to_csv('ColdHardiness_Grape_Merlot_imputed_brits_LT.csv', index=False)
+brits_df['LTE50'] = test_df['LTE50']
+data_imputed_folder = './abstract_imputed'
+if not os.path.isdir(data_imputed_folder):
+    os.makedirs(data_imputed_folder)
+filename = 'ColdHardiness_Grape_Merlot_imputed'
+
+brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
 
 

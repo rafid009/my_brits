@@ -1,4 +1,5 @@
 import copy
+from threading import get_ident
 from turtle import color
 from cvxpy import real
 import numpy as np
@@ -25,7 +26,6 @@ import matplotlib
 from pypots.data import mcar, masked_fill
 from pypots.imputation import SAITS
 from pypots.utils.metrics import cal_mae, cal_mse
-from process_data import *
 import pickle
 
 warnings.filterwarnings("ignore")
@@ -70,7 +70,6 @@ seasons = {
 # '2019-2020': 31,
 '2020-2021': 32,
 '2021-2022': 33,
-# '2022': 34
 }
 
 RNN_HID_SIZE = 64
@@ -102,7 +101,7 @@ std = []
 
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
-df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 train_season_df = season_df.drop(season_array[-1], axis=0)
@@ -122,22 +121,22 @@ mean, std = get_mean_std(train_season_df, features)
 model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=21)
-model_brits_path = f"{model_dir}/model_BRITS_LT.model"
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
+model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.2.model"
 if os.path.exists(model_brits_path):
-    model_brits.load_state_dict(torch.load(model_brits_path))
+    model_brits.load_state_dict(torch.load(model_brits_path, map_location='cpu'))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_e1000_21.model"
+saits_file = f"{model_dir}/model_saits_synth_0.2.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice.model"
+mice_file = f"{model_dir}/model_mice_synth_0.2.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
@@ -215,7 +214,8 @@ def graph_bar_diff_multi(diff_folder, GT_values, result_dict, title, x, xlabel, 
     plot_dict = {}
     plt.figure(figsize=(32,20))
     for key, value in result_dict.items():
-      plot_dict[key] = np.abs(GT_values) - np.abs(value[missing])
+        # print(f"key: {key}")
+        plot_dict[key] = np.abs(GT_values) - np.abs(value[missing])
     # ind = np.arange(prediction.shape[0])
     # x = np.array(x)
     width = 0.3
@@ -229,18 +229,18 @@ def graph_bar_diff_multi(diff_folder, GT_values, result_dict, title, x, xlabel, 
     for key, value in plot_dict.items():
         if key not in remove_keys:
             # print(f"x = {len(x)}, value = {len(value)}")
-            plt.bar(x + pos + 5, value, width, label = key, color=colors[i])
+            plt.bar(x + pos, value, width, label = key, color=colors[i])
             i += 1
             pos += width
 
-    plt.xlabel(xlabel, fontsize=16)
-    plt.ylabel(ylabel, fontsize=16)
-    plt.title(title, fontsize=20)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
+    plt.xlabel(xlabel, fontsize=20)
+    plt.ylabel(ylabel, fontsize=20)
+    plt.title(title, fontsize=25)
+    plt.xticks([r + width for r in range(len(x))], [str(i) for i in x],fontsize=20)
+    plt.yticks(fontsize=20)
     # plt.axis([0, 80, -2, 3])
 
-    plt.legend(loc='best')
+    plt.legend(loc='best', fontsize=25)
     plt.tight_layout(pad=5)
     folder = f"{diff_folder}/{season}"
     if not os.path.isdir(folder):
@@ -328,7 +328,7 @@ def draw_data_plot(results, f, season, folder='subplots', is_original=False, exi
 
         ax = plt.subplot(616)
         ax.set_title('Feature = '+f+' Season = '+season+' imputed by MVTS', fontsize=27)
-        plt.plot(np.arange(results['MVTS'].shape[0]), results['MVTS'].cpu().detach().numpy(), 'tab:blue')
+        plt.plot(np.arange(results['MVTS'].shape[0]), results['MVTS'], 'tab:blue')
         ax.set_xlabel('Days', fontsize=25)
         ax.set_ylabel('Values', fontsize=25)
 
@@ -395,9 +395,19 @@ def unnormalize(X, mean, std, feature_idx=-1):
     else:
         return (X * std[feature_idx]) + mean[feature_idx]
 
-def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_features=None, real_test=True, random_start=False):
+def parse_id(fs, x, y, feature_impute_idx, length, trial_num=-1, dependent_features=None, real_test=True, random_start=False, random=False, pad=-1):
+    if random:
+        idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
+        indices = np.random.choice(idx1[:-pad], int(len(idx1[:-pad]) * 0.2), replace=False)
+        indices = indices * len(features) + feature_impute_idx
 
-    if real_test:
+        if dependent_features is not None and len(dependent_features) != 0:
+            inv_indices = (indices - feature_impute_idx)//len(features)
+            # if length > 1:
+            #     print('inv: ', inv_indices)
+            for i in inv_indices:
+                x[i, dependent_features] = np.nan 
+    elif real_test:
         idx1 = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
         # print(f"idx1: {idx1}")
         idx1 = idx1 * len(features) + feature_impute_idx
@@ -510,6 +520,183 @@ season_df, season_array, max_length = get_seasons_data(test_modified_df, test_do
 
 # print(f"season array: {season_array[1]}")
 plot_mse_folder = 'overlapping_mse/'
+
+def evaluate_imputation(mse_folder):
+    filename = 'json/json_eval_2_LT'
+    given_features = [
+        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        'MIN_AT',
+        'AVG_AT', # average temp is AgWeather Network
+        'MAX_AT',
+        'MIN_REL_HUMIDITY',
+        'AVG_REL_HUMIDITY',
+        'MAX_REL_HUMIDITY',
+        'MIN_DEWPT',
+        'AVG_DEWPT',
+        'MAX_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'MIN_ST8', # diff from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MAX_ST8', # diff from zengxian
+        #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR',
+        'LTE50' # ???
+    ]
+    
+    for season in seasons.keys():
+        print(f"For season: {season}")
+        for feature in given_features:
+            season_idx = seasons[season]
+            feature_idx = features.index(feature)
+            X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
+            original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
+            
+            iter = 50#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
+            total_count = 0
+            model_mse = {
+                'BRITS': 0,
+                'SAITS': 0,
+                'MICE': 0,
+                'MVTS': 0,
+                'LINEAR': 0
+            }
+            for i in range(iter):
+                fs = open(filename, "w")
+                if feature.split('_')[-1] not in feature_dependency.keys():
+                    dependent_feature_ids = []
+                else:
+                    dependent_feature_ids = [features.index(f) for f in feature_dependency[feature.split('_')[-1]] if (f != feature) and (f in features)]
+                
+                missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, -1, i, dependent_feature_ids, random=True, pad=pads[0])
+                print(f"missing idx: {missing_indices}")
+                fs.close()
+
+                # print(f"i: {i}\nmissing indices: {missing_indices}")
+                val_iter = data_loader.get_loader(batch_size=1, filename=filename)
+
+                for idx, data in enumerate(val_iter):
+                    data = utils.to_var(data)
+                    row_indices = missing_indices // len(features)
+                    # print(f"rows: {row_indices}")
+                    ret = model_brits.run_on_batch(data, None)
+                    eval_ = ret['evals'].data.cpu().numpy()
+                    eval_ = np.squeeze(eval_)
+                    imputation_brits = ret['imputations'].data.cpu().numpy()
+                    imputation_brits = np.squeeze(imputation_brits)
+                    imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
+                    
+                    Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
+                    # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
+                    
+                    # Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
+                    imputation_saits = model_saits.impute(Xeval)
+                    # print(f"SAITS imputation: {imputation_saits}")
+                    imputation_saits = np.squeeze(imputation_saits)
+                    imputed_saits = imputation_saits[row_indices, feature_idx]
+
+                    ret_eval = copy.deepcopy(eval_)
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    imputation_mice = model_mice.transform(ret_eval)
+                    imputed_mice = imputation_mice[row_indices, feature_idx]
+                    
+                    ret_eval = copy.deepcopy(eval_)
+                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    test_df = pd.DataFrame(ret_eval, columns=features)
+                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
+
+                    params = {
+                        'config_filepath': None, 
+                        'output_dir': './transformer/output/', 
+                        'data_dir': './transformer/data_dir/', 
+                        'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
+                        'resume': False, 
+                        'change_output': False, 
+                        'save_all': False, 
+                        'experiment_name': 'MVTS_test',
+                        'comment': 'imputation test', 
+                        'no_timestamp': False, 
+                        'records_file': 'Imputation_records.csv', 
+                        'console': False, 
+                        'print_interval': 1, 
+                        'gpu': '0', 
+                        'n_proc': 1, 
+                        'num_workers': 0, 
+                        'seed': None, 
+                        'limit_size': None, 
+                        'test_only': 'testset', 
+                        'data_class': 'agaid', 
+                        'labels': None, 
+                        'test_from': './transformer/test_indices.txt', 
+                        'test_ratio': 0, 
+                        'val_ratio': 0, 
+                        'pattern': None, 
+                        'val_pattern': None, 
+                        'test_pattern': 'Merlot_test', 
+                        'normalization': 'standardization', 
+                        'norm_from': None, 
+                        'subsample_factor': None, 
+                        'task': 'imputation', 
+                        'masking_ratio': 0.15, 
+                        'mean_mask_length': 10.0, 
+                        'mask_mode': 'separate', 
+                        'mask_distribution': 'geometric', 
+                        'exclude_feats': None, 
+                        'mask_feats': [0, 1], 
+                        'start_hint': 0.0, 
+                        'end_hint': 0.0, 
+                        'harden': True, 
+                        'epochs': 1000, 
+                        'val_interval': 2, 
+                        'optimizer': 'Adam', 
+                        'lr': 0.0009, 
+                        'lr_step': [1000000], 
+                        'lr_factor': [0.1], 
+                        'batch_size': 16, 
+                        'l2_reg': 0, 
+                        'global_reg': False, 
+                        'key_metric': 'loss', 
+                        'freeze': False, 
+                        'model': 'transformer', 
+                        'max_seq_len': 252, 
+                        'data_window_len': None, 
+                        'd_model': 128, 
+                        'dim_feedforward': 256, 
+                        'num_heads': 8, 
+                        'num_layers': 3, 
+                        'dropout': 0.1, 
+                        'pos_encoding': 'learnable', 
+                        'activation': 'relu', 
+                        'normalization_layer': 'BatchNorm'
+                    }
+
+                    transformer_preds = run_transformer(params)
+                    # # print(f'trasformer preds: {transformer_preds.shape}')
+                    
+                    imputation_transformer = np.squeeze(transformer_preds)
+                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+
+                    ret_eval[row_indices, feature_idx] = np.nan
+                    ret_eval_df = pd.DataFrame(ret_eval, columns=features)
+                    imputed_linear = ret_eval_df.interpolate(method='linear', limit_direction='both')
+                    imputed_linear = imputed_linear.to_numpy()
+                    imputed_linear = imputed_linear[row_indices, feature_idx]
+
+                    real_values = eval_[row_indices, feature_idx]
+
+                model_mse['BRITS'] += ((real_values - imputed_brits) ** 2).mean()
+                model_mse['SAITS'] += ((real_values - imputed_saits) ** 2).mean()
+                model_mse['MICE'] += ((real_values - imputed_mice) ** 2).mean()
+                model_mse['MVTS'] += ((real_values - imputed_transformer) ** 2).mean()
+                model_mse['LINEAR'] += ((real_values - imputed_linear) ** 2).mean()
+                # print(f"real: {real_values}\nlinear mse: {linear_mse}")
+                total_count += 1
+            print(f"\tFor feature: {feature}\n\t\tBRITS: {model_mse['BRITS']/total_count}\n\t\tSAITS: {model_mse['SAITS']/total_count}\n\t\tMICE: {model_mse['MICE']/total_count}\n\t\tMVTS: {model_mse['MVTS']/total_count}\n\t\tLINEAR: {model_mse['LINEAR']/total_count}")
 
 def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
     filename = 'json/json_eval_2_LT'
@@ -1166,158 +1353,159 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                 for idx, data in enumerate(val_iter):
                     data = utils.to_var(data)
                     row_indices = missing_indices // len(features)
+                    with torch.no_grad():
+                        # BRITS
+                        ret = model_brits.run_on_batch(data, None)
+                        eval_ = ret['evals'].data.cpu().numpy()
+                        eval_ = np.squeeze(eval_)
+                        imputation_brits = ret['imputations'].data.cpu().numpy()
+                        imputation_brits = np.squeeze(imputation_brits)
+                        imputed_brits = imputation_brits[row_indices, feature_idx]
 
-                    # BRITS
-                    ret = model_brits.run_on_batch(data, None)
-                    eval_ = ret['evals'].data.cpu().numpy()
-                    eval_ = np.squeeze(eval_)
-                    imputation_brits = ret['imputations'].data.cpu().numpy()
-                    imputation_brits = np.squeeze(imputation_brits)
-                    imputed_brits = imputation_brits[row_indices, feature_idx]
+                        # SAITS
+                        Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
+                        imputation_saits = model_saits.impute(Xeval)
+                        imputation_saits = np.squeeze(imputation_saits)
+                        imputed_saits = imputation_saits[row_indices, feature_idx]
 
-                    # SAITS
-                    Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
-                    imputation_saits = model_saits.impute(Xeval)
-                    imputation_saits = np.squeeze(imputation_saits)
-                    imputed_saits = imputation_saits[row_indices, feature_idx]
+                        # MICE
+                        ret_eval = copy.deepcopy(eval_)
+                        ret_eval[row_indices, feature_idx] = np.nan
+                        imputation_mice = model_mice.transform(ret_eval)
+                        imputed_mice = imputation_mice[row_indices, feature_idx]
+                        
+                        ret_eval = copy.deepcopy(eval_)
+                        ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                        ret_eval[row_indices, feature_idx] = np.nan
+                        test_df = pd.DataFrame(ret_eval, columns=features)
+                        add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
 
-                    # MICE
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    imputation_mice = model_mice.transform(ret_eval)
-                    imputed_mice = imputation_mice[row_indices, feature_idx]
+                        params = {
+                            'config_filepath': None, 
+                            'output_dir': './transformer/output/', 
+                            'data_dir': './transformer/data_dir/', 
+                            'load_model': './transformer/output/mvts-model-synth-0.2/checkpoints/model_best.pth', 
+                            'resume': False, 
+                            'change_output': False, 
+                            'save_all': False, 
+                            'experiment_name': 'MVTS_test',
+                            'comment': 'imputation test', 
+                            'no_timestamp': False, 
+                            'records_file': 'Imputation_records.csv', 
+                            'console': False, 
+                            'print_interval': 1, 
+                            'gpu': '-1', 
+                            'n_proc': 1, 
+                            'num_workers': 0, 
+                            'seed': None, 
+                            'limit_size': None, 
+                            'test_only': 'testset', 
+                            'data_class': 'agaid', 
+                            'labels': None, 
+                            'test_from': './transformer/test_indices.txt', 
+                            'test_ratio': 0, 
+                            'val_ratio': 0, 
+                            'pattern': None, 
+                            'val_pattern': None, 
+                            'test_pattern': 'Merlot_test', 
+                            'normalization': 'standardization', 
+                            'norm_from': None, 
+                            'subsample_factor': None, 
+                            'task': 'imputation', 
+                            'masking_ratio': 0.15, 
+                            'mean_mask_length': 10.0, 
+                            'mask_mode': 'separate', 
+                            'mask_distribution': 'geometric', 
+                            'exclude_feats': None, 
+                            'mask_feats': [0, 1], 
+                            'start_hint': 0.0, 
+                            'end_hint': 0.0, 
+                            'harden': True, 
+                            'epochs': 1000, 
+                            'val_interval': 2, 
+                            'optimizer': 'Adam', 
+                            'lr': 0.0009, 
+                            'lr_step': [1000000], 
+                            'lr_factor': [0.1], 
+                            'batch_size': 16, 
+                            'l2_reg': 0, 
+                            'global_reg': False, 
+                            'key_metric': 'loss', 
+                            'freeze': False, 
+                            'model': 'transformer', 
+                            'max_seq_len': 252, 
+                            'data_window_len': None, 
+                            'd_model': 128, 
+                            'dim_feedforward': 256, 
+                            'num_heads': 8, 
+                            'num_layers': 3, 
+                            'dropout': 0.1, 
+                            'pos_encoding': 'learnable', 
+                            'activation': 'relu', 
+                            'normalization_layer': 'BatchNorm'
+                        }
+
+                        transformer_preds = run_transformer(params)
+                        # # print(f'trasformer preds: {transformer_preds.shape}')
+                        
+                        imputation_transformer = np.squeeze(transformer_preds)
+                        imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+
+
+                        # REAL
+                        real_values = eval_[row_indices, feature_idx]
+
+                        # Same day MSE
+                        mse_1['BRITS'] += ((real_values[0] - imputed_brits[0]) ** 2)
+                        season_mse_1['BRITS'].append(((real_values[0] - imputed_brits[0]) ** 2))
+
+                        mse_1['SAITS'] += ((real_values[0] - imputed_saits[0]) ** 2)
+                        season_mse_1['SAITS'].append(((real_values[0] - imputed_saits[0]) ** 2))
+
+                        mse_1['MICE'] += ((real_values[0] - imputed_mice[0]) ** 2)
+                        season_mse_1['MICE'].append(((real_values[0] - imputed_mice[0]) ** 2))
+
+                        mse_1['MVTS'] += ((real_values[0] - imputed_transformer[0]) ** 2)
+                        season_mse_1['MVTS'].append(((real_values[0] - imputed_transformer[0]) ** 2))
+
+                        # Next day MSE
+                        mse_2['BRITS'] += ((real_values[1] - imputed_brits[1]) ** 2)
+                        season_mse_2['BRITS'].append(((real_values[1] - imputed_brits[1]) ** 2))
+
+                        mse_2['SAITS'] += ((real_values[1] - imputed_saits[1]) ** 2)
+                        season_mse_2['SAITS'].append(((real_values[1] - imputed_saits[1]) ** 2))
+
+                        mse_2['MICE'] += ((real_values[1] - imputed_mice[1]) ** 2)
+                        season_mse_2['MICE'].append(((real_values[1] - imputed_mice[1]) ** 2))
+
+                        mse_2['MVTS'] += ((real_values[1] - imputed_transformer[1]) ** 2)
+                        season_mse_2['MVTS'].append(((real_values[1] - imputed_transformer[1]) ** 2))
+
+                        # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
+                        trial_count += 1
+
+                        real_value = eval_[:, feature_idx]
                     
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    test_df = pd.DataFrame(ret_eval, columns=features)
-                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
+                        draw_data['real'] = unnormalize(real_value, mean, std, feature_idx)
+                        draw_data['real'][original_missing_indices] = 0
 
-                    params = {
-                        'config_filepath': None, 
-                        'output_dir': './transformer/output/', 
-                        'data_dir': './transformer/data_dir/', 
-                        'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
-                        'resume': False, 
-                        'change_output': False, 
-                        'save_all': False, 
-                        'experiment_name': 'MVTS_test',
-                        'comment': 'imputation test', 
-                        'no_timestamp': False, 
-                        'records_file': 'Imputation_records.csv', 
-                        'console': False, 
-                        'print_interval': 1, 
-                        'gpu': '0', 
-                        'n_proc': 1, 
-                        'num_workers': 0, 
-                        'seed': None, 
-                        'limit_size': None, 
-                        'test_only': 'testset', 
-                        'data_class': 'agaid', 
-                        'labels': None, 
-                        'test_from': './transformer/test_indices.txt', 
-                        'test_ratio': 0, 
-                        'val_ratio': 0, 
-                        'pattern': None, 
-                        'val_pattern': None, 
-                        'test_pattern': 'Merlot_test', 
-                        'normalization': 'standardization', 
-                        'norm_from': None, 
-                        'subsample_factor': None, 
-                        'task': 'imputation', 
-                        'masking_ratio': 0.15, 
-                        'mean_mask_length': 10.0, 
-                        'mask_mode': 'separate', 
-                        'mask_distribution': 'geometric', 
-                        'exclude_feats': None, 
-                        'mask_feats': [0, 1], 
-                        'start_hint': 0.0, 
-                        'end_hint': 0.0, 
-                        'harden': True, 
-                        'epochs': 1000, 
-                        'val_interval': 2, 
-                        'optimizer': 'Adam', 
-                        'lr': 0.0009, 
-                        'lr_step': [1000000], 
-                        'lr_factor': [0.1], 
-                        'batch_size': 16, 
-                        'l2_reg': 0, 
-                        'global_reg': False, 
-                        'key_metric': 'loss', 
-                        'freeze': False, 
-                        'model': 'transformer', 
-                        'max_seq_len': 252, 
-                        'data_window_len': None, 
-                        'd_model': 128, 
-                        'dim_feedforward': 256, 
-                        'num_heads': 8, 
-                        'num_layers': 3, 
-                        'dropout': 0.1, 
-                        'pos_encoding': 'learnable', 
-                        'activation': 'relu', 
-                        'normalization_layer': 'BatchNorm'
-                    }
+                        missing_values = copy.deepcopy(real_value)
+                        missing_values[row_indices] = 0
+                        draw_data['missing'] = unnormalize(missing_values, mean, std, feature_idx)
+                        draw_data['missing'][original_missing_indices] = 0
+                        draw_data['missing'][row_indices] = 0
 
-                    transformer_preds = run_transformer(params)
-                    # # print(f'trasformer preds: {transformer_preds.shape}')
-                    
-                    imputation_transformer = np.squeeze(transformer_preds)
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+                        draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
+                        draw_data['SAITS'] = unnormalize(imputation_saits[:, feature_idx], mean, std, feature_idx)
+                        draw_data['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
+                        draw_data['MVTS'] = unnormalize(imputation_transformer[:, feature_idx], mean, std, feature_idx).numpy()
 
+                        # draws['real'][row_indices] = 0
+                        if data_folder is not None:
+                            draw_data_plot(draw_data, features[feature_idx], given_season, folder=data_folder, existing=i)
+                        if diff_folder is not None:
+                            graph_bar_diff_multi(diff_folder, draw_data['real'][row_indices], draw_data, f'Difference From Gorund Truth for LTE50 in {given_season} existing = {i+1}', np.arange(len(row_indices)), 'Days where LTE50 value is available', 'Degrees', given_season, 'LTE50', missing=row_indices, existing=i)
 
-                    # REAL
-                    real_values = eval_[row_indices, feature_idx]
-
-                    # Same day MSE
-                    mse_1['BRITS'] += ((real_values[0] - imputed_brits[0]) ** 2)
-                    season_mse_1['BRITS'].append(((real_values[0] - imputed_brits[0]) ** 2))
-
-                    mse_1['SAITS'] += ((real_values[0] - imputed_saits[0]) ** 2)
-                    season_mse_1['SAITS'].append(((real_values[0] - imputed_saits[0]) ** 2))
-
-                    mse_1['MICE'] += ((real_values[0] - imputed_mice[0]) ** 2)
-                    season_mse_1['MICE'].append(((real_values[0] - imputed_mice[0]) ** 2))
-
-                    mse_1['MVTS'] += ((real_values[0] - imputed_transformer[0]) ** 2)
-                    season_mse_1['MVTS'].append(((real_values[0] - imputed_transformer[0]) ** 2))
-
-                    # Next day MSE
-                    mse_2['BRITS'] += ((real_values[1] - imputed_brits[1]) ** 2)
-                    season_mse_2['BRITS'].append(((real_values[1] - imputed_brits[1]) ** 2))
-
-                    mse_2['SAITS'] += ((real_values[1] - imputed_saits[1]) ** 2)
-                    season_mse_2['SAITS'].append(((real_values[1] - imputed_saits[1]) ** 2))
-
-                    mse_2['MICE'] += ((real_values[1] - imputed_mice[1]) ** 2)
-                    season_mse_2['MICE'].append(((real_values[1] - imputed_mice[1]) ** 2))
-
-                    mse_2['MVTS'] += ((real_values[1] - imputed_transformer[1]) ** 2)
-                    season_mse_2['MVTS'].append(((real_values[1] - imputed_transformer[1]) ** 2))
-
-                    # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
-                    trial_count += 1
-
-                    real_value = eval_[:, feature_idx]
-                
-                    draw_data['real'] = unnormalize(real_value, mean, std, feature_idx)
-                    draw_data['real'][original_missing_indices] = 0
-
-                    missing_values = copy.deepcopy(real_value)
-                    missing_values[row_indices] = 0
-                    draw_data['missing'] = unnormalize(missing_values, mean, std, feature_idx)
-                    draw_data['missing'][original_missing_indices] = 0
-                    draw_data['missing'][row_indices] = 0
-
-                    draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
-                    draw_data['SAITS'] = unnormalize(imputation_saits[:, feature_idx], mean, std, feature_idx)
-                    draw_data['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
-                    draw_data['MVTS'] = unnormalize(imputation_transformer[:, feature_idx], mean, std, feature_idx)
-
-                    # draws['real'][row_indices] = 0
-                    if data_folder is not None:
-                        draw_data_plot(draw_data, features[feature_idx], given_season, folder=data_folder, existing=i)
-                    if diff_folder is not None:
-                        graph_bar_diff_multi(diff_folder, draw_data['real'][row_indices], draw_data, f'Difference From Gorund Truth for LTE50 in {given_season} existing = {i+1}', np.arange(len(row_indices)), 'Days where LTE50 value is available', 'Degrees', given_season, 'LTE50', missing=row_indices, existing=i)
             if trial_count <= 0:
                 continue
             mse_1['BRITS'] /= trial_count
@@ -1342,8 +1530,11 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
             draws_2['MVTS'].append(mse_2['MVTS'])
             # draws_2.append(mse_2)
             x_axis.append(i+1)
-        print(f"For season = {given_season}, BRITS mse = {np.array(season_mse_1['BRITS']).mean()}, SAITS mse = {np.array(season_mse_1['SAITS']).mean()}")
-
+        print(f"For season = {given_season} same day prediction results:\n\tBRITS mse = {np.array(season_mse_1['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_1['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_1['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_1['MVTS']).mean()}")
+        print(f"For season = {given_season} next day prediction results:\n\tBRITS mse = {np.array(season_mse_2['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_2['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_2['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_2['MVTS']).mean()}")
+        
+        ferguson_mse, ferguson_preds = get_FG(season_df, 'LTE50', 'PREDICTED_LTE50', season_array[season_idx])
+        print(f"For season = {given_season} Ferguson mse = {ferguson_mse}")
         # result_df = pd.DataFrame(results)
         # folder = f'{mse_folder}/{feature}/remove-{r_feat}/mse_results'
         # if not os.path.isdir(folder):
@@ -1587,6 +1778,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
 
 
 
+
 ####################### Draw data plots #######################
 
 def do_data_plots(data_folder, missing_length, is_original=False):
@@ -1677,9 +1869,9 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # forward_data_folder = 'forward_LT_data_brits_saits_13'
 # forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
-forward_folder = 'forward_LT_abstract_1'
-forward_data_folder = f"{forward_folder}/data"
-forward_diff_folder = f"{forward_folder}/diff"
+forward_folder = 'forward_LT_abstract_7'
+forward_data_folder = None#f"{forward_folder}/data"
+forward_diff_folder = None#f"{forward_folder}/diff"
 forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder, diff_folder=forward_diff_folder)
 # forward_folder = 'forward_LT_abstract_2'
 # forward_prediction_LT_day(forward_folder, same=False)
@@ -1698,3 +1890,5 @@ forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_
 #     os.makedirs(diff_plots_LT)
 
 # forward_prediction_LT_day(forward_folder, data_folder=data_plots_LT, diff_folder=diff_plots_LT, slide=False)
+
+# evaluate_imputation(None)

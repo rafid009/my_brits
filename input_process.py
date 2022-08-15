@@ -66,7 +66,7 @@ def parse_rec(values, masks, evals, eval_masks, dir_):
     return rec
 
 
-def parse_id(x, y):
+def parse_id(x, y, mean, std):
     # data = pd.read_csv('./raw/{}.txt'.format(id_))
     # accumulate the records within one hour
     # data['Time'] = data['Time'].apply(lambda x: to_time_bin(x))
@@ -115,37 +115,43 @@ def parse_id(x, y):
 
     fs.write(rec + '\n')
 
-df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
-modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
-season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-# idx_LT_not_null = get_non_null_LT(season_df)
-# train_idx = get_train_idx(season_array, idx_LT_not_null)
-X, Y = split_XY(season_df, max_length, season_array, features)
-print(f"X: {X.shape}")
-X = X[:-2]
-Y = Y[:-2]
+# df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+# modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
+# season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+# # idx_LT_not_null = get_non_null_LT(season_df)
+# # train_idx = get_train_idx(season_array, idx_LT_not_null)
+# X, Y = split_XY(season_df, max_length, season_array, features)
+# print(f"X: {X.shape}")
+# X = X[:-2]
+# Y = Y[:-2]
 
 
-train_season_df = season_df.drop(season_array[-1], axis=0)
-train_season_df = train_season_df.drop(season_array[-2], axis=0)
-# train_season_df = train_season_df.drop(season_array[-3], axis=0)
-# train_season_df = train_season_df.drop(season_array[-4], axis=0)
-mean, std = get_mean_std(train_season_df, features)
-print(f"X: {X.shape}")
-# print('season mean at: ',np.where(~np.isnan(season_npy)))
+# train_season_df = season_df.drop(season_array[-1], axis=0)
+# train_season_df = train_season_df.drop(season_array[-2], axis=0)
+# # train_season_df = train_season_df.drop(season_array[-3], axis=0)
+# # train_season_df = train_season_df.drop(season_array[-4], axis=0)
+# mean, std = get_mean_std(train_season_df, features)
+# print(f"X: {X.shape}")
+# # print('season mean at: ',np.where(~np.isnan(season_npy)))
 
-mean = np.array(mean) #np.mean(season_df[attributes].to_numpy(), axis=0)
-std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
+# mean = np.array(mean) #np.mean(season_df[attributes].to_numpy(), axis=0)
+# std = np.array(std) #np.std(season_df[attributes].to_numpy(), axis=0)
 
 
-def prepare_brits_input(model_dir='./model_abstract'):
-    
+def prepare_brits_input(df, season_array, max_length, features, mean, std, model_dir='./model_abstract', complete_seasons=None):
+    if complete_seasons is not None:
+        seasons = [season_array[s] for s in complete_seasons]
+    else:
+        seasons = season_array
+    X, Y = split_XY(df, max_length, seasons, features)
     np.save(f'{model_dir}/mean.npy', mean)
     np.save(f'{model_dir}/std.npy', std)
+    X = X[:-2]
+    Y = Y[:-2]
     for i in range(X.shape[0]):
-        parse_id(X[i], Y[i])
+        parse_id(X[i], Y[i], mean, std)
 
     fs.close()
 
-if __name__ == "__main__":
-    prepare_brits_input()
+# if __name__ == "__main__":
+#     prepare_brits_input()
