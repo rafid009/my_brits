@@ -421,9 +421,8 @@ mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False
 model_name = "mvts_synth_0.4"
 
 mvts_df = test_df.copy()
-print(f"transformer: {transformer_preds.shape}")
-print(f"mvts shape: {mvts_df.loc[season_df.index.tolist(), features].shape}")
-mvts_df.loc[season_df.index.tolist(), features] = transformer_preds
+
+mvts_df.loc[season_df.index.tolist(), features] = imputed_array_mvts
 mvts_df['LTE50'] = test_df['LTE50']
 data_imputed_folder = './abstract_imputed'
 if not os.path.isdir(data_imputed_folder):
