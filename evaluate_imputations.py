@@ -101,7 +101,7 @@ std = []
 
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
-df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv')
+df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.4.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 train_season_df = season_df.drop(season_array[-1], axis=0)
@@ -122,7 +122,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
-model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.2.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.4.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path, map_location='cpu'))
 
@@ -513,7 +513,7 @@ given_features = [
     'LTE50' # ???
 ]
 
-test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
+test_df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.4.csv')
 test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
