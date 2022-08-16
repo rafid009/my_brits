@@ -365,7 +365,7 @@ for idx, data in enumerate(val_iter):
         # print(imputation_brits[i])
         without_paddings = np.delete(imputation_saits[i], zero_pads[i], 0)
         # print(f"without pd: {without_paddings}")
-        if imputed_array_brits is None:
+        if imputed_array_saits is None:
             imputed_array_saits = np.round(without_paddings, 2)
         else:
             imputed_array_saits = np.concatenate((imputed_array_saits, np.round(without_paddings, 2)), axis=0)
