@@ -26,6 +26,8 @@ warnings.filterwarnings("ignore")
 
 np.set_printoptions(threshold=sys.maxsize)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.3
 LABEL_WEIGHT = 1
@@ -239,7 +241,7 @@ model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, labe
 
 if os.path.exists('./model_abstract/model_BRITS_LT_synth_0.4.model'):
     model_brits.load_state_dict(torch.load('./model_abstract/model_BRITS_LT_synth_0.4.model'))
-
+model_brits.to(device=device)
 model_brits.eval()
 
 saits_file = './model_abstract/model_saits_synth_0.4.model'
