@@ -328,7 +328,7 @@ val_iter = data_loader.get_loader(batch_size=len(season_array), filename=folder 
 imputed_array_brits = None
 for idx, data in enumerate(val_iter):
     transformer_preds = run_transformer(params)
-    transformer_preds = unnormalize(transformer_preds.detach().numpy(), mean, std)
+    transformer_preds = unnormalize(transformer_preds.cpu().detach().numpy(), mean, std)
     # print(f"mvts: {transformer_preds.shape}")
     # print(f'season_df: {season_df[features].shape}')
     data = utils.to_var(data)
