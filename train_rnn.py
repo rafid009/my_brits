@@ -232,13 +232,13 @@ def format_seconds_to_hhmmss(seconds):
     seconds %= 60
     return "%02i:%02i:%02i" % (hours, minutes, seconds)
 
-n_random = 0.4
+n_random = 0.2
 
 impute_model = 'linear_synth' 
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 1000
+    'epochs': 800
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -256,7 +256,7 @@ impute_model = 'brits_synth'
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 1000
+    'epochs': 800
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -274,7 +274,7 @@ impute_model = 'saits_synth'
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 1000
+    'epochs': 800
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -291,7 +291,7 @@ impute_model = 'mice_synth'
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 1000
+    'epochs': 800
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
@@ -308,7 +308,7 @@ impute_model = 'mvts_synth'
 args = {
     'name': f"pred_model_{impute_model}_{n_random}",
     'batch_size': 16,
-    'epochs': 1000
+    'epochs': 800
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
