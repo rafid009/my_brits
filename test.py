@@ -328,6 +328,7 @@ print('season array loader: ', len(season_array))
 val_iter = data_loader.get_loader(batch_size=len(season_array), filename=folder + 'json', shuffle=False)
 
 imputed_array_brits = None
+imputed_array_saits = None
 for idx, data in enumerate(val_iter):
     transformer_preds = run_transformer(params)
     transformer_preds = unnormalize(transformer_preds.cpu().detach().numpy(), mean, std)
