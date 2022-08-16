@@ -131,12 +131,12 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_synth_0.2.model"
+saits_file = f"{model_dir}/model_saits_synth_0.4.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice_synth_0.2.model"
+mice_file = f"{model_dir}/model_mice_synth_0.4.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
@@ -144,7 +144,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
+    'load_model': './transformer/output/mvts-synth-0.4/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -499,10 +499,10 @@ given_features = [
     'MIN_DEWPT',
     'AVG_DEWPT',
     'MAX_DEWPT',
-    'P_INCHES', # precipitation
+    # 'P_INCHES', # precipitation
     'WS_MPH', # wind speed. if no sensor then value will be na
     'MAX_WS_MPH', 
-    'LW_UNITY', # leaf wetness sensor
+    # 'LW_UNITY', # leaf wetness sensor
     'SR_WM2', # solar radiation # different from zengxian
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
@@ -1384,7 +1384,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                             'config_filepath': None, 
                             'output_dir': './transformer/output/', 
                             'data_dir': './transformer/data_dir/', 
-                            'load_model': './transformer/output/mvts-model-synth-0.2/checkpoints/model_best.pth', 
+                            'load_model': './transformer/output/mvts-synth-0.4/checkpoints/model_best.pth', 
                             'resume': False, 
                             'change_output': False, 
                             'save_all': False, 
