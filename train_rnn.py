@@ -232,7 +232,7 @@ def format_seconds_to_hhmmss(seconds):
     seconds %= 60
     return "%02i:%02i:%02i" % (hours, minutes, seconds)
 
-n_random = 0.2
+n_random = 0.4
 
 impute_model = 'linear_synth' 
 args = {
