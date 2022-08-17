@@ -176,11 +176,12 @@ if __name__ == "__main__":
     modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
+    # train_season_df = season_df.loc[train_season_complete]
     train_season_df = season_df.drop(season_array[-1], axis=0)
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
     mean, std = get_mean_std(season_df, features)
     
-    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, None)#complete_seasons)
+    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
     batch_size = 16
     n_epochs = 4000
     RNN_HID_SIZE = 64
@@ -212,8 +213,8 @@ if __name__ == "__main__":
 
     num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
 
-    X = X[:-2]# X[complete_seasons[:-2]]
-    Y = Y[:-2]# [complete_seasons[:-2]]
+    X = X[complete_seasons[:-2]]
+    Y = [complete_seasons[:-2]]
 
     for i in range(X.shape[0]):
         X[i] = (X[i] - mean)/std
@@ -237,7 +238,7 @@ if __name__ == "__main__":
     # # MICE
     print(f"=========== MICE Training Starts ===========")
     
-    train_complete_season_df = train_season_df#.loc[train_season_complete]
+    train_complete_season_df = train_season_df.loc[train_season_complete]
     normalized_season_df = train_complete_season_df[features].copy()
     normalized_season_df = (normalized_season_df - mean) /std
     mice_impute = IterativeImputer(random_state=0, max_iter=30)
@@ -323,7 +324,8 @@ if __name__ == "__main__":
 
     train_season_df = season_df.drop(season_array[-1], axis=0)
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    train_season_complete = season_array[:-2]#[season_array[s] for s in complete_seasons[:-2]]
+    train_season_complete = [season_array[s] for s in complete_seasons[:-2]]
+    train_season_df = train_season_df.loc[train_season_complete]
     add_season_id_and_save(data_folder, train_season_df, train_season_complete, 'ColdHardiness_Grape_Merlot_synth_transformer.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
