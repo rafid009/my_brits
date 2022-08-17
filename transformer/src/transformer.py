@@ -118,10 +118,10 @@ def run_transformer(config):
         if test_indices is None:
             test_indices = []
 
-    if config['test_only'] != 'testset':
-        logger.info("{} samples may be used for training".format(len(train_indices)))
-        logger.info("{} samples will be used for validation".format(len(val_indices)))
-        logger.info("{} samples will be used for testing".format(len(test_indices)))
+    # if config['test_only'] != 'testset':
+    #     logger.info("{} samples may be used for training".format(len(train_indices)))
+    #     logger.info("{} samples will be used for validation".format(len(val_indices)))
+    #     logger.info("{} samples will be used for testing".format(len(test_indices)))
 
     with open(os.path.join(config['output_dir'], 'data_indices.json'), 'w') as f:
         try:
@@ -165,10 +165,10 @@ def run_transformer(config):
             else:
                 param.requires_grad = False
 
-    if config['test_only'] != 'testset':
-        logger.info("Model:\n{}".format(model))
-        logger.info("Total number of parameters: {}".format(utils.count_parameters(model)))
-        logger.info("Trainable parameters: {}".format(utils.count_parameters(model, trainable=True)))
+    # if config['test_only'] != 'testset':
+    #     logger.info("Model:\n{}".format(model))
+    #     logger.info("Total number of parameters: {}".format(utils.count_parameters(model)))
+    #     logger.info("Trainable parameters: {}".format(utils.count_parameters(model, trainable=True)))
 
 
     # Initialize optimizer

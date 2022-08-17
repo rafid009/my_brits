@@ -147,7 +147,7 @@ def random_synthetic_missing(season_df, features, n_random=0.2):
 if __name__ == "__main__":
     n_features = 19
     model_dir = "./model_abstract"
-    n_random = 0.2
+    n_random = 0.4
 
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir)
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # BRITS
     print(f"=========== BRITS Training Starts ===========")
     df_synth = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic.csv')
-    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
     train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
     
 
-    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
     # train_season_df = season_df.loc[train_season_complete]
@@ -326,7 +326,7 @@ if __name__ == "__main__":
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
     train_season_complete = [season_array[s] for s in complete_seasons[:-2]]
     train_season_df = train_season_df.loc[train_season_complete]
-    add_season_id_and_save(data_folder, train_season_df, train_season_complete, 'ColdHardiness_Grape_Merlot_synth_transformer.csv')
+    add_season_id_and_save(data_folder, train_season_df, train_season_complete, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
 
