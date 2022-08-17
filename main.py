@@ -147,7 +147,7 @@ def random_synthetic_missing(season_df, features, n_random=0.2):
 if __name__ == "__main__":
     n_features = 19
     model_dir = "./model_abstract"
-    n_random = 0
+    n_random = 0.2
 
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir)
@@ -155,20 +155,22 @@ if __name__ == "__main__":
 
     # BRITS
     print(f"=========== BRITS Training Starts ===========")
-    df_synth = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')#new_synthetic.csv')
-    # modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
-    # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    df_synth = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
+    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
-    # train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
-    # for s in complete_seasons[:-2]:
-    #     s_copy = copy.deepcopy(season_array[s])
-    #     train_season_complete.extend(s_copy)
+    train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+    for s in complete_seasons[:-2]:
+        s_copy = copy.deepcopy(season_array[s])
+        train_season_complete.extend(s_copy)
 
-    # season_df = season_df.loc[train_season_complete]
+    train_season_df = season_df.loc[train_season_complete]
     # print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
-    # df_synth.loc[season_df.index.tolist(), :] = random_synthetic_missing(season_df, features, n_random=n_random)
+    df_synth.loc[train_season_df.index.tolist(), :] = random_synthetic_missing(train_season_df, features, n_random=n_random)
 
-    # df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
+    df_synth.loc[season_array[-2], :] = random_synthetic_missing(season_df.loc[season_array[-2]], features, n_random)
+    df_synth.loc[season_array[-1], :] = random_synthetic_missing(season_df.loc[season_array[-1]], features, n_random)
+    df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
     
 
     modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)#False, is_year=True)
