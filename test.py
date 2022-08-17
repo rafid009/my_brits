@@ -174,18 +174,17 @@ complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 
 
 
 
-train_df = pd.read_csv("ColdHardiness_Grape_Merlot_new_synthetic_0.4.csv")
+train_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
 # print('Now train')
 train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, features, is_dormant=True)#, is_year=True)
 train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, features, is_dormant=True)#, is_year=True)
-train_season_array = [train_season_array[i] for i in complete_seasons]
+# train_season_array = [train_season_array[i] for i in complete_seasons]
 
-train_complete = []
-for i in range(len(train_season_array)):
-    indices = copy.deepcopy(train_season_array[i])
-    train_complete.extend(indices)
-
-train_season_df = train_season_df.loc[train_complete]
+# train_complete = []
+# for i in range(len(train_season_array)):
+#     indices = copy.deepcopy(train_season_array[i])
+#     train_complete.extend(indices)
+# train_season_df = train_season_df.loc[train_complete]
 train_season_df = train_season_df.drop(train_season_array[-1], axis=0)
 train_season_df = train_season_df.drop(train_season_array[-2], axis=0)
 # train_season_df = train_season_df.drop(train_season_array[-3], axis=0)
@@ -201,15 +200,15 @@ mean, std = get_mean_std(train_season_df, features)
 
 
 print('Now test')
-test_df = pd.read_csv("ColdHardiness_Grape_Merlot_new_synthetic_0.4.csv")
+test_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
 modified_df, dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#, is_year=True)
-season_array = [season_array[i] for i in complete_seasons]
-seasons_complete = []
-for i in range(len(season_array)):
-    indices = copy.deepcopy(season_array[i])
-    seasons_complete.extend(indices)
-season_df = season_df.loc[seasons_complete]
+# season_array = [season_array[i] for i in complete_seasons]
+# seasons_complete = []
+# for i in range(len(season_array)):
+#     indices = copy.deepcopy(season_array[i])
+#     seasons_complete.extend(indices)
+# season_df = season_df.loc[seasons_complete]
 # print('season array: ', len(season_array), '\n', season_array)
 
 
@@ -239,15 +238,15 @@ fs.close()
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
-if os.path.exists('./model_abstract/model_BRITS_LT_synth_0.4.model'):
-    model_brits.load_state_dict(torch.load('./model_abstract/model_BRITS_LT_synth_0.4.model'))
+if os.path.exists('./model_abstract/model_BRITS_LT_synth_0.model'):
+    model_brits.load_state_dict(torch.load('./model_abstract/model_BRITS_LT_synth_0.model'))
 model_brits.to(device=device)
 model_brits.eval()
 
-saits_file = './model_abstract/model_saits_synth_0.4.model'
+saits_file = './model_abstract/model_saits_synth_0.model'
 model_saits = pickle.load(open(saits_file, 'rb'))
 
-mice_file = './model_abstract/model_mice_synth_0.4.model'
+mice_file = './model_abstract/model_mice_synth_0.model'
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 test_normalized_df = season_df[features].copy()
@@ -261,7 +260,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/mvts-synth-0.4/checkpoints/model_best.pth', 
+    'load_model': './transformer/output/mvts-original/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -382,7 +381,7 @@ for idx, data in enumerate(val_iter):
             imputed_array_mvts = np.concatenate((imputed_array_mvts, np.round(without_paddings, 2)), axis=0)
 print(f"season indices: {len(season_df.index.tolist())}")
 
-model_name = "brits_synth_0.4"
+model_name = "brits_synth_0"
 
 brits_df = test_df.copy()
 brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
@@ -394,7 +393,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "saits_synth_0.4"
+model_name = "saits_synth_0"
 
 saits_df = test_df.copy()
 saits_df.loc[season_df.index.tolist(), features] = imputed_array_saits
@@ -406,7 +405,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 saits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "mice_synth_0.4"
+model_name = "mice_synth_0"
 
 mice_df = test_df.copy()
 mice_df.loc[season_df.index.tolist(), features] = imputation_mice
@@ -418,7 +417,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "mvts_synth_0.4"
+model_name = "mvts_synth_0"
 
 mvts_df = test_df.copy()
 
