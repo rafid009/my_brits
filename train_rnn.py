@@ -46,13 +46,17 @@ features = [
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
 
-def initialize_input(impute_model, n_random, imputed=True):
+def initialize_input(impute_model, n_random, imputed=True, original=False):
     if imputed:
         input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_imputed"
         df = pd.read_csv(f"{input_file}_{impute_model}_{n_random}.csv")
     else:
-        input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
-        df = pd.read_csv(f"{input_file}_{n_random}.csv")
+        if original:
+            input_file = f"./ColdHardiness_Grape_Merlot_2"
+            df = pd.read_csv(f"{input_file}.csv")
+        else:
+            input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
+            df = pd.read_csv(f"{input_file}_{n_random}.csv")
     if imputed:
         modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True, imputed=True)#False, is_year=True)
     else:
@@ -240,7 +244,7 @@ args = {
     'batch_size': 16,
     'epochs': 800
 }
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
 _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
