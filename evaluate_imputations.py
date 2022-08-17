@@ -122,7 +122,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
-model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.4.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path, map_location='cpu'))
 
@@ -131,12 +131,12 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_synth_0.4.model"
+saits_file = f"{model_dir}/model_saits_synth_0.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice_synth_0.4.model"
+mice_file = f"{model_dir}/model_mice_synth_0.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
@@ -144,7 +144,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/mvts-synth-0.4/checkpoints/model_best.pth', 
+    'load_model': './transformer/output/mvts-original/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -513,7 +513,7 @@ given_features = [
     'LTE50' # ???
 ]
 
-test_df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.4.csv')
+test_df = pd.read_csv('ColdHardiness_Grape_Merlot_2.csv')
 test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
@@ -1384,7 +1384,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                             'config_filepath': None, 
                             'output_dir': './transformer/output/', 
                             'data_dir': './transformer/data_dir/', 
-                            'load_model': './transformer/output/mvts-synth-0.4/checkpoints/model_best.pth', 
+                            'load_model': './transformer/output/mvts-original/checkpoints/model_best.pth', 
                             'resume': False, 
                             'change_output': False, 
                             'save_all': False, 
