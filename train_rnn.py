@@ -46,8 +46,11 @@ features = [
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
 
-def initialize_input(impute_model, n_random, imputed=True, original=False):
-    if imputed:
+def initialize_input(impute_model, n_random, imputed=True, original=False, station=False):
+    if station:
+        input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_new_synthetic"
+        df = pd.read_csv(f"{input_file}.csv")
+    elif imputed:
         input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_imputed"
         df = pd.read_csv(f"{input_file}_{impute_model}_{n_random}.csv")
     else:
@@ -236,7 +239,25 @@ def format_seconds_to_hhmmss(seconds):
     seconds %= 60
     return "%02i:%02i:%02i" % (hours, minutes, seconds)
 
-n_random = 0
+n_random = 0.2
+
+impute_model = 'station_replace'
+args = {
+    'name': f"pred_model_{impute_model}_{n_random}",
+    'batch_size': 16,
+    'epochs': 800
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, station=True)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
 
 impute_model = 'linear_synth' 
 args = {
@@ -254,7 +275,7 @@ print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
-
+print()
 
 impute_model = 'brits_synth' 
 args = {
@@ -272,7 +293,7 @@ print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
-
+print()
 
 impute_model = 'saits_synth' 
 args = {
@@ -290,6 +311,7 @@ print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
+print()
 
 impute_model = 'mice_synth' 
 args = {
@@ -307,6 +329,7 @@ print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
+print()
 
 impute_model = 'mvts_synth' 
 args = {
@@ -324,3 +347,4 @@ print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
+print()
