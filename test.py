@@ -235,18 +235,18 @@ for i in range(X.shape[0]):
     Xeval[i] = parse_id(X[i], Y[i], fs, mean, std, features)
 fs.close()
 
-
+n_random = 0.2
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
-if os.path.exists('./model_abstract/model_BRITS_LT_synth_0.model'):
-    model_brits.load_state_dict(torch.load('./model_abstract/model_BRITS_LT_synth_0.model'))
+if os.path.exists(f'./model_abstract/model_BRITS_LT_synth_{n_random}.model'):
+    model_brits.load_state_dict(torch.load(f'./model_abstract/model_BRITS_LT_synth_{n_random}.model'))
 model_brits.to(device=device)
 model_brits.eval()
 
-saits_file = './model_abstract/model_saits_synth_0.model'
+saits_file = f'./model_abstract/model_saits_synth_{n_random}.model'
 model_saits = pickle.load(open(saits_file, 'rb'))
 
-mice_file = './model_abstract/model_mice_synth_0.model'
+mice_file = f'./model_abstract/model_mice_synth_{n_random}.model'
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 test_normalized_df = season_df[features].copy()
@@ -254,13 +254,13 @@ test_normalized_df = (test_normalized_df - mean) /std
 test_imputed_mice = model_mice.transform(test_normalized_df[features])
 imputation_mice = unnormalize(test_imputed_mice, mean, std)
 
-add_season_id_and_save('./transformer/data_dir', season_df[features], season_array=season_array, filename='ColdHardiness_Grape_Merlot_test.csv')
+add_season_id_and_save('./transformer/data_dir', season_df[features], season_array=season_array, filename=f'ColdHardiness_Grape_Merlot_test_{n_random}.csv')
 
 params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': './transformer/output/mvts-original/checkpoints/model_best.pth', 
+    'load_model': f'./transformer/output/mvts-synth-{n_random}/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -381,7 +381,7 @@ for idx, data in enumerate(val_iter):
             imputed_array_mvts = np.concatenate((imputed_array_mvts, np.round(without_paddings, 2)), axis=0)
 print(f"season indices: {len(season_df.index.tolist())}")
 
-model_name = "brits_synth_0"
+model_name = f"brits_synth_{n_random}"
 
 brits_df = test_df.copy()
 brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
@@ -393,7 +393,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "saits_synth_0"
+model_name = f"saits_synth_{n_random}"
 
 saits_df = test_df.copy()
 saits_df.loc[season_df.index.tolist(), features] = imputed_array_saits
@@ -405,7 +405,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 saits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "mice_synth_0"
+model_name = f"mice_synth_{n_random}"
 
 mice_df = test_df.copy()
 mice_df.loc[season_df.index.tolist(), features] = imputation_mice
@@ -417,7 +417,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = "mvts_synth_0"
+model_name = f"mvts_synth_{n_random}"
 
 mvts_df = test_df.copy()
 

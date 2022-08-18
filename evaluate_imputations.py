@@ -35,6 +35,7 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+n_random = 0.2
 seasons = {
 # '1988-1989': 0,
 # '1989-1990': 1,
@@ -101,7 +102,7 @@ std = []
 
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
-df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv')
+df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 train_season_df = season_df.drop(season_array[-1], axis=0)
@@ -122,7 +123,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
-model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.2.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_synth_{n_random}.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path, map_location='cpu'))
 
@@ -131,12 +132,12 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_synth_0.2.model"
+saits_file = f"{model_dir}/model_saits_synth_{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice_synth_0.2.model"
+mice_file = f"{model_dir}/model_mice_synth_{n_random}.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
@@ -513,7 +514,7 @@ given_features = [
     'LTE50' # ???
 ]
 
-test_df = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic_0.2.csv')
+test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
 test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
@@ -1378,13 +1379,13 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                         ret_eval[row_indices, feature_idx] = np.nan
                         test_df = pd.DataFrame(ret_eval, columns=features)
-                        add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
+                        add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_{n_random}.csv')
 
                         params = {
                             'config_filepath': None, 
                             'output_dir': './transformer/output/', 
                             'data_dir': './transformer/data_dir/', 
-                            'load_model': './transformer/output/mvts-synth-0.2/checkpoints/model_best.pth', 
+                            'load_model': f'./transformer/output/mvts-synth-{n_random}/checkpoints/model_best.pth', 
                             'resume': False, 
                             'change_output': False, 
                             'save_all': False, 
