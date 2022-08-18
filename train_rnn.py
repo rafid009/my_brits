@@ -268,7 +268,7 @@ args = {
     'batch_size': 16,
     'epochs': 800
 }
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)# original=True)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
 _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
