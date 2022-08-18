@@ -49,7 +49,7 @@ complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 
 
 def initialize_input(impute_model, n_random, imputed=True, original=False, station=False):
     if station:
-        input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_new_synthetic"
+        input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
         df = pd.read_csv(f"{input_file}.csv")
     elif imputed:
         input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_imputed"
@@ -73,8 +73,10 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         seasons_complete.extend(indices)
     season_df = season_df.loc[seasons_complete]
 
-    imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
-
+    if not imputed:
+        imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
+    else:
+        imputed_season_df = season_df
     # print(f"imputed: {imputed_season_df.isna().sum()}")
 
     train_season_df = imputed_season_df.drop(seasons_array[-1], axis=0)
