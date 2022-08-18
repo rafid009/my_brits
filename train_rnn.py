@@ -16,6 +16,7 @@ np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+n_random = 0.2
 
 features = [
     'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
@@ -239,7 +240,7 @@ def format_seconds_to_hhmmss(seconds):
     seconds %= 60
     return "%02i:%02i:%02i" % (hours, minutes, seconds)
 
-n_random = 0.2
+
 
 impute_model = 'station_replace'
 args = {
