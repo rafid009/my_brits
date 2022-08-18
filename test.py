@@ -28,6 +28,8 @@ np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+n_random = 0.2
+
 RNN_HID_SIZE = 64
 IMPUTE_WEIGHT = 0.3
 LABEL_WEIGHT = 1
@@ -174,7 +176,7 @@ complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 
 
 
 
-train_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
+train_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv")
 # print('Now train')
 train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, features, is_dormant=True)#, is_year=True)
 train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, features, is_dormant=True)#, is_year=True)
@@ -200,7 +202,7 @@ mean, std = get_mean_std(train_season_df, features)
 
 
 print('Now test')
-test_df = pd.read_csv("ColdHardiness_Grape_Merlot_2.csv")
+test_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv")
 modified_df, dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#, is_year=True)
 # season_array = [season_array[i] for i in complete_seasons]
@@ -235,7 +237,6 @@ for i in range(X.shape[0]):
     Xeval[i] = parse_id(X[i], Y[i], fs, mean, std, features)
 fs.close()
 
-n_random = 0.2
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
 if os.path.exists(f'./model_abstract/model_BRITS_LT_synth_{n_random}.model'):
