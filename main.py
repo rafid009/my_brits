@@ -147,7 +147,7 @@ def random_synthetic_missing(season_df, features, n_random=0.2):
 if __name__ == "__main__":
     n_features = 19
     model_dir = "./model_abstract"
-    n_random = 0.4
+    n_random = 0.2
 
     if not os.path.isdir(model_dir):
         os.makedirs(model_dir)
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         train_season_complete.extend(s_copy)
 
     train_season_df = season_df.loc[train_season_complete]
-    # print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
+    print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
     df_synth.loc[train_season_df.index.tolist(), :] = random_synthetic_missing(train_season_df, features, n_random=n_random)
 
     df_synth.loc[season_array[-2], :] = random_synthetic_missing(season_df.loc[season_array[-2]], features, n_random)
@@ -176,10 +176,10 @@ if __name__ == "__main__":
     modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
-    # train_season_df = season_df.loc[train_season_complete]
-    train_season_df = season_df.drop(season_array[-1], axis=0)
-    train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    mean, std = get_mean_std(season_df, features)
+    train_season_df = season_df.loc[train_season_complete]
+    # train_season_df = train_season_df.drop(season_array[-1], axis=0)
+    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    mean, std = get_mean_std(train_season_df, features)
     
     prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
     batch_size = 16
@@ -195,8 +195,8 @@ if __name__ == "__main__":
         model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
     else:
         model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-    if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
+    # if os.path.exists(model_path):
+    #     model.load_state_dict(torch.load(model_path))
 
     if torch.cuda.is_available():
         model = model.cuda()
@@ -238,8 +238,8 @@ if __name__ == "__main__":
     # # MICE
     print(f"=========== MICE Training Starts ===========")
     
-    train_complete_season_df = train_season_df.loc[train_season_complete]
-    normalized_season_df = train_complete_season_df[features].copy()
+    # train_complete_season_df = train_season_df.loc[train_season_complete]
+    normalized_season_df = train_season_df[features].copy()
     normalized_season_df = (normalized_season_df - mean) /std
     mice_impute = IterativeImputer(random_state=0, max_iter=30)
     mice_impute.fit(normalized_season_df[features].to_numpy())
@@ -322,10 +322,9 @@ if __name__ == "__main__":
 
     season_df['season_id'] = 0
 
-    train_season_df = season_df.drop(season_array[-1], axis=0)
-    train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    train_season_complete = [season_array[s] for s in complete_seasons[:-2]]
-    train_season_df = train_season_df.loc[train_season_complete]
+    # train_season_df = season_df.drop(season_array[-1], axis=0)
+    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    # train_season_df = train_season_df.loc[train_season_complete]
     add_season_id_and_save(data_folder, train_season_df, train_season_complete, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
