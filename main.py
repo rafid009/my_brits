@@ -155,7 +155,24 @@ if __name__ == "__main__":
 
     # BRITS
     print(f"=========== BRITS Training Starts ===========")
-    df_synth = pd.read_csv('ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    df_synth = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+    # modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
+    # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    
+    # train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+    # for s in complete_seasons[:-2]:
+    #     s_copy = copy.deepcopy(season_array[s])
+    #     train_season_complete.extend(s_copy)
+
+    # train_season_df = season_df.loc[train_season_complete]
+    # print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
+    # df_synth.loc[train_season_df.index.tolist(), :] = random_synthetic_missing(train_season_df, features, n_random=n_random)
+
+    # df_synth.loc[season_array[-2], :] = random_synthetic_missing(season_df.loc[season_array[-2]], features, n_random)
+    # df_synth.loc[season_array[-1], :] = random_synthetic_missing(season_df.loc[season_array[-1]], features, n_random)
+    # df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
+    
+
     modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
@@ -165,88 +182,76 @@ if __name__ == "__main__":
         train_season_complete.extend(s_copy)
 
     train_season_df = season_df.loc[train_season_complete]
-    print(f"synth idx: {df_synth.index.tolist()}\nseaon df idx: {season_df.index.tolist()}")
-    df_synth.loc[train_season_df.index.tolist(), :] = random_synthetic_missing(train_season_df, features, n_random=n_random)
-
-    df_synth.loc[season_array[-2], :] = random_synthetic_missing(season_df.loc[season_array[-2]], features, n_random)
-    df_synth.loc[season_array[-1], :] = random_synthetic_missing(season_df.loc[season_array[-1]], features, n_random)
-    df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
-    
-
-    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
-    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-    
-    train_season_df = season_df.loc[train_season_complete]
     # train_season_df = train_season_df.drop(season_array[-1], axis=0)
     # train_season_df = train_season_df.drop(season_array[-2], axis=0)
     mean, std = get_mean_std(train_season_df, features)
     
-    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
-    batch_size = 16
-    n_epochs = 4000
-    RNN_HID_SIZE = 64
-    IMPUTE_WEIGHT = 0.5
-    LABEL_WEIGHT = 1
-    model_name = 'BRITS'
-    model_path_name = 'BRITS'
-    model_path = f'{model_dir}/model_{model_path_name}_LT_synth_{n_random}.model'
+    # prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
+    # batch_size = 16
+    # n_epochs = 4000
+    # RNN_HID_SIZE = 64
+    # IMPUTE_WEIGHT = 0.5
+    # LABEL_WEIGHT = 1
+    # model_name = 'BRITS'
+    # model_path_name = 'BRITS'
+    # model_path = f'{model_dir}/model_{model_path_name}_LT_synth_{n_random}.model'
     
-    if model_name == 'BRITS':
-        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
-    else:
-        model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-    # if os.path.exists(model_path):
-    #     model.load_state_dict(torch.load(model_path))
+    # if model_name == 'BRITS':
+    #     model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
+    # else:
+    #     model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+    # # if os.path.exists(model_path):
+    # #     model.load_state_dict(torch.load(model_path))
 
-    if torch.cuda.is_available():
-        model = model.cuda()
+    # if torch.cuda.is_available():
+    #     model = model.cuda()
 
-    train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
-    print(f"=========== BRITS Training Ends ===========")
+    # train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
+    # print(f"=========== BRITS Training Ends ===========")
 
-    # SAITS
-    print(f"=========== SAITS Training Starts ===========")
+    # # SAITS
+    # print(f"=========== SAITS Training Starts ===========")
 
     
 
-    X, Y = split_XY(season_df, max_length, season_array, features)
+    # X, Y = split_XY(season_df, max_length, season_array, features)
 
-    num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
+    # num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
 
-    X = X[complete_seasons[:-2]]
-    Y = [complete_seasons[:-2]]
+    # X = X[complete_seasons[:-2]]
+    # Y = [complete_seasons[:-2]]
 
-    for i in range(X.shape[0]):
-        X[i] = (X[i] - mean)/std
+    # for i in range(X.shape[0]):
+    #     X[i] = (X[i] - mean)/std
 
-    filename = f'{model_dir}/model_saits_synth_{n_random}.model'
-    # print(f"X: {X.shape}")
-    # X = X.reshape(num_samples, 48, -1)
-    X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
-    X = masked_fill(X, 1 - missing_mask, np.nan)
-    # Model training. This is PyPOTS showtime. 
-    saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=2000, patience=100)
+    # filename = f'{model_dir}/model_saits_synth_{n_random}.model'
+    # # print(f"X: {X.shape}")
+    # # X = X.reshape(num_samples, 48, -1)
+    # X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
+    # X = masked_fill(X, 1 - missing_mask, np.nan)
+    # # Model training. This is PyPOTS showtime. 
+    # saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=2000, patience=100)
 
-    saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
-    pickle.dump(saits, open(filename, 'wb'))
+    # saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
+    # pickle.dump(saits, open(filename, 'wb'))
 
-    imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
-    mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
-    print(f"SAITS Validation MSE: {mse}")
-    print(f"=========== SAITS Training Ends ===========")
+    # imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
+    # mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
+    # print(f"SAITS Validation MSE: {mse}")
+    # print(f"=========== SAITS Training Ends ===========")
 
-    # # MICE
-    print(f"=========== MICE Training Starts ===========")
+    # # # MICE
+    # print(f"=========== MICE Training Starts ===========")
     
-    # train_complete_season_df = train_season_df.loc[train_season_complete]
-    normalized_season_df = train_season_df[features].copy()
-    normalized_season_df = (normalized_season_df - mean) /std
-    mice_impute = IterativeImputer(random_state=0, max_iter=30)
-    mice_impute.fit(normalized_season_df[features].to_numpy())
-    filename = f'{model_dir}/model_mice_synth_{n_random}.model'
-    pickle.dump(mice_impute, open(filename, 'wb'))
+    # # train_complete_season_df = train_season_df.loc[train_season_complete]
+    # normalized_season_df = train_season_df[features].copy()
+    # normalized_season_df = (normalized_season_df - mean) /std
+    # mice_impute = IterativeImputer(random_state=0, max_iter=30)
+    # mice_impute.fit(normalized_season_df[features].to_numpy())
+    # filename = f'{model_dir}/model_mice_synth_{n_random}.model'
+    # pickle.dump(mice_impute, open(filename, 'wb'))
 
-    print(f"=========== MICE Training Ends ===========")
+    # print(f"=========== MICE Training Ends ===========")
 
     # MVTS
     print(f"=========== MVTS Training Starts ===========")
@@ -321,7 +326,7 @@ if __name__ == "__main__":
     # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
     season_df['season_id'] = 0
-
+    train_season_complete = [season_array[i] for i in complete_seasons[:-2]]
     # train_season_df = season_df.drop(season_array[-1], axis=0)
     # train_season_df = train_season_df.drop(season_array[-2], axis=0)
     # train_season_df = train_season_df.loc[train_season_complete]
