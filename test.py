@@ -371,7 +371,7 @@ for idx, data in enumerate(val_iter):
             imputed_array_saits = np.round(without_paddings, 2)
         else:
             imputed_array_saits = np.concatenate((imputed_array_saits, np.round(without_paddings, 2)), axis=0)
-
+    print(f"transformer preds: {transformer_preds.shape}")
     for i in range(transformer_preds.shape[0]):
         # print(imputation_brits[i])
         without_paddings = np.delete(transformer_preds[i], zero_pads[i], 0)
@@ -421,7 +421,7 @@ mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False
 model_name = f"mvts_synth_{n_random}"
 
 mvts_df = test_df.copy()
-
+print(f"season df: {season_df.shape}\nimputed array: {imputed_array_mvts.shape}")
 mvts_df.loc[season_df.index.tolist(), features] = imputed_array_mvts
 mvts_df['LTE50'] = test_df['LTE50']
 data_imputed_folder = './abstract_imputed'
