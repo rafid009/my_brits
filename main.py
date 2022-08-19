@@ -145,7 +145,7 @@ def random_synthetic_missing(season_df, features, n_random=0.2):
     return df_copy#.to_numpy()
 
 if __name__ == "__main__":
-    n_features = 19
+    n_features = len(features)
     model_dir = "./model_abstract"
     n_random = 0
 

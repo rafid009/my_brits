@@ -32,7 +32,7 @@ fs = open(folder+'json_without_LT', 'w')
 #     return values
 
 
-def parse_delta(masks, dir_):
+def parse_delta(masks, features, dir_):
     if dir_ == 'backward':
         masks = masks[::-1]
 
@@ -40,15 +40,15 @@ def parse_delta(masks, dir_):
 
     for h in range(masks.shape[0]):
         if h == 0:
-            deltas.append(np.ones(len(attributes)))
+            deltas.append(np.ones(len(features)))
         else:
-            deltas.append(np.ones(len(attributes)) + (1 - masks[h]) * deltas[-1])
+            deltas.append(np.ones(len(features)) + (1 - masks[h]) * deltas[-1])
 
     return np.array(deltas)
 
 
-def parse_rec(values, masks, evals, eval_masks, dir_):
-    deltas = parse_delta(masks, dir_)
+def parse_rec(values, masks, evals, eval_masks, features, dir_):
+    deltas = parse_delta(masks, features, dir_)
 
     # only used in GRU-D
     forwards = pd.DataFrame(values).fillna(method='ffill').fillna(0.0).to_numpy()
@@ -66,7 +66,7 @@ def parse_rec(values, masks, evals, eval_masks, dir_):
     return rec
 
 
-def parse_id(x, y, mean, std):
+def parse_id(x, y, mean, std, features):
     # data = pd.read_csv('./raw/{}.txt'.format(id_))
     # accumulate the records within one hour
     # data['Time'] = data['Time'].apply(lambda x: to_time_bin(x))
@@ -107,8 +107,8 @@ def parse_id(x, y, mean, std):
     rec = {'label': label}
 
     # prepare the model for both directions
-    rec['forward'] = parse_rec(values, masks, evals, eval_masks, dir_='forward')
-    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], dir_='backward')
+    rec['forward'] = parse_rec(values, masks, evals, eval_masks, features, dir_='forward')
+    rec['backward'] = parse_rec(values[::-1], masks[::-1], evals[::-1], eval_masks[::-1], features, dir_='backward')
     # for key in rec.keys():
     #     print(f"{key}: {type(rec[key])}")# and {rec[key].shape}")
     rec = json.dumps(rec)
@@ -149,7 +149,7 @@ def prepare_brits_input(df, season_array, max_length, features, mean, std, model
     X = X[:-2]
     Y = Y[:-2]
     for i in range(X.shape[0]):
-        parse_id(X[i], Y[i], mean, std)
+        parse_id(X[i], Y[i], mean, std, features)
 
     fs.close()
 
