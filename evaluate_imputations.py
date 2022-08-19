@@ -35,7 +35,7 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-n_random = 0.2
+n_random = 0
 seasons = {
 # '1988-1989': 0,
 # '1989-1990': 1,
@@ -102,11 +102,24 @@ std = []
 
 # features_impute = [features.index('MEAN_AT'), features.index('AVG_REL_HUMIDITY')]
 ############## Data Load and Preprocess ##############
-df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+
+if n_random == 0:
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+else:
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-train_season_df = season_df.drop(season_array[-1], axis=0)
-train_season_df = train_season_df.drop(season_array[-2], axis=0)
+
+train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+for s in complete_seasons[:-2]:
+    s_copy = copy.deepcopy(season_array[s])
+    train_season_complete.extend(s_copy)
+
+train_season_df = season_df.loc[train_season_complete]
+
+# train_season_df = train_season_df.drop(season_array[-1], axis=0)
+# train_season_df = train_season_df.drop(season_array[-2], axis=0)
 
 mean, std = get_mean_std(train_season_df, features)
 
@@ -125,7 +138,7 @@ model_dir = "./model_abstract"
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
 model_brits_path = f"{model_dir}/model_BRITS_LT_synth_{n_random}.model"
 if os.path.exists(model_brits_path):
-    model_brits.load_state_dict(torch.load(model_brits_path, map_location='cpu'))
+    model_brits.load_state_dict(torch.load(model_brits_path))
 
 if torch.cuda.is_available():
     model_brits = model_brits.cuda()
@@ -513,9 +526,11 @@ given_features = [
     'ETR',
     'LTE50' # ???
 ]
-
-test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
+if n_random == 0:
+    test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+else:
+    test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True, imputed=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
 
