@@ -35,7 +35,7 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-n_random = 0
+n_random = 0.2
 seasons = {
 # '1988-1989': 0,
 # '1989-1990': 1,
@@ -105,9 +105,9 @@ std = []
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
 if n_random == 0:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_0.csv')
 else:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_0.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
@@ -136,7 +136,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
-model_brits_path = f"{model_dir}/model_BRITS_LT_synth_{n_random}.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.model"#{n_random}.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
 
@@ -145,12 +145,12 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_synth_{n_random}.model"
+saits_file = f"{model_dir}/model_saits_synth_0.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice_synth_{n_random}.model"
+mice_file = f"{model_dir}/model_mice_synth_0.model"#{n_random}.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############
@@ -1400,7 +1400,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                             'config_filepath': None, 
                             'output_dir': './transformer/output/', 
                             'data_dir': './transformer/data_dir/', 
-                            'load_model': f'./transformer/output/mvts-synth-{n_random}/checkpoints/model_best.pth', 
+                            'load_model': f'./transformer/output/mvts-synth-0/checkpoints/model_best.pth', 
                             'resume': False, 
                             'change_output': False, 
                             'save_all': False, 
