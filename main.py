@@ -37,10 +37,10 @@ features = [
     'MIN_DEWPT',
     'AVG_DEWPT',
     'MAX_DEWPT',
-    # 'P_INCHES', # precipitation
+    'P_INCHES', # precipitation
     'WS_MPH', # wind speed. if no sensor then value will be na
     'MAX_WS_MPH', 
-    # 'LW_UNITY', # leaf wetness sensor
+    'LW_UNITY', # leaf wetness sensor
     'SR_WM2', # solar radiation # different from zengxian
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
     mean, std = get_mean_std(train_season_df, features)
     
-    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
+    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir)#, complete_seasons)
     batch_size = 16
     n_epochs = 4000
     RNN_HID_SIZE = 64
@@ -327,8 +327,8 @@ if __name__ == "__main__":
 
     season_df['season_id'] = 0
     # train_season_complete = [season_array[i] for i in complete_seasons[:-2]]
-    train_season_df = season_df.drop(season_array[-1], axis=0)
-    train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    # train_season_df = season_df.drop(season_array[-1], axis=0)
+    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
     # train_season_df = train_season_df.loc[train_season_complete]
     add_season_id_and_save(data_folder, train_season_df, season_array, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
     run_transformer(params)
