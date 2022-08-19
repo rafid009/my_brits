@@ -136,7 +136,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
-model_brits_path = f"{model_dir}/model_BRITS_LT_synth_0.model"#{n_random}.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_orig.model"#{n_random}.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
 
@@ -145,12 +145,12 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-saits_file = f"{model_dir}/model_saits_synth_0.model"#{n_random}.model"
+saits_file = f"{model_dir}/model_saits_orig.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
 ############## Load MICE ##############
-mice_file = f"{model_dir}/model_mice_synth_0.model"#{n_random}.model"
+mice_file = f"{model_dir}/model_mice_orig.model"#{n_random}.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
 
 ############## Load MVTS ##############

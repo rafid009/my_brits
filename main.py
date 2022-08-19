@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
     # BRITS
     print(f"=========== BRITS Training Starts ===========")
-    df_synth = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    df_synth = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
     # modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
     # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
@@ -173,17 +173,17 @@ if __name__ == "__main__":
     # df_synth.to_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv', index=False)
     
 
-    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True, not_original=True)#False, is_year=True)
+    modified_df, dormant_seasons = preprocess_missing_values(df_synth, features, is_dormant=True)# not_original=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
     
-    train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
-    for s in complete_seasons[:-2]:
-        s_copy = copy.deepcopy(season_array[s])
-        train_season_complete.extend(s_copy)
+    # train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+    # for s in complete_seasons[:-2]:
+    #     s_copy = copy.deepcopy(season_array[s])
+    #     train_season_complete.extend(s_copy)
 
-    train_season_df = season_df.loc[train_season_complete]
-    # train_season_df = train_season_df.drop(season_array[-1], axis=0)
-    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    # train_season_df = season_df.loc[train_season_complete]
+    train_season_df = season_df.drop(season_array[-1], axis=0)
+    train_season_df = train_season_df.drop(season_array[-2], axis=0)
     mean, std = get_mean_std(train_season_df, features)
     
     prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir, complete_seasons)
@@ -194,14 +194,14 @@ if __name__ == "__main__":
     LABEL_WEIGHT = 1
     model_name = 'BRITS'
     model_path_name = 'BRITS'
-    model_path = f'{model_dir}/model_{model_path_name}_LT_synth_{n_random}.model'
+    model_path = f'{model_dir}/model_{model_path_name}_LT_orig.model'#synth_{n_random}.model'
     
     if model_name == 'BRITS':
         model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
     else:
         model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-    # if os.path.exists(model_path):
-    #     model.load_state_dict(torch.load(model_path))
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
 
     if torch.cuda.is_available():
         model = model.cuda()
@@ -218,13 +218,13 @@ if __name__ == "__main__":
 
     num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
 
-    X = X[complete_seasons[:-2]]
-    Y = [complete_seasons[:-2]]
+    X = X[:-2]
+    Y = Y[:-2]#[complete_seasons[:-2]]
 
     for i in range(X.shape[0]):
         X[i] = (X[i] - mean)/std
 
-    filename = f'{model_dir}/model_saits_synth_{n_random}.model'
+    filename = f'{model_dir}/model_saits_orig.model'#synth_{n_random}.model'
     # print(f"X: {X.shape}")
     # X = X.reshape(num_samples, 48, -1)
     X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     normalized_season_df = (normalized_season_df - mean) /std
     mice_impute = IterativeImputer(random_state=0, max_iter=30)
     mice_impute.fit(normalized_season_df[features].to_numpy())
-    filename = f'{model_dir}/model_mice_synth_{n_random}.model'
+    filename = f'{model_dir}/model_mice_orig.model'#synth_{n_random}.model'
     pickle.dump(mice_impute, open(filename, 'wb'))
 
     print(f"=========== MICE Training Ends ===========")
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         'resume': False,
         'change_output': False,
         'save_all': False,
-        'experiment_name': 'mvts-synth-0', 
+        'experiment_name': 'mvts-orig', 
         'comment': 'pretraining through imputation', 
         'no_timestamp': False, 
         'records_file': 'Imputation_records.csv', 
@@ -326,11 +326,11 @@ if __name__ == "__main__":
     # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
     season_df['season_id'] = 0
-    train_season_complete = [season_array[i] for i in complete_seasons[:-2]]
-    # train_season_df = season_df.drop(season_array[-1], axis=0)
-    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
+    # train_season_complete = [season_array[i] for i in complete_seasons[:-2]]
+    train_season_df = season_df.drop(season_array[-1], axis=0)
+    train_season_df = train_season_df.drop(season_array[-2], axis=0)
     # train_season_df = train_season_df.loc[train_season_complete]
-    add_season_id_and_save(data_folder, train_season_df, train_season_complete, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
+    add_season_id_and_save(data_folder, train_season_df, season_array, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
 
