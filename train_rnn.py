@@ -78,11 +78,17 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
     else:
         imputed_season_df = season_df
     # print(f"imputed: {imputed_season_df.isna().sum()}")
+    
+    input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
+    train_0_df = pd.read_csv(f"{input_file}.csv")
 
-    train_season_df = imputed_season_df.drop(seasons_array[-1], axis=0)
-    train_season_df = train_season_df.drop(seasons_array[-2], axis=0)
+    train_0_modified_df, dormant_seasons = preprocess_missing_values(train_0_df, features, is_dormant=True, imputed=True)#False, is_year=True)
+    train_0_season_df, seasons_array, max_length = get_seasons_data(train_0_modified_df, dormant_seasons, features, is_dormant=True)
 
-    x_mean, x_std = get_mean_std_rnn(train_season_df, features)
+    train_season_df_0 = train_0_season_df.drop(seasons_array[-1], axis=0)
+    train_season_df_0 = train_season_df_0.drop(seasons_array[-2], axis=0)
+
+    x_mean, x_std = get_mean_std_rnn(train_season_df_0, features)
 
     x_train, y_train = split_and_normalize(imputed_season_df, max_length, seasons_array[:-2], features, x_mean, x_std)
 
@@ -244,41 +250,41 @@ def format_seconds_to_hhmmss(seconds):
 
 
 
-impute_model = 'station_replace'
-args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
-    'batch_size': 16,
-    'epochs': 800
-}
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, station=True)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
+# impute_model = 'station_replace'
+# args = {
+#     'name': f"pred_model_{impute_model}_{n_random}",
+#     'batch_size': 16,
+#     'epochs': 800
+# }
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, station=True)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"Predicitve {impute_model} model mse: {best_loss}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
 
-impute_model = 'linear_synth' 
-args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
-    'batch_size': 16,
-    'epochs': 800
-}
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)# original=True)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
+# impute_model = 'linear_synth' 
+# args = {
+#     'name': f"pred_model_{impute_model}_{n_random}",
+#     'batch_size': 16,
+#     'epochs': 800
+# }
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)# original=True)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"Predicitve {impute_model} model mse: {best_loss}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
 
 impute_model = 'brits_synth' 
 args = {
@@ -289,11 +295,11 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
@@ -307,11 +313,11 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
@@ -329,7 +335,7 @@ _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, opti
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
@@ -343,11 +349,11 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
