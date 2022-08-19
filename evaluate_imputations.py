@@ -105,9 +105,9 @@ std = []
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
 if n_random == 0:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_0.csv')
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
 else:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_0.csv')
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
