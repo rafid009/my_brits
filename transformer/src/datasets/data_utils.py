@@ -55,8 +55,8 @@ def preprocess_missing_values(df, is_dormant=True, is_year=False):
   modified_df['SR_WM2'].replace(0, np.nan, inplace=True)
   modified_df['WS_MPH'].replace(0, np.nan, inplace=True)
   modified_df['MAX_WS_MPH'].replace(0, np.nan, inplace=True)
-  # modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
-  # modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
+  modified_df['LW_UNITY'].replace(0, np.nan, inplace=True)
+  modified_df['P_INCHES'].replace(0, np.nan, inplace=True)
 
   start_idx = df[df['DATE'] == '2007-07-21'].index.tolist()[0]
   end_idx = df[df['DATE'] == '2007-12-30'].index.tolist()[0]

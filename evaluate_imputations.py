@@ -1423,6 +1423,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                         ret_eval[row_indices, feature_idx] = np.nan
                         test_df = pd.DataFrame(ret_eval, columns=features)
+                        print(f"test df: {test_df.columns}")
                         add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_{n_random}.csv')
 
                         params = {
