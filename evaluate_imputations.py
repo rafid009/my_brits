@@ -132,10 +132,10 @@ std = []
 ############## Data Load and Preprocess ##############
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
-if n_random == 0:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
-else:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
+# if n_random == 0:
+#     df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+# else:
+df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
@@ -559,7 +559,7 @@ given_features = [
 # else:
 #     test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
 test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
-test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True, imputed=True)#, is_year=True)
+test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
 
@@ -1424,7 +1424,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         ret_eval[row_indices, feature_idx] = np.nan
                         test_df = pd.DataFrame(ret_eval, columns=features)
                         # print(f"test df: {test_df.columns}")
-                        add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_{n_random}.csv')
+                        add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_2.csv')
 
                         params = {
                             'config_filepath': None, 
