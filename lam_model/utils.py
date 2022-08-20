@@ -49,7 +49,7 @@ def split_and_normalize(_df, season_max_length, seasons, features, x_mean, x_std
         # print(f"y_next: {y_next.shape}, add_array: {add_array_next.shape}")
         y_next = np.concatenate((y_next, add_array_next), axis=0)
         # _y = np.squeeze(_y)
-        print(f"y_1: {_y.shape}, y_2: {y_next}")
+        print(f"y_1: {_y.shape}, y_2: {y_next.shape}")
         _y = np.concatenate((_y, y_next), axis=0)
         print(f"y_both: {_y.shape}")
         x.append(_x)
