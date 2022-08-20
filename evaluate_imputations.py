@@ -526,10 +526,11 @@ given_features = [
     'ETR',
     'LTE50' # ???
 ]
-if n_random == 0:
-    test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
-else:
-    test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+# if n_random == 0:
+#     test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+# else:
+#     test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv')
+test_df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
 test_modified_df, test_dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True, imputed=True)#, is_year=True)
 # print(f"dormant seasons: {len(test_dormant_seasons)}\n {test_dormant_seasons}")
 season_df, season_array, max_length = get_seasons_data(test_modified_df, test_dormant_seasons, features, is_dormant=True)#, is_year=True)
@@ -630,7 +631,7 @@ def evaluate_imputation(mse_folder):
                         'config_filepath': None, 
                         'output_dir': './transformer/output/', 
                         'data_dir': './transformer/data_dir/', 
-                        'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
+                        'load_model': './transformer/output/mvts-orig/checkpoints/model_best.pth', 
                         'resume': False, 
                         'change_output': False, 
                         'save_all': False, 
@@ -1400,7 +1401,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                             'config_filepath': None, 
                             'output_dir': './transformer/output/', 
                             'data_dir': './transformer/data_dir/', 
-                            'load_model': f'./transformer/output/mvts-synth-0/checkpoints/model_best.pth', 
+                            'load_model': f'./transformer/output/mvts-orig/checkpoints/model_best.pth', 
                             'resume': False, 
                             'change_output': False, 
                             'save_all': False, 
