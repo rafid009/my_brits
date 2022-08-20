@@ -516,6 +516,7 @@ class SeasonData(BaseData):
 
     @staticmethod
     def load_single(filepath):
+        # print(f"file: {filepath}")
         df = SeasonData.read_data(filepath)
         # print(f"df cols: {df.columns}")
         df = SeasonData.select_columns(df)
