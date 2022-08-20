@@ -517,7 +517,7 @@ class SeasonData(BaseData):
     @staticmethod
     def load_single(filepath):
         df = SeasonData.read_data(filepath)
-        print(f"df cols: {df.columns}")
+        # print(f"df cols: {df.columns}")
         df = SeasonData.select_columns(df)
         
         # num_nan = df.isna().sum().sum()
