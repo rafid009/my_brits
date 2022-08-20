@@ -54,7 +54,7 @@ features = [
 
 def train(model, n_epochs, batch_size, model_path, data_file='./json/json_LT'):
     start = time.time()
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     data_iter = data_loader.get_loader(batch_size=batch_size, filename=data_file)
     pre_mse = 9999999
@@ -80,7 +80,8 @@ def train(model, n_epochs, batch_size, model_path, data_file='./json/json_LT'):
                 count_diverge += 1
             else:
                 count_diverge = 0
-            tepoch.set_postfix(MSE=mse)
+            tepoch.set_postfix(train_loss=(run_loss / (idx + 1.0)), val_loss=mse)
+            tepoch.update(1)
         if (epoch + 1) % 100 == 0 and count_diverge == 0:
             torch.save(model.state_dict(), model_path)
     end = time.time()
@@ -188,7 +189,7 @@ if __name__ == "__main__":
     
     prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir)#, complete_seasons)
     batch_size = 16
-    n_epochs = 4000
+    n_epochs = 3000
     RNN_HID_SIZE = 64
     IMPUTE_WEIGHT = 0.5
     LABEL_WEIGHT = 1
