@@ -36,6 +36,34 @@ np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 n_random = 0.2
+
+features = [
+    'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+    'MIN_AT',
+    'AVG_AT', # average temp is AgWeather Network
+    'MAX_AT',
+    'MIN_REL_HUMIDITY',
+    'AVG_REL_HUMIDITY',
+    'MAX_REL_HUMIDITY',
+    'MIN_DEWPT',
+    'AVG_DEWPT',
+    'MAX_DEWPT',
+    'P_INCHES', # precipitation
+    'WS_MPH', # wind speed. if no sensor then value will be na
+    'MAX_WS_MPH', 
+    'LW_UNITY', # leaf wetness sensor
+    'SR_WM2', # solar radiation # different from zengxian
+    'MIN_ST8', # diff from zengxian
+    'ST8', # soil temperature # diff from zengxian
+    'MAX_ST8', # diff from zengxian
+    #'MSLP_HPA', # barrometric pressure # diff from zengxian
+    'ETO', # evaporation of soil water lost to atmosphere
+    'ETR', # ???
+    'LTE50'
+    # 'SEASON_JDAY'
+]
+
+
 seasons = {
 # '1988-1989': 0,
 # '1989-1990': 1,
@@ -1886,7 +1914,7 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # forward_data_folder = 'forward_LT_data_brits_saits_13'
 # forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
-forward_folder = 'forward_LT_abstract_7'
+forward_folder = 'forward_LT_2'
 forward_data_folder = None#f"{forward_folder}/data"
 forward_diff_folder = None#f"{forward_folder}/diff"
 forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder, diff_folder=forward_diff_folder)
