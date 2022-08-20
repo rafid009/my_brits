@@ -239,8 +239,8 @@ fs.close()
 
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 
-if os.path.exists(f'./model_abstract/model_BRITS_LT_orig.model')#synth_{n_random}.model'):
-    model_brits.load_state_dict(torch.load(f'./model_abstract/model_BRITS_LT_synth_{n_random}.model'))
+if os.path.exists(f'./model_abstract/model_BRITS_LT_orig.model'):#synth_{n_random}.model')
+    model_brits.load_state_dict(torch.load(f'./model_abstract/model_BRITS_LT_orig.model'))#_synth_{n_random}.model'))
 model_brits.to(device=device)
 model_brits.eval()
 
