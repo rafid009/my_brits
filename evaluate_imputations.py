@@ -107,19 +107,19 @@ complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 
 if n_random == 0:
     df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
 else:
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_new_synthetic.csv')
+    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
 modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
-train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
-for s in complete_seasons[:-2]:
-    s_copy = copy.deepcopy(season_array[s])
-    train_season_complete.extend(s_copy)
+# train_season_complete = []#[season_array[i] for i in complete_seasons[:-2]]
+# for s in complete_seasons[:-2]:
+#     s_copy = copy.deepcopy(season_array[s])
+#     train_season_complete.extend(s_copy)
 
-train_season_df = season_df.loc[train_season_complete]
+# train_season_df = season_df.loc[train_season_complete]
 
-# train_season_df = train_season_df.drop(season_array[-1], axis=0)
-# train_season_df = train_season_df.drop(season_array[-2], axis=0)
+train_season_df = season_df.drop(season_array[-1], axis=0)
+train_season_df = train_season_df.drop(season_array[-2], axis=0)
 
 mean, std = get_mean_std(train_season_df, features)
 
@@ -135,7 +135,7 @@ mean, std = get_mean_std(train_season_df, features)
 model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
-model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=19)
+model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
 model_brits_path = f"{model_dir}/model_BRITS_LT_orig.model"#{n_random}.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
@@ -513,10 +513,10 @@ given_features = [
     'MIN_DEWPT',
     'AVG_DEWPT',
     'MAX_DEWPT',
-    # 'P_INCHES', # precipitation
+    'P_INCHES', # precipitation
     'WS_MPH', # wind speed. if no sensor then value will be na
     'MAX_WS_MPH', 
-    # 'LW_UNITY', # leaf wetness sensor
+    'LW_UNITY', # leaf wetness sensor
     'SR_WM2', # solar radiation # different from zengxian
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
