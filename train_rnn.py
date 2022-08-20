@@ -148,6 +148,7 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 # for i in yn:
                 #     print(i)
                 n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
+                print(f"nan: {n_nan.shape}, out_50: {out_lt_50.shape}")
                 # print(f"y_torch: {y.shape}\nleft shape: {out_lt_50[n_nan[0], n_nan[1]].shape}")
                 # print(f"n_nan: {n_nan}\nleft: {out_lt_50[n_nan[0], n_nan[1]]}\nright: {y_torch[n_nan[0], n_nan[1]]}")
                 # left = out_lt_50[n_nan[0], n_nan[1]]
