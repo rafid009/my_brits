@@ -255,7 +255,7 @@ test_normalized_df = (test_normalized_df - mean) /std
 test_imputed_mice = model_mice.transform(test_normalized_df[features])
 imputation_mice = unnormalize(test_imputed_mice, mean, std)
 
-add_season_id_and_save('./transformer/data_dir', season_df[features], season_array=season_array, filename=f'ColdHardiness_Grape_Merlot_test_{n_random}.csv')
+add_season_id_and_save('./transformer/data_dir', season_df[features], season_array=season_array, filename=f'ColdHardiness_Grape_Merlot_test_2.csv')#{n_random}.csv')
 
 params = {
     'config_filepath': None, 
