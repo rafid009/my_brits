@@ -142,23 +142,25 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 out_lt_50, _ = model(x_torch)
 
                 optimizer.zero_grad()       # zero the parameter gradients
-                print(f"y: {y.shape}")
+                # print(f"y: {y.shape}")
                 # print(f"isna: {np.isnan(y)}")
                 # yn = np.isnan(y)
                 # for i in yn:
                 #     print(i)
                 n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
-                print(f"nan: {n_nan.shape}, out_50: {out_lt_50.shape}")
+                # print(f"nan: {n_nan.shape}, out_50: {out_lt_50.shape}")
                 # print(f"y_torch: {y.shape}\nleft shape: {out_lt_50[n_nan[0], n_nan[1]].shape}")
                 # print(f"n_nan: {n_nan}\nleft: {out_lt_50[n_nan[0], n_nan[1]]}\nright: {y_torch[n_nan[0], n_nan[1]]}")
                 # left = out_lt_50[n_nan[0], n_nan[1]]
                 # print(f"left: {np.isnan(left.detach().numpy())}")
                 loss_lt_50 = criterion(
-                    torch.squeeze(out_lt_50[n_nan[0], n_nan[1]]), y_torch[n_nan[0], n_nan[1]])  # LT50 GT
+                    torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
-
+                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                loss_lt_50_next = criterion(
+                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50
+                loss = loss_lt_50 + loss_lt_50_next
 
                 loss.backward()             # backward +
                 optimizer.step()            # optimize
@@ -185,12 +187,15 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     out_lt_50, _ = model(x_torch)
                     # getting non nan values is slow right now due to copying to cpu, write pytorch gpu version
                     
-                    n_nan = get_not_nan(y)  # LT10/50/90 not NAN
+                    n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
                     loss_lt_50 = criterion(
-                        torch.squeeze(out_lt_50[n_nan[0], n_nan[1]]), y_torch[n_nan[0], n_nan[1]])  # LT50 GT
+                        torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
+                    n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                    loss_lt_50_next = criterion(
+                        torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
                     #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                    loss = loss_lt_50
+                    loss = loss_lt_50 + loss_lt_50_next
                     total_loss += loss.item()
 
                     tepoch.set_postfix(Val_Loss=total_loss / count)
@@ -204,7 +209,7 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
 
                     torch.save(model.state_dict(), os.path.join(modelSavePath, args['name'] + ".pt"))
 
-    return loss_lt_50.item(), best_loss
+    return loss_lt_50.item(), loss_lt_50_next.item(), best_loss
 
 def evaluate(model, x_test, y_test, batch_size, criterion):
     x_test = torch.FloatTensor(x_test)
@@ -231,14 +236,19 @@ def evaluate(model, x_test, y_test, batch_size, criterion):
                 out_lt_50, _ = model(x_torch)
                 # getting non nan values is slow right now due to copying to cpu, write pytorch gpu version
                 
-                n_nan = get_not_nan(y)  # LT10/50/90 not NAN
+                n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
                 loss_lt_50 = criterion(
-                    torch.squeeze(out_lt_50[n_nan[0], n_nan[1]]), y_torch[n_nan[0], n_nan[1]])  # LT50 GT
+                    torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]]) 
+                     # LT50 GT
+
+                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                loss_lt_50_next = criterion(
+                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
 
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50
+                loss = loss_lt_50 + loss_lt_50_next
                 total_loss += loss.item()
-                print(f"{seasons[i]} mse: {loss.item()}")
+                print(f"{seasons[i]} same mse: {loss_lt_50.item()}\nnext mse: {loss_lt_50_next.item()}")
                 tepoch.set_postfix(Val_Loss=total_loss / count)
                 tepoch.update(1)
 
@@ -278,7 +288,7 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
@@ -296,7 +306,7 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
@@ -314,7 +324,7 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
@@ -332,7 +342,7 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
@@ -350,7 +360,7 @@ args = {
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
