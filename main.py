@@ -325,12 +325,12 @@ if __name__ == "__main__":
     # modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
     # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
-    season_df['season_id'] = 0
+    # season_df['season_id'] = 0
     # train_season_complete = [season_array[i] for i in complete_seasons[:-2]]
     # train_season_df = season_df.drop(season_array[-1], axis=0)
     # train_season_df = train_season_df.drop(season_array[-2], axis=0)
     # train_season_df = train_season_df.loc[train_season_complete]
-    add_season_id_and_save(data_folder, train_season_df, season_array, f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
+    add_season_id_and_save(data_folder, train_season_df, season_array[:-2], f'ColdHardiness_Grape_Merlot_synth_transformer_{n_random}.csv')
     run_transformer(params)
     print(f"=========== MVTS Training Ends ===========")
 
