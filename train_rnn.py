@@ -29,10 +29,10 @@ features = [
     'MIN_DEWPT',
     'AVG_DEWPT',
     'MAX_DEWPT',
-    # 'P_INCHES', # precipitation
+    'P_INCHES', # precipitation
     'WS_MPH', # wind speed. if no sensor then value will be na
     'MAX_WS_MPH', 
-    # 'LW_UNITY', # leaf wetness sensor
+    'LW_UNITY', # leaf wetness sensor
     'SR_WM2', # solar radiation # different from zengxian
     'MIN_ST8', # diff from zengxian
     'ST8', # soil temperature # diff from zengxian
@@ -53,7 +53,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         df = pd.read_csv(f"{input_file}.csv")
     elif imputed:
         input_file = f"./abstract_imputed/ColdHardiness_Grape_Merlot_imputed"
-        df = pd.read_csv(f"{input_file}_{impute_model}_{n_random}.csv")
+        df = pd.read_csv(f"{input_file}_{impute_model}.csv")#_{n_random}.csv")
     else:
         if original:
             input_file = f"./ColdHardiness_Grape_Merlot_2"
@@ -64,14 +64,14 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
     if imputed:
         modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True, imputed=True)#False, is_year=True)
     else:
-        modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True, imputed=False)
+        modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#, imputed=False)
     season_df, seasons_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)
-    seasons_array = [seasons_array[i] for i in complete_seasons]
-    seasons_complete = []
-    for i in range(len(seasons_array)):
-        indices = copy.deepcopy(seasons_array[i])
-        seasons_complete.extend(indices)
-    season_df = season_df.loc[seasons_complete]
+    # seasons_array = [seasons_array[i] for i in complete_seasons]
+    # seasons_complete = []
+    # for i in range(len(seasons_array)):
+    #     indices = copy.deepcopy(seasons_array[i])
+    #     seasons_complete.extend(indices)
+    # season_df = season_df.loc[seasons_complete]
 
     if not imputed:
         imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
@@ -79,16 +79,16 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         imputed_season_df = season_df
     # print(f"imputed: {imputed_season_df.isna().sum()}")
     
-    input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
-    train_0_df = pd.read_csv(f"{input_file}.csv")
+    # input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
+    # train_0_df = pd.read_csv(f"{input_file}.csv")
 
-    train_0_modified_df, dormant_seasons = preprocess_missing_values(train_0_df, features, is_dormant=True, imputed=True)#False, is_year=True)
-    train_0_season_df, seasons_array, max_length = get_seasons_data(train_0_modified_df, dormant_seasons, features, is_dormant=True)
+    # train_0_modified_df, dormant_seasons = preprocess_missing_values(train_0_df, features, is_dormant=True, imputed=True)#False, is_year=True)
+    # train_0_season_df, seasons_array, max_length = get_seasons_data(train_0_modified_df, dormant_seasons, features, is_dormant=True)
 
-    train_season_df_0 = train_0_season_df.drop(seasons_array[-1], axis=0)
-    train_season_df_0 = train_season_df_0.drop(seasons_array[-2], axis=0)
+    # train_season_df_0 = train_0_season_df.drop(seasons_array[-1], axis=0)
+    # train_season_df_0 = train_season_df_0.drop(seasons_array[-2], axis=0)
 
-    x_mean, x_std = get_mean_std_rnn(train_season_df_0, features)
+    x_mean, x_std = get_mean_std_rnn(imputed_season_df, features)
 
     x_train, y_train = split_and_normalize(imputed_season_df, max_length, seasons_array[:-2], features, x_mean, x_std)
 
@@ -97,7 +97,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
 
 def initialize_model(impute_model, x_train, n_random):
     model = net(np.array(x_train).shape[-1])
-    model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+    model_path = f"./rnn_models/pred_model_{impute_model}.pt"#_{n_random}.pt"
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
     model.to(device)
