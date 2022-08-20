@@ -142,15 +142,15 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 out_lt_50, _ = model(x_torch)
 
                 optimizer.zero_grad()       # zero the parameter gradients
-                # print(f"y: {y.shape}")
+                print(f"y: {y.shape}")
                 # print(f"isna: {np.isnan(y)}")
-                yn = np.isnan(y)
+                # yn = np.isnan(y)
                 # for i in yn:
                 #     print(i)
-                n_nan = get_not_nan(y)  # LT10/50/90 not NAN
+                n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
                 # print(f"y_torch: {y.shape}\nleft shape: {out_lt_50[n_nan[0], n_nan[1]].shape}")
                 # print(f"n_nan: {n_nan}\nleft: {out_lt_50[n_nan[0], n_nan[1]]}\nright: {y_torch[n_nan[0], n_nan[1]]}")
-                left = out_lt_50[n_nan[0], n_nan[1]]
+                # left = out_lt_50[n_nan[0], n_nan[1]]
                 # print(f"left: {np.isnan(left.detach().numpy())}")
                 loss_lt_50 = criterion(
                     torch.squeeze(out_lt_50[n_nan[0], n_nan[1]]), y_torch[n_nan[0], n_nan[1]])  # LT50 GT
@@ -268,23 +268,23 @@ def format_seconds_to_hhmmss(seconds):
 # evaluate(model, x_test, y_test, 1, criterion)
 # print()
 
-# impute_model = 'linear_synth' 
-# args = {
-#     'name': f"pred_model_{impute_model}_{n_random}",
-#     'batch_size': 16,
-#     'epochs': 800
-# }
-# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False)# original=True)
-# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-# model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
-# model.load_state_dict(torch.load(model_path))
-# evaluate(model, x_test, y_test, 1, criterion)
-# print()
+impute_model = 'linear_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 800
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
 
 impute_model = 'brits_orig' 
 args = {

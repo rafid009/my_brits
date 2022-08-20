@@ -18,9 +18,9 @@ class net(nn.Module):  # LT50 and budbreak
         #self.dropout = nn.Dropout(p=0.1)
         self.linear3 = nn.Linear(self.memory_size, self.penul)  # penul
         self.linear4 = nn.Linear(self.penul, 1)  # LT10
-        self.linear5 = nn.Linear(self.penul, 1)  # LT50
+        self.linear5 = nn.Linear(self.penul, 2)  # LT50
         self.linear6 = nn.Linear(self.penul, 1)  # LT90
-        self.linear7 = nn.Linear(self.penul, 1)  # Budbreak
+        self.linear7 = nn.Linear(self.penul + 1, 1)  # Budbreak
 
     def forward(self, x, h=None):
         batch_dim, time_dim, state_dim = x.shape
@@ -41,6 +41,7 @@ class net(nn.Module):  # LT50 and budbreak
 
         # out_lt_10 = self.linear4(out_s)  # LT10
         out_lt_50 = self.linear5(out_s)  # LT50
+
         # out_lt_90 = self.linear6(out_s)  # LT90
 
         # out_ph = self.linear7(out_s).sigmoid()  # Budbreak
