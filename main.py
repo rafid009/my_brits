@@ -210,48 +210,48 @@ if __name__ == "__main__":
     print(f"=========== BRITS Training Ends ===========")
 
     # SAITS
-    print(f"=========== SAITS Training Starts ===========")
+    # print(f"=========== SAITS Training Starts ===========")
 
     
 
-    X, Y = split_XY(season_df, max_length, season_array, features)
+    # X, Y = split_XY(season_df, max_length, season_array, features)
 
-    num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
+    # num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
 
-    X = X[:-2]
-    Y = Y[:-2]#[complete_seasons[:-2]]
+    # X = X[:-2]
+    # Y = Y[:-2]#[complete_seasons[:-2]]
 
-    for i in range(X.shape[0]):
-        X[i] = (X[i] - mean)/std
+    # for i in range(X.shape[0]):
+    #     X[i] = (X[i] - mean)/std
 
-    filename = f'{model_dir}/model_saits_orig.model'#synth_{n_random}.model'
-    # print(f"X: {X.shape}")
-    # X = X.reshape(num_samples, 48, -1)
-    X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
-    X = masked_fill(X, 1 - missing_mask, np.nan)
-    # Model training. This is PyPOTS showtime. 
-    saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=2000, patience=100)
+    # filename = f'{model_dir}/model_saits_orig.model'#synth_{n_random}.model'
+    # # print(f"X: {X.shape}")
+    # # X = X.reshape(num_samples, 48, -1)
+    # X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
+    # X = masked_fill(X, 1 - missing_mask, np.nan)
+    # # Model training. This is PyPOTS showtime. 
+    # saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=2000, patience=100)
 
-    saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
-    pickle.dump(saits, open(filename, 'wb'))
+    # saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
+    # pickle.dump(saits, open(filename, 'wb'))
 
-    imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
-    mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
-    print(f"SAITS Validation MSE: {mse}")
-    print(f"=========== SAITS Training Ends ===========")
+    # imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
+    # mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
+    # print(f"SAITS Validation MSE: {mse}")
+    # print(f"=========== SAITS Training Ends ===========")
 
-    # MICE
-    print(f"=========== MICE Training Starts ===========")
+    # # MICE
+    # print(f"=========== MICE Training Starts ===========")
     
-    # train_complete_season_df = train_season_df.loc[train_season_complete]
-    normalized_season_df = train_season_df[features].copy()
-    normalized_season_df = (normalized_season_df - mean) /std
-    mice_impute = IterativeImputer(random_state=0, max_iter=30)
-    mice_impute.fit(normalized_season_df[features].to_numpy())
-    filename = f'{model_dir}/model_mice_orig.model'#synth_{n_random}.model'
-    pickle.dump(mice_impute, open(filename, 'wb'))
+    # # train_complete_season_df = train_season_df.loc[train_season_complete]
+    # normalized_season_df = train_season_df[features].copy()
+    # normalized_season_df = (normalized_season_df - mean) /std
+    # mice_impute = IterativeImputer(random_state=0, max_iter=30)
+    # mice_impute.fit(normalized_season_df[features].to_numpy())
+    # filename = f'{model_dir}/model_mice_orig.model'#synth_{n_random}.model'
+    # pickle.dump(mice_impute, open(filename, 'wb'))
 
-    print(f"=========== MICE Training Ends ===========")
+    # print(f"=========== MICE Training Ends ===========")
 
     # # MVTS
     # print(f"=========== MVTS Training Starts ===========")
