@@ -176,7 +176,7 @@ complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 
 
 
 
-train_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv")
+train_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_2.csv")#new_synthetic_{n_random}.csv")
 # print('Now train')
 train_modified_df, train_dormant_seasons = preprocess_missing_values(train_df, features, is_dormant=True)#, is_year=True)
 train_season_df, train_season_array, train_max_length = get_seasons_data(train_modified_df, train_dormant_seasons, features, is_dormant=True)#, is_year=True)
@@ -202,7 +202,7 @@ mean, std = get_mean_std(train_season_df, features)
 
 
 print('Now test')
-test_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_new_synthetic_{n_random}.csv")
+test_df = pd.read_csv(f"ColdHardiness_Grape_Merlot_2.csv")#new_synthetic_{n_random}.csv")
 modified_df, dormant_seasons = preprocess_missing_values(test_df, features, is_dormant=True)#, is_year=True)
 season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#, is_year=True)
 # season_array = [season_array[i] for i in complete_seasons]
@@ -261,7 +261,7 @@ params = {
     'config_filepath': None, 
     'output_dir': './transformer/output/', 
     'data_dir': './transformer/data_dir/', 
-    'load_model': f'./transformer/output/mvts-synth-{n_random}/checkpoints/model_best.pth', 
+    'load_model': f'./transformer/output/mvts-orig/checkpoints/model_best.pth', 
     'resume': False, 
     'change_output': False, 
     'save_all': False, 
@@ -382,7 +382,7 @@ for idx, data in enumerate(val_iter):
             imputed_array_mvts = np.concatenate((imputed_array_mvts, np.round(without_paddings, 2)), axis=0)
 print(f"season indices: {len(season_df.index.tolist())}")
 
-model_name = f"brits_synth_{n_random}"
+model_name = f"brits_orig"#synth_{n_random}"
 
 brits_df = test_df.copy()
 brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
@@ -394,7 +394,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = f"saits_synth_{n_random}"
+model_name = f"saits_orig"#synth_{n_random}"
 
 saits_df = test_df.copy()
 saits_df.loc[season_df.index.tolist(), features] = imputed_array_saits
@@ -406,7 +406,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 saits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = f"mice_synth_{n_random}"
+model_name = f"mice_orig"#synth_{n_random}"
 
 mice_df = test_df.copy()
 mice_df.loc[season_df.index.tolist(), features] = imputation_mice
@@ -418,7 +418,7 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = f"mvts_synth_{n_random}"
+model_name = f"mvts_orig"#synth_{n_random}"
 
 mvts_df = test_df.copy()
 print(f"season df: {season_df.shape}\nimputed array: {imputed_array_mvts.shape}")
