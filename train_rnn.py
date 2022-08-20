@@ -286,45 +286,27 @@ def format_seconds_to_hhmmss(seconds):
 # evaluate(model, x_test, y_test, 1, criterion)
 # print()
 
-impute_model = 'brits_synth' 
+impute_model = 'brits_orig' 
 args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
+    'name': f"pred_model_{impute_model}",
     'batch_size': 16,
     'epochs': 1100
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
+_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
 
-impute_model = 'saits_synth' 
+impute_model = 'saits_orig' 
 args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
-    'batch_size': 16,
-    'epochs': 1100
-}
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
-
-impute_model = 'mice_synth' 
-args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
+    'name': f"pred_model_{impute_model}",
     'batch_size': 16,
     'epochs': 1100
 }
@@ -340,19 +322,37 @@ model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
 
-impute_model = 'mvts_synth' 
+impute_model = 'mice_orig' 
 args = {
-    'name': f"pred_model_{impute_model}_{n_random}",
+    'name': f"pred_model_{impute_model}",
     'batch_size': 16,
     'epochs': 1100
 }
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
 start_time = time.time()
-# _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
+_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
+
+impute_model = 'mvts_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 1100
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_0.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
