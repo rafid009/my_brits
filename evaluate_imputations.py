@@ -601,7 +601,7 @@ def evaluate_imputation(mse_folder):
             X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             
-            iter = 50#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
+            iter = 100#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
             total_count = 0
             model_mse = {
                 'BRITS': 0,
@@ -653,7 +653,7 @@ def evaluate_imputation(mse_folder):
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
                     ret_eval[row_indices, feature_idx] = np.nan
                     test_df = pd.DataFrame(ret_eval, columns=features)
-                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
+                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test_2.csv')
 
                     params = {
                         'config_filepath': None, 
@@ -1946,10 +1946,10 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # forward_data_folder = 'forward_LT_data_brits_saits_13'
 # forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
-forward_folder = 'forward_LT_2'
-forward_data_folder = None#f"{forward_folder}/data"
-forward_diff_folder = None#f"{forward_folder}/diff"
-forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder, diff_folder=forward_diff_folder)
+# forward_folder = 'forward_LT_2'
+# forward_data_folder = None#f"{forward_folder}/data"
+# forward_diff_folder = None#f"{forward_folder}/diff"
+# forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder, diff_folder=forward_diff_folder)
 # forward_folder = 'forward_LT_abstract_2'
 # forward_prediction_LT_day(forward_folder, same=False)
 # forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_folder)
@@ -1968,4 +1968,4 @@ forward_prediction_LT_day(forward_folder, slide=False, data_folder=forward_data_
 
 # forward_prediction_LT_day(forward_folder, data_folder=data_plots_LT, diff_folder=diff_plots_LT, slide=False)
 
-# evaluate_imputation(None)
+evaluate_imputation(None)
