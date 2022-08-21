@@ -79,7 +79,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         mean_imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
         mean_imputer.fit(train_df[features])
         imputed_season_df = season_df.copy()
-        imputed_season_df[:, features] = mean_imputer.transform(season_df[features])
+        imputed_season_df.loc[:, features] = mean_imputer.transform(season_df[features])
 
     elif not imputed:
         imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
