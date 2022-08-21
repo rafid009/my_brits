@@ -382,17 +382,17 @@ for idx, data in enumerate(val_iter):
             imputed_array_mvts = np.concatenate((imputed_array_mvts, np.round(without_paddings, 2)), axis=0)
 print(f"season indices: {len(season_df.index.tolist())}")
 
-model_name = f"brits_orig"#synth_{n_random}"
+# model_name = f"brits_orig"#synth_{n_random}"
 
-brits_df = test_df.copy()
-brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
-brits_df['LTE50'] = test_df['LTE50']
-data_imputed_folder = './abstract_imputed'
-if not os.path.isdir(data_imputed_folder):
-    os.makedirs(data_imputed_folder)
-filename = 'ColdHardiness_Grape_Merlot_imputed'
+# brits_df = test_df.copy()
+# brits_df.loc[season_df.index.tolist(), features] = imputed_array_brits
+# brits_df['LTE50'] = test_df['LTE50']
+# data_imputed_folder = './abstract_imputed'
+# if not os.path.isdir(data_imputed_folder):
+#     os.makedirs(data_imputed_folder)
+# filename = 'ColdHardiness_Grape_Merlot_imputed'
 
-brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
+# brits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
 model_name = f"saits_orig"#synth_{n_random}"
 
@@ -406,30 +406,30 @@ filename = 'ColdHardiness_Grape_Merlot_imputed'
 
 saits_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = f"mice_orig"#synth_{n_random}"
+# model_name = f"mice_orig"#synth_{n_random}"
 
-mice_df = test_df.copy()
-mice_df.loc[season_df.index.tolist(), features] = imputation_mice
-mice_df['LTE50'] = test_df['LTE50']
-data_imputed_folder = './abstract_imputed'
-if not os.path.isdir(data_imputed_folder):
-    os.makedirs(data_imputed_folder)
-filename = 'ColdHardiness_Grape_Merlot_imputed'
+# mice_df = test_df.copy()
+# mice_df.loc[season_df.index.tolist(), features] = imputation_mice
+# mice_df['LTE50'] = test_df['LTE50']
+# data_imputed_folder = './abstract_imputed'
+# if not os.path.isdir(data_imputed_folder):
+#     os.makedirs(data_imputed_folder)
+# filename = 'ColdHardiness_Grape_Merlot_imputed'
 
-mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
+# mice_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
-model_name = f"mvts_orig"#synth_{n_random}"
+# model_name = f"mvts_orig"#synth_{n_random}"
 
-mvts_df = test_df.copy()
-print(f"season df: {season_df.shape}\nimputed array: {imputed_array_mvts.shape}")
-mvts_df.loc[season_df.index.tolist(), features] = imputed_array_mvts
-mvts_df['LTE50'] = test_df['LTE50']
-data_imputed_folder = './abstract_imputed'
-if not os.path.isdir(data_imputed_folder):
-    os.makedirs(data_imputed_folder)
-filename = 'ColdHardiness_Grape_Merlot_imputed'
+# mvts_df = test_df.copy()
+# print(f"season df: {season_df.shape}\nimputed array: {imputed_array_mvts.shape}")
+# mvts_df.loc[season_df.index.tolist(), features] = imputed_array_mvts
+# mvts_df['LTE50'] = test_df['LTE50']
+# data_imputed_folder = './abstract_imputed'
+# if not os.path.isdir(data_imputed_folder):
+#     os.makedirs(data_imputed_folder)
+# filename = 'ColdHardiness_Grape_Merlot_imputed'
 
-mvts_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
+# mvts_df.to_csv(f"{data_imputed_folder}/{filename}_{model_name}.csv", index=False)
 
 # evals = np.array(evals)
 # imputations_brits = np.array(imputations_brits)
