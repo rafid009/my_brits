@@ -82,7 +82,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         imputed_season_df.loc[:, features] = mean_imputer.transform(season_df[features])
 
     elif not imputed:
-        imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
+        imputed_season_df = season_df[features].interpolate(method='linear', limit_direction='both')
     else:
         imputed_season_df = season_df
     # print(f"imputed: {imputed_season_df.isna().sum()}")
@@ -164,15 +164,15 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 loss_lt_50 = criterion(
                     torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
-                # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                # loss_lt_50_next = criterion(
-                #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                loss_lt_50_next = criterion(
+                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
 
                 # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
                 # loss_lt_50_next_2 = criterion(
                 #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50 #+ loss_lt_50_next_2
+                loss = loss_lt_50 + loss_lt_50_next
 
                 loss.backward()             # backward +
                 optimizer.step()            # optimize
@@ -203,14 +203,14 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     loss_lt_50 = criterion(
                         torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
-                    # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                    # loss_lt_50_next = criterion(
-                    #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+                    n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                    loss_lt_50_next = criterion(
+                        torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
                     # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
                     # loss_lt_50_next_2 = criterion(
                     #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                     #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                    loss = loss_lt_50 #loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
+                    loss = loss_lt_50 + loss_lt_50_next# + loss_lt_50_next_2
                     total_loss += loss.item()
 
                     tepoch.set_postfix(Val_Loss=total_loss / count)
@@ -256,18 +256,18 @@ def evaluate(model, x_test, y_test, batch_size, criterion):
                     torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]]) 
                      # LT50 GT
 
-                # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                # # print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
-                # loss_lt_50_next = criterion(
-                #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
+                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                # print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
+                loss_lt_50_next = criterion(
+                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
                 
                 # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
                 # loss_lt_50_next_2 = criterion(
                 #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50#loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
+                loss = loss_lt_50 + loss_lt_50_next# + loss_lt_50_next_2
                 total_loss += loss.item()
-                print(f"{seasons[i]} same mse: {loss_lt_50.item()}")#\nnext mse: {loss_lt_50_next.item()}\next 2 mse: {loss_lt_50_next_2.item()}")
+                print(f"{seasons[i]} same mse: {loss_lt_50.item()}\nnext mse: {loss_lt_50_next.item()}")#\next 2 mse: {loss_lt_50_next_2.item()}")
                 tepoch.set_postfix(Val_Loss=total_loss / count)
                 tepoch.update(1)
 
