@@ -82,7 +82,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
         imputed_season_df.loc[:, features] = mean_imputer.transform(season_df[features])
 
     elif not imputed:
-        imputed_season_df = season_df[features].interpolate(method='linear', limit_direction='both')
+        imputed_season_df.loc[:, features] = season_df[features].interpolate(method='linear', limit_direction='both')
     else:
         imputed_season_df = season_df
     # print(f"imputed: {imputed_season_df.isna().sum()}")
