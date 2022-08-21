@@ -73,18 +73,18 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
     #     indices = copy.deepcopy(seasons_array[i])
     #     seasons_complete.extend(indices)
     # season_df = season_df.loc[seasons_complete]
+    imputed_season_df = season_df.copy()
     if mean:
         train_df = season_df.drop(seasons_array[-2], axis=0)
         train_df = train_df.drop(seasons_array[-1], axis=0)
         mean_imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
         mean_imputer.fit(train_df[features])
-        imputed_season_df = season_df.copy()
+        
         imputed_season_df.loc[:, features] = mean_imputer.transform(season_df[features])
 
     elif not imputed:
         imputed_season_df.loc[:, features] = season_df[features].interpolate(method='linear', limit_direction='both')
-    else:
-        imputed_season_df = season_df
+
     # print(f"imputed: {imputed_season_df.isna().sum()}")
     
     # input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
