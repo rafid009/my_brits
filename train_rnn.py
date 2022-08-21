@@ -242,6 +242,7 @@ def evaluate(model, x_test, y_test, batch_size, criterion):
                      # LT50 GT
 
                 n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
                 loss_lt_50_next = criterion(
                     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
 
