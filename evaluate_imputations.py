@@ -618,7 +618,7 @@ def evaluate_imputation(mse_folder):
                     dependent_feature_ids = [features.index(f) for f in feature_dependency[feature.split('_')[-1]] if (f != feature) and (f in features)]
                 
                 missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, -1, i, dependent_feature_ids, random=True, pad=pads[0])
-                print(f"missing idx: {missing_indices}")
+                # print(f"missing idx: {missing_indices}")
                 fs.close()
 
                 # print(f"i: {i}\nmissing indices: {missing_indices}")
@@ -1079,7 +1079,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
 def forward_parse_id(fs, x, y, feature_impute_idx, trial_num=-1, all=False):
 
     idx_temp = np.where(~np.isnan(x[:,feature_impute_idx]))[0]
-    print(f"idx1: {idx_temp}")
+    # print(f"idx1: {idx_temp}")
     idx1 = idx_temp * len(features) + feature_impute_idx
     # print(f"idx1-1: {idx1}")
     # exit()
