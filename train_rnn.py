@@ -12,6 +12,7 @@ from tqdm import tqdm
 import sys
 import time
 import copy
+from sklearn.impute import SimpleImputer
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -47,7 +48,7 @@ features = [
 complete_seasons = [4, 5, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
 
-def initialize_input(impute_model, n_random, imputed=True, original=False, station=False):
+def initialize_input(impute_model, n_random, imputed=True, original=False, station=False, mean=False):
     if station:
         input_file = f"./ColdHardiness_Grape_Merlot_new_synthetic"
         df = pd.read_csv(f"{input_file}.csv")
@@ -72,8 +73,15 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
     #     indices = copy.deepcopy(seasons_array[i])
     #     seasons_complete.extend(indices)
     # season_df = season_df.loc[seasons_complete]
+    if mean:
+        train_df = season_df.drop(seasons_array[-2], axis=0)
+        train_df = train_df.drop(seasons_array[-1], axis=0)
+        mean_imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+        mean_imputer.fit(train_df)
+        imputed_season_df = season_df.copy()
+        imputed_season_df[:, :] = mean_imputer.transform(season_df)
 
-    if not imputed:
+    elif not imputed:
         imputed_season_df = season_df.interpolate(method='linear', limit_direction='both')
     else:
         imputed_season_df = season_df
@@ -156,15 +164,15 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 loss_lt_50 = criterion(
                     torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
-                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                loss_lt_50_next = criterion(
-                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+                # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                # loss_lt_50_next = criterion(
+                #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
 
-                n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
-                loss_lt_50_next_2 = criterion(
-                    torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
+                # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                # loss_lt_50_next_2 = criterion(
+                #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50_next #+ loss_lt_50_next_2
+                loss = loss_lt_50 #+ loss_lt_50_next_2
 
                 loss.backward()             # backward +
                 optimizer.step()            # optimize
@@ -195,14 +203,14 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     loss_lt_50 = criterion(
                         torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
 
-                    n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                    loss_lt_50_next = criterion(
-                        torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
-                    n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
-                    loss_lt_50_next_2 = criterion(
-                        torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
+                    # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                    # loss_lt_50_next = criterion(
+                    #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+                    # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                    # loss_lt_50_next_2 = criterion(
+                    #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                     #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                    loss = loss_lt_50_next #loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
+                    loss = loss_lt_50 #loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
                     total_loss += loss.item()
 
                     tepoch.set_postfix(Val_Loss=total_loss / count)
@@ -216,7 +224,7 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
 
                     torch.save(model.state_dict(), os.path.join(modelSavePath, args['name'] + ".pt"))
 
-    return loss_lt_50.item(), loss_lt_50_next.item(), best_loss
+    return loss_lt_50.item(), None, best_loss
 
 def evaluate(model, x_test, y_test, batch_size, criterion):
     x_test = torch.FloatTensor(x_test)
@@ -248,18 +256,18 @@ def evaluate(model, x_test, y_test, batch_size, criterion):
                     torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]]) 
                      # LT50 GT
 
-                n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
-                # print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
-                loss_lt_50_next = criterion(
-                    torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
+                # n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
+                # # print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
+                # loss_lt_50_next = criterion(
+                #     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
                 
-                n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
-                loss_lt_50_next_2 = criterion(
-                    torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
+                # n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                # loss_lt_50_next_2 = criterion(
+                #     torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50_next#loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
+                loss = loss_lt_50#loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
                 total_loss += loss.item()
-                print(f"{seasons[i]} same mse: {loss_lt_50.item()}\nnext mse: {loss_lt_50_next.item()}\next 2 mse: {loss_lt_50_next_2.item()}")
+                print(f"{seasons[i]} same mse: {loss_lt_50.item()}")#\nnext mse: {loss_lt_50_next.item()}\next 2 mse: {loss_lt_50_next_2.item()}")
                 tepoch.set_postfix(Val_Loss=total_loss / count)
                 tepoch.update(1)
 
@@ -290,6 +298,25 @@ def format_seconds_to_hhmmss(seconds):
 # evaluate(model, x_test, y_test, 1, criterion)
 # print()
 
+impute_model = 'mean_orig' 
+args = {
+    'name': f"pred_model_{impute_model}_nn",
+    'batch_size': 16,
+    'epochs': 800
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True, mean=True)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+# print(f"Predicitve {impute_model}")
+model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
+
 impute_model = 'linear_orig' 
 args = {
     'name': f"pred_model_{impute_model}_nn",
@@ -303,7 +330,7 @@ _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, o
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
-print(f"Predicitve {impute_model}")
+# print(f"Predicitve {impute_model}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
@@ -322,7 +349,7 @@ _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, o
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
-print(f"Predicitve {impute_model}")
+# print(f"Predicitve {impute_model}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
@@ -341,7 +368,7 @@ _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, o
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
-print(f"Predicitve {impute_model}")
+# print(f"Predicitve {impute_model}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
@@ -360,7 +387,7 @@ _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, o
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 print(f"Predicitve {impute_model} model mse: {best_loss}")
-print(f"Predicitve {impute_model}")
+# print(f"Predicitve {impute_model}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
@@ -378,7 +405,7 @@ start_time = time.time()
 _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
 end_time = time.time()
 print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"Predicitve {impute_model}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
 # print(f"model mse: {best_loss}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
