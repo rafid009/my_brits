@@ -1354,12 +1354,19 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
             'MICE': [],
             'MVTS': []
         }
+
+        season_mse_3 = {
+            'BRITS': [],
+            'SAITS': [],
+            'MICE': [],
+            'MVTS': []
+        }
         # season_mse_brits = []
         # season_mse_saits = []
         # season_mse_2_brits = []
         # season_mse_2_saits = []
         print(f"\n\nseason: {given_season}")
-        for i in range(len(non_missing_indices)-2):
+        for i in range(len(non_missing_indices)-3):
             # print(f"i = {i}")
             # mse_1_brits = 0
             # mse_1_saits = 0
@@ -1373,6 +1380,13 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                 'MVTS': 0
             }
             mse_2 = {
+                'BRITS': 0,
+                'SAITS': 0,
+                'MICE': 0,
+                'MVTS': 0
+            }
+
+            mse_3 = {
                 'BRITS': 0,
                 'SAITS': 0,
                 'MICE': 0,
@@ -1527,6 +1541,17 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         mse_2['MVTS'] += ((real_values[1] - imputed_transformer[1]) ** 2)
                         season_mse_2['MVTS'].append(((real_values[1] - imputed_transformer[1]) ** 2))
 
+                        mse_3['BRITS'] += ((real_values[2] - imputed_brits[2]) ** 2)
+                        season_mse_3['BRITS'].append(((real_values[2] - imputed_brits[2]) ** 2))
+
+                        mse_3['SAITS'] += ((real_values[2] - imputed_saits[2]) ** 2)
+                        season_mse_3['SAITS'].append(((real_values[2] - imputed_saits[2]) ** 2))
+
+                        mse_3['MICE'] += ((real_values[2] - imputed_mice[2]) ** 2)
+                        season_mse_3['MICE'].append(((real_values[2] - imputed_mice[2]) ** 2))
+
+                        mse_3['MVTS'] += ((real_values[2] - imputed_transformer[2]) ** 2)
+                        season_mse_2['MVTS'].append(((real_values[2] - imputed_transformer[2]) ** 2))
                         # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
                         trial_count += 1
 
@@ -1564,6 +1589,11 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
             mse_2['MICE'] /= trial_count
             mse_2['MVTS'] /= trial_count
 
+            mse_3['BRITS'] /= trial_count
+            mse_3['SAITS'] /= trial_count
+            mse_3['MICE'] /= trial_count
+            mse_3['MVTS'] /= trial_count
+
             # mse_2 /= trial_count
             draws_1['BRITS'].append(mse_1['BRITS'])
             draws_1['SAITS'].append(mse_1['SAITS'])
@@ -1578,6 +1608,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
             x_axis.append(i+1)
         print(f"For season = {given_season} same day prediction results:\n\tBRITS mse = {np.array(season_mse_1['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_1['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_1['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_1['MVTS']).mean()}")
         print(f"For season = {given_season} next day prediction results:\n\tBRITS mse = {np.array(season_mse_2['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_2['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_2['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_2['MVTS']).mean()}")
+        print(f"For season = {given_season} next 2 day prediction results:\n\tBRITS mse = {np.array(season_mse_3['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_3['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_3['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_3['MVTS']).mean()}")
         
         ferguson_mse, ferguson_preds = get_FG(season_df, 'LTE50', 'PREDICTED_LTE50', season_array[season_idx])
         print(f"For season = {given_season} Ferguson mse = {ferguson_mse}")

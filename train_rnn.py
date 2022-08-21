@@ -159,8 +159,12 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                 n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
                 loss_lt_50_next = criterion(
                     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+
+                n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                loss_lt_50_next_2 = criterion(
+                    torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50 + loss_lt_50_next
+                loss = loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
 
                 loss.backward()             # backward +
                 optimizer.step()            # optimize
@@ -194,8 +198,11 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
                     loss_lt_50_next = criterion(
                         torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
+                    n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                    loss_lt_50_next_2 = criterion(
+                        torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                     #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                    loss = loss_lt_50 + loss_lt_50_next
+                    loss = loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
                     total_loss += loss.item()
 
                     tepoch.set_postfix(Val_Loss=total_loss / count)
@@ -245,11 +252,14 @@ def evaluate(model, x_test, y_test, batch_size, criterion):
                 print(f"lt50 next: {out_lt_50[:, :, 1][n_nan[0], n_nan[1]]}\ny next: {y_torch[:, :, 1][n_nan[0], n_nan[1]]}")
                 loss_lt_50_next = criterion(
                     torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]]) 
-
+                
+                n_nan = get_not_nan(y[:, :,2])  # LT10/50/90 not NAN
+                loss_lt_50_next_2 = criterion(
+                    torch.squeeze(out_lt_50[:, :, 2][n_nan[0], n_nan[1]]), y_torch[:, :, 2][n_nan[0], n_nan[1]])
                 #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
-                loss = loss_lt_50 + loss_lt_50_next
+                loss = loss_lt_50 + loss_lt_50_next + loss_lt_50_next_2
                 total_loss += loss.item()
-                print(f"{seasons[i]} same mse: {loss_lt_50.item()}\nnext mse: {loss_lt_50_next.item()}")
+                print(f"{seasons[i]} same mse: {loss_lt_50.item()}\nnext mse: {loss_lt_50_next.item()}\next 2 mse: {loss_lt_50_next_2.item()}")
                 tepoch.set_postfix(Val_Loss=total_loss / count)
                 tepoch.update(1)
 
@@ -280,41 +290,41 @@ def format_seconds_to_hhmmss(seconds):
 # evaluate(model, x_test, y_test, 1, criterion)
 # print()
 
-# impute_model = 'linear_orig' 
-# args = {
-#     'name': f"pred_model_{impute_model}",
-#     'batch_size': 16,
-#     'epochs': 800
-# }
-# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
-# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-# model_path = f"./rnn_models/pred_model_{impute_model}.pt"#_{n_random}.pt"
-# model.load_state_dict(torch.load(model_path))
-# evaluate(model, x_test, y_test, 1, criterion)
-# print()
+impute_model = 'linear_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 800
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}.pt"#_{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
 
-# impute_model = 'brits_orig' 
-# args = {
-#     'name': f"pred_model_{impute_model}",
-#     'batch_size': 16,
-#     'epochs': 1100
-# }
-# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-# model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
-# model.load_state_dict(torch.load(model_path))
-# evaluate(model, x_test, y_test, 1, criterion)
-# print()
+impute_model = 'brits_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 1100
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
 
 impute_model = 'saits_orig' 
 args = {
@@ -334,38 +344,38 @@ model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
 
-# impute_model = 'mice_orig' 
-# args = {
-#     'name': f"pred_model_{impute_model}",
-#     'batch_size': 16,
-#     'epochs': 1100
-# }
-# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-# model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
-# model.load_state_dict(torch.load(model_path))
-# evaluate(model, x_test, y_test, 1, criterion)
-# print()
+impute_model = 'mice_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 1100
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()
 
-# impute_model = 'mvts_orig' 
-# args = {
-#     'name': f"pred_model_{impute_model}",
-#     'batch_size': 16,
-#     'epochs': 1100
-# }
-# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"Predicitve {impute_model} model mse: {best_loss}")
-# model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
-# model.load_state_dict(torch.load(model_path))
-# evaluate(model, x_test, y_test, 1, criterion)
-# print()
+impute_model = 'mvts_orig' 
+args = {
+    'name': f"pred_model_{impute_model}",
+    'batch_size': 16,
+    'epochs': 1100
+}
+x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"Predicitve {impute_model} model mse: {best_loss}")
+model_path = f"./rnn_models/pred_model_{impute_model}.pt"#{n_random}.pt"
+model.load_state_dict(torch.load(model_path))
+evaluate(model, x_test, y_test, 1, criterion)
+print()

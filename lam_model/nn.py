@@ -18,7 +18,7 @@ class net(nn.Module):  # LT50 and budbreak
         #self.dropout = nn.Dropout(p=0.1)
         self.linear3 = nn.Linear(self.memory_size, self.penul)  # penul
         self.linear4 = nn.Linear(self.penul, 1)  # LT10
-        self.linear5 = nn.Linear(self.penul, 2)  # LT50
+        self.linear5 = nn.Linear(self.penul, 3)  # LT50
         self.linear6 = nn.Linear(self.penul, 1)  # LT90
         self.linear7 = nn.Linear(self.penul + 1, 1)  # Budbreak
 
