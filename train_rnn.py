@@ -292,7 +292,7 @@ def format_seconds_to_hhmmss(seconds):
 
 impute_model = 'linear_orig' 
 args = {
-    'name': f"pred_model_{impute_model}",
+    'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
     'epochs': 800
 }
@@ -310,7 +310,7 @@ print()
 
 impute_model = 'brits_orig' 
 args = {
-    'name': f"pred_model_{impute_model}",
+    'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
     'epochs': 1100
 }
@@ -328,7 +328,7 @@ print()
 
 impute_model = 'saits_orig' 
 args = {
-    'name': f"pred_model_{impute_model}",
+    'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
     'epochs': 1100
 }
@@ -346,7 +346,7 @@ print()
 
 impute_model = 'mice_orig' 
 args = {
-    'name': f"pred_model_{impute_model}",
+    'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
     'epochs': 1100
 }
@@ -364,7 +364,7 @@ print()
 
 impute_model = 'mvts_orig' 
 args = {
-    'name': f"pred_model_{impute_model}",
+    'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
     'epochs': 1100
 }
