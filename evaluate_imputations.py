@@ -635,7 +635,7 @@ def evaluate_imputation(mse_folder):
                     imputation_brits = ret['imputations'].data.cpu().numpy()
                     imputation_brits = np.squeeze(imputation_brits)
                     imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
-                    prinbt(f"imputed brits: {imputed_brits}")
+                    print(f"imputed brits: {imputed_brits}")
                     Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
                     # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
                     
