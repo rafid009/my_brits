@@ -110,7 +110,7 @@ def initialize_model(impute_model, x_train, n_random):
         model.load_state_dict(torch.load(model_path))
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.001)#, amsgrad=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)#, amsgrad=True)
     criterion = nn.MSELoss()
     criterion.to(device)
     return model, optimizer, criterion
@@ -342,7 +342,7 @@ impute_model = 'brits_orig'
 args = {
     'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
-    'epochs': 500
+    'epochs': 1500
 }
 print(f"Predicitve {impute_model}:")
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
