@@ -105,9 +105,9 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
 
 def initialize_model(impute_model, x_train, n_random):
     model = net(np.array(x_train).shape[-1])
-    # model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
-    # if os.path.exists(model_path):
-    #     model.load_state_dict(torch.load(model_path))
+    model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)#, weight_decay=1e-4)#, amsgrad=True)
@@ -202,7 +202,7 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     n_nan = get_not_nan(y[:, :, 0])  # LT10/50/90 not NAN
                     loss_lt_50 = criterion(
                         torch.squeeze(out_lt_50[:, :, 0][n_nan[0], n_nan[1]]), y_torch[:, :, 0][n_nan[0], n_nan[1]])  # LT50 GT
-
+                    print(f"epoch: {epoch}, out: {out_lt_50[:, :, 0][n_nan[0], n_nan[1]]}\n len: {out_lt_50[:, :, 0][n_nan[0], n_nan[1]].shape}\n\ny: {y_torch[:, :, 0][n_nan[0], n_nan[1]]}\n len: {y_torch[:, :, 0][n_nan[0], n_nan[1]].shape}\n\n")
                     n_nan = get_not_nan(y[:, :, 1])  # LT10/50/90 not NAN
                     loss_lt_50_next = criterion(
                         torch.squeeze(out_lt_50[:, :, 1][n_nan[0], n_nan[1]]), y_torch[:, :, 1][n_nan[0], n_nan[1]])
@@ -212,7 +212,7 @@ def training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, crit
                     #loss = loss_lt_10 + loss_lt_50 + loss_lt_90 + loss_ph
                     loss = loss_lt_50 + loss_lt_50_next# + loss_lt_50_next_2
                     total_loss += loss.item()
-
+                    print(f"val loss: {total_loss/count}")
                     tepoch.set_postfix(Val_Loss=total_loss / count)
                     tepoch.update(1)
                 val_loss = total_loss / count
@@ -362,7 +362,7 @@ impute_model = 'saits_orig'
 args = {
     'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
-    'epochs': 2500
+    'epochs': 1000
 }
 print(f"Predicitve {impute_model}:")
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
