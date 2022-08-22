@@ -583,28 +583,28 @@ plot_mse_folder = 'overlapping_mse/'
 def evaluate_imputation(mse_folder):
     filename = 'json/json_eval_2_LT'
     given_features = [
-        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-        'MIN_AT',
-        'AVG_AT', # average temp is AgWeather Network
-        'MAX_AT',
-        'MIN_REL_HUMIDITY',
+        # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        # 'MIN_AT',
+        # 'AVG_AT', # average temp is AgWeather Network
+        # 'MAX_AT',
+        # 'MIN_REL_HUMIDITY',
         'AVG_REL_HUMIDITY',
-        'MAX_REL_HUMIDITY',
-        'MIN_DEWPT',
-        'AVG_DEWPT',
-        'MAX_DEWPT',
-        'P_INCHES', # precipitation
-        'WS_MPH', # wind speed. if no sensor then value will be na
-        'MAX_WS_MPH', 
-        'LW_UNITY', # leaf wetness sensor
-        'SR_WM2', # solar radiation # different from zengxian
-        'MIN_ST8', # diff from zengxian
-        'ST8', # soil temperature # diff from zengxian
-        'MAX_ST8', # diff from zengxian
-        #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        'ETO', # evaporation of soil water lost to atmosphere
-        'ETR',
-        'LTE50' # ???
+        # 'MAX_REL_HUMIDITY',
+        # 'MIN_DEWPT',
+        # 'AVG_DEWPT',
+        # 'MAX_DEWPT',
+        # 'P_INCHES', # precipitation
+        # 'WS_MPH', # wind speed. if no sensor then value will be na
+        # 'MAX_WS_MPH', 
+        # 'LW_UNITY', # leaf wetness sensor
+        # 'SR_WM2', # solar radiation # different from zengxian
+        # 'MIN_ST8', # diff from zengxian
+        # 'ST8', # soil temperature # diff from zengxian
+        # 'MAX_ST8', # diff from zengxian
+        # #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        # 'ETO', # evaporation of soil water lost to atmosphere
+        # 'ETR',
+        # 'LTE50' # ???
     ]
     
     for season in seasons.keys():
@@ -615,7 +615,7 @@ def evaluate_imputation(mse_folder):
             X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             
-            iter = 1#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
+            iter = 100#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
             total_count = 0
             model_mse = {
                 'BRITS': 0,
@@ -632,8 +632,8 @@ def evaluate_imputation(mse_folder):
                     dependent_feature_ids = [features.index(f) for f in feature_dependency[feature.split('_')[-1]] if (f != feature) and (f in features)]
                 
                 missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, -1, i, dependent_feature_ids, random=True, pad=pads[0])
-                print(f"missing idx: {missing_indices}")
-                print(f"missing idx: len: {len(missing_indices)}")
+                # print(f"missing idx: {missing_indices}")
+                # print(f"missing idx: len: {len(missing_indices)}")
                 fs.close()
 
                 # print(f"i: {i}\nmissing indices: {missing_indices}")
@@ -649,7 +649,7 @@ def evaluate_imputation(mse_folder):
                     imputation_brits = ret['imputations'].data.cpu().numpy()
                     imputation_brits = np.squeeze(imputation_brits)
                     imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
-                    print(f"imputed brits: {imputed_brits}")
+                    # print(f"imputed brits: {imputed_brits}")
                     Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
                     # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
                     
@@ -658,13 +658,13 @@ def evaluate_imputation(mse_folder):
                     # print(f"SAITS imputation: {imputation_saits}")
                     imputation_saits = np.squeeze(imputation_saits)
                     imputed_saits = imputation_saits[row_indices, feature_idx]
-                    print(f"imputed saits: {imputed_saits}")
+                    # print(f"imputed saits: {imputed_saits}")
 
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval[row_indices, feature_idx] = np.nan
                     imputation_mice = model_mice.transform(ret_eval)
                     imputed_mice = imputation_mice[row_indices, feature_idx]
-                    print(f"imputed mice: {imputed_mice}")
+                    # print(f"imputed mice: {imputed_mice}")
                     
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
@@ -742,11 +742,13 @@ def evaluate_imputation(mse_folder):
                     
                     imputation_transformer = np.squeeze(transformer_preds)
                     imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
-                    print(f"imputed mvts: {imputed_transformer}")
+                    # print(f"imputed mvts: {imputed_transformer}")
 
                     ret_eval[row_indices, feature_idx] = np.nan
+
                     ret_eval_df = pd.DataFrame(ret_eval, columns=features)
-                    imputed_linear = ret_eval_df.interpolate(method='linear', limit_direction='both')
+                    ret_eval_df['DATE'] = season_df.loc[season_array[season_idx], 'DATE']
+                    imputed_linear = ret_eval_df.interpolate(method='time')#, limit_direction='both')
                     imputed_linear = imputed_linear.to_numpy()
                     imputed_linear = imputed_linear[row_indices, feature_idx]
                     print(f"imputd linear: {imputed_linear}")
@@ -754,11 +756,11 @@ def evaluate_imputation(mse_folder):
                     real_values = eval_[row_indices, feature_idx]
                     print(f"real: {real_values}")
 
-                model_mse['BRITS'] += ((real_values - imputed_brits) ** 2).mean()
-                model_mse['SAITS'] += ((real_values - imputed_saits) ** 2).mean()
-                model_mse['MICE'] += ((real_values - imputed_mice) ** 2).mean()
-                model_mse['MVTS'] += ((real_values - imputed_transformer) ** 2).mean()
-                model_mse['LINEAR'] += ((real_values - imputed_linear) ** 2).mean()
+                model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
+                model_mse['SAITS'] += np.sqrt((real_values - imputed_saits) ** 2).mean()
+                model_mse['MICE'] += np.sqrt((real_values - imputed_mice) ** 2).mean()
+                model_mse['MVTS'] += np.sqrt((real_values - imputed_transformer) ** 2).mean()
+                model_mse['LINEAR'] += np.sqrt((real_values - imputed_linear) ** 2).mean()
                 # print(f"real: {real_values}\nlinear mse: {linear_mse}")
                 total_count += 1
             print(f"\tFor feature: {feature}\n\t\tBRITS: {model_mse['BRITS']/total_count}\n\t\tSAITS: {model_mse['SAITS']/total_count}\n\t\tMICE: {model_mse['MICE']/total_count}\n\t\tMVTS: {model_mse['MVTS']/total_count}\n\t\tLINEAR: {model_mse['LINEAR']/total_count}")
