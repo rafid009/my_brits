@@ -69,7 +69,7 @@ def run_transformer(config):
         logger.info("Loading and preprocessing data ...")
     data_class = data_factory[config['data_class']]
     my_data = data_class(config['data_dir'], pattern=config['pattern'], n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
-    print(f"mydata: {my_data.feature_df.columns.to_list()}")
+    # print(f"mydata: {my_data.feature_df.columns.to_list()}")
     feat_dim = my_data.feature_df.shape[1]  # dimensionality of data features
     if config['task'] == 'classification':
         validation_method = 'StratifiedShuffleSplit'
