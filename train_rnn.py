@@ -110,7 +110,7 @@ def initialize_model(impute_model, x_train, n_random):
     #     model.load_state_dict(torch.load(model_path))
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.001, amsgrad=True)
     criterion = nn.MSELoss()
     criterion.to(device)
     return model, optimizer, criterion
