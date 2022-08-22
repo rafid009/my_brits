@@ -590,28 +590,28 @@ plot_mse_folder = 'overlapping_mse/'
 def evaluate_imputation(mse_folder):
     filename = 'json/json_eval_2_LT'
     given_features = [
-        # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-        # 'MIN_AT',
-        # 'AVG_AT', # average temp is AgWeather Network
-        # 'MAX_AT',
-        # 'MIN_REL_HUMIDITY',
+        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        'MIN_AT',
+        'AVG_AT', # average temp is AgWeather Network
+        'MAX_AT',
+        'MIN_REL_HUMIDITY',
         'AVG_REL_HUMIDITY',
-        # 'MAX_REL_HUMIDITY',
-        # 'MIN_DEWPT',
-        # 'AVG_DEWPT',
-        # 'MAX_DEWPT',
-        # 'P_INCHES', # precipitation
-        # 'WS_MPH', # wind speed. if no sensor then value will be na
-        # 'MAX_WS_MPH', 
-        # 'LW_UNITY', # leaf wetness sensor
-        # 'SR_WM2', # solar radiation # different from zengxian
-        # 'MIN_ST8', # diff from zengxian
-        # 'ST8', # soil temperature # diff from zengxian
-        # 'MAX_ST8', # diff from zengxian
-        # #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        # 'ETO', # evaporation of soil water lost to atmosphere
-        # 'ETR',
-        # 'LTE50' # ???
+        'MAX_REL_HUMIDITY',
+        'MIN_DEWPT',
+        'AVG_DEWPT',
+        'MAX_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'MIN_ST8', # diff from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MAX_ST8', # diff from zengxian
+        #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR',
+        'LTE50' # ???
     ]
     
     for season in seasons.keys():
@@ -649,7 +649,7 @@ def evaluate_imputation(mse_folder):
                 for idx, data in enumerate(val_iter):
                     data = utils.to_var(data)
                     row_indices = missing_indices // len(features)
-                    print(f"rows: {row_indices}")
+                    # print(f"rows: {row_indices}")
                     ret = model_brits.run_on_batch(data, None)
                     eval_ = ret['evals'].data.cpu().numpy()
                     eval_ = np.squeeze(eval_)
@@ -757,10 +757,10 @@ def evaluate_imputation(mse_folder):
                     # imputed_linear = ret_eval_df.interpolate(method='linear', limit_direction='both')
                     imputed_linear = impute(ret_eval_df).to_numpy()
                     imputed_linear = imputed_linear[row_indices, feature_idx]
-                    print(f"imputd linear: {imputed_linear}")
+                    # print(f"imputd linear: {imputed_linear}")
 
                     real_values = eval_[row_indices, feature_idx]
-                    print(f"real: {real_values}")
+                    # print(f"real: {real_values}")
 
                 model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
                 model_mse['SAITS'] += np.sqrt((real_values - imputed_saits) ** 2).mean()
