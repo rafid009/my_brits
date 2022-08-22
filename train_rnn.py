@@ -105,7 +105,7 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
 
 def initialize_model(impute_model, x_train, n_random):
     model = net(np.array(x_train).shape[-1])
-    model_path = f"./rnn_models/pred_model_{impute_model}.pt"#_{n_random}.pt"
+    model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
     model.to(device)
