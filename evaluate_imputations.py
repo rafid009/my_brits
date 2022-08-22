@@ -27,6 +27,7 @@ from pypots.data import mcar, masked_fill
 from pypots.imputation import SAITS
 from pypots.utils.metrics import cal_mae, cal_mse
 import pickle
+from linear_imputation import impute, Imputer
 
 warnings.filterwarnings("ignore")
 matplotlib.rc('xtick', labelsize=20) 
@@ -180,6 +181,12 @@ model_saits = pickle.load(open(saits_file, 'rb'))
 ############## Load MICE ##############
 mice_file = f"{model_dir}/model_mice_orig.model"#{n_random}.model"
 model_mice = pickle.load(open(mice_file, 'rb'))
+
+############## Train Linear Impute ##############
+normalized_season_df = train_season_df[features].copy()
+normalized_season_df = (normalized_season_df - mean) /std
+linear = Imputer(normalized_season_df)
+
 
 ############## Load MVTS ##############
 params = {
@@ -747,9 +754,8 @@ def evaluate_imputation(mse_folder):
                     ret_eval[row_indices, feature_idx] = np.nan
 
                     ret_eval_df = pd.DataFrame(ret_eval, columns=features)
-                    ret_eval_df['DATE'] = season_df.loc[season_array[season_idx], 'DATE']
-                    imputed_linear = ret_eval_df.interpolate(method='time')#, limit_direction='both')
-                    imputed_linear = imputed_linear.to_numpy()
+                    # imputed_linear = ret_eval_df.interpolate(method='linear', limit_direction='both')
+                    imputed_linear = impute(ret_eval_df).to_numpy()
                     imputed_linear = imputed_linear[row_indices, feature_idx]
                     print(f"imputd linear: {imputed_linear}")
 
