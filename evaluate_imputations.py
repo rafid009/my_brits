@@ -601,7 +601,7 @@ def evaluate_imputation(mse_folder):
             X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
             original_missing_indices = np.where(np.isnan(X[season_idx, :, feature_idx]))[0]
             
-            iter = 100#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
+            iter = 1#len(season_array[season_idx]) - (l-1) - len(original_missing_indices) - pads[season_idx]
             total_count = 0
             model_mse = {
                 'BRITS': 0,
@@ -618,7 +618,8 @@ def evaluate_imputation(mse_folder):
                     dependent_feature_ids = [features.index(f) for f in feature_dependency[feature.split('_')[-1]] if (f != feature) and (f in features)]
                 
                 missing_indices, Xeval = parse_id(fs, X[season_idx], Y[season_idx], feature_idx, -1, i, dependent_feature_ids, random=True, pad=pads[0])
-                # print(f"missing idx: {missing_indices}")
+                print(f"missing idx: {missing_indices}")
+                print(f"missing idx: len: {len(missing_indices)}")
                 fs.close()
 
                 # print(f"i: {i}\nmissing indices: {missing_indices}")
@@ -627,7 +628,7 @@ def evaluate_imputation(mse_folder):
                 for idx, data in enumerate(val_iter):
                     data = utils.to_var(data)
                     row_indices = missing_indices // len(features)
-                    # print(f"rows: {row_indices}")
+                    print(f"rows: {row_indices}")
                     ret = model_brits.run_on_batch(data, None)
                     eval_ = ret['evals'].data.cpu().numpy()
                     eval_ = np.squeeze(eval_)
@@ -648,6 +649,7 @@ def evaluate_imputation(mse_folder):
                     ret_eval[row_indices, feature_idx] = np.nan
                     imputation_mice = model_mice.transform(ret_eval)
                     imputed_mice = imputation_mice[row_indices, feature_idx]
+                    print(f"imputed mice: {imputed_mice}")
                     
                     ret_eval = copy.deepcopy(eval_)
                     ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
@@ -733,6 +735,7 @@ def evaluate_imputation(mse_folder):
                     imputed_linear = imputed_linear[row_indices, feature_idx]
 
                     real_values = eval_[row_indices, feature_idx]
+                    print(f"real: {real_values}")
 
                 model_mse['BRITS'] += ((real_values - imputed_brits) ** 2).mean()
                 model_mse['SAITS'] += ((real_values - imputed_saits) ** 2).mean()
