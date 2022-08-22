@@ -105,12 +105,12 @@ def initialize_input(impute_model, n_random, imputed=True, original=False, stati
 
 def initialize_model(impute_model, x_train, n_random):
     model = net(np.array(x_train).shape[-1])
-    model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
-    if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
+    # model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
+    # if os.path.exists(model_path):
+    #     model.load_state_dict(torch.load(model_path))
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-6, weight_decay=1e-4)#, amsgrad=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)#, weight_decay=1e-4)#, amsgrad=True)
     criterion = nn.MSELoss()
     criterion.to(device)
     return model, optimizer, criterion
@@ -362,17 +362,17 @@ impute_model = 'saits_orig'
 args = {
     'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
-    'epochs': 1500
+    'epochs': 2500
 }
 print(f"Predicitve {impute_model}:")
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
 model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-# start_time = time.time()
-# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-# end_time = time.time()
-# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-# print(f"model mse: {best_loss}")
-# print(f"Predicitve {impute_model}")
+start_time = time.time()
+_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+end_time = time.time()
+print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+print(f"model mse: {best_loss}")
+print(f"Predicitve {impute_model}")
 model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
 model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
