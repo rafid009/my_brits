@@ -42,20 +42,20 @@ def split_and_normalize(_df, season_max_length, seasons, features, x_mean, x_std
         add_array_next = np.zeros((season_max_length - len(season) + 1, len(label)))
         add_array_next[:] = np.NaN
 
-        add_array_next_2 = np.zeros((season_max_length - len(season) + 2, len(label)))
-        add_array_next_2[:] = np.NaN
+        # add_array_next_2 = np.zeros((season_max_length - len(season) + 2, len(label)))
+        # add_array_next_2[:] = np.NaN
 
         _y = _df.loc[season, :][label].to_numpy()
         y_next = _df.loc[season[1:], :][label].to_numpy()
-        y_next_2 = _df.loc[season[2:], :][label].to_numpy()
+        # y_next_2 = _df.loc[season[2:], :][label].to_numpy()
         # print(f"y_: {_y.shape}, add_array: {add_array.shape}")
         _y = np.concatenate((_y, add_array), axis=0)
         # print(f"y_next: {y_next.shape}, add_array: {add_array_next.shape}")
         y_next = np.concatenate((y_next, add_array_next), axis=0)
-        y_next_2 = np.concatenate((y_next_2, add_array_next_2), axis=0)
+        # y_next_2 = np.concatenate((y_next_2, add_array_next_2), axis=0)
         # _y = np.squeeze(_y)
         # print(f"y_1: {_y.shape}, y_2: {y_next.shape}")
-        _y = np.concatenate((_y, y_next, y_next_2), axis=1)
+        _y = np.concatenate((_y, y_next), axis=1)
         # print(f"y_both: {_y.shape}")
         x.append(_x)
         y.append(_y)

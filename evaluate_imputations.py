@@ -746,7 +746,7 @@ def evaluate_imputation(mse_folder):
 
                     ret_eval[row_indices, feature_idx] = np.nan
                     ret_eval_df = pd.DataFrame(ret_eval, columns=features)
-                    imputed_linear = ret_eval_df.interpolate(method='time', limit_direction='both')
+                    imputed_linear = ret_eval_df.interpolate(method='linear', limit_direction='both')
                     imputed_linear = imputed_linear.to_numpy()
                     imputed_linear = imputed_linear[row_indices, feature_idx]
                     print(f"imputd linear: {imputed_linear}")
