@@ -110,7 +110,7 @@ def initialize_model(impute_model, x_train, n_random):
     #     model.load_state_dict(torch.load(model_path))
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.MSELoss()
     criterion.to(device)
     return model, optimizer, criterion
@@ -298,51 +298,51 @@ def format_seconds_to_hhmmss(seconds):
 # evaluate(model, x_test, y_test, 1, criterion)
 # print()
 
-impute_model = 'mean_orig' 
-args = {
-    'name': f"pred_model_{impute_model}_nn",
-    'batch_size': 16,
-    'epochs': 800
-}
-print(f"Predicitve {impute_model}:")
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True, mean=True)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"model mse: {best_loss}")
-# print(f"Predicitve {impute_model}")
-model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
+# impute_model = 'mean_orig' 
+# args = {
+#     'name': f"pred_model_{impute_model}_nn",
+#     'batch_size': 16,
+#     'epochs': 800
+# }
+# print(f"Predicitve {impute_model}:")
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True, mean=True)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"model mse: {best_loss}")
+# # print(f"Predicitve {impute_model}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
 
-impute_model = 'linear_orig' 
-args = {
-    'name': f"pred_model_{impute_model}_nn",
-    'batch_size': 16,
-    'epochs': 800
-}
-print(f"Predicitve {impute_model}:")
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"model mse: {best_loss}")
-# print(f"Predicitve {impute_model}")
-model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
+# impute_model = 'linear_orig' 
+# args = {
+#     'name': f"pred_model_{impute_model}_nn",
+#     'batch_size': 16,
+#     'epochs': 800
+# }
+# print(f"Predicitve {impute_model}:")
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random, imputed=False, original=True)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"model mse: {best_loss}")
+# # print(f"Predicitve {impute_model}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#_{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
 
 impute_model = 'brits_orig' 
 args = {
     'name': f"pred_model_{impute_model}_nn",
     'batch_size': 16,
-    'epochs': 1100
+    'epochs': 1000
 }
 print(f"Predicitve {impute_model}:")
 x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
@@ -358,62 +358,62 @@ model.load_state_dict(torch.load(model_path))
 evaluate(model, x_test, y_test, 1, criterion)
 print()
 
-impute_model = 'saits_orig' 
-args = {
-    'name': f"pred_model_{impute_model}_nn",
-    'batch_size': 16,
-    'epochs': 1100
-}
-print(f"Predicitve {impute_model}:")
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"model mse: {best_loss}")
-# print(f"Predicitve {impute_model}")
-model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
-
-impute_model = 'mice_orig' 
-args = {
-    'name': f"pred_model_{impute_model}_nn",
-    'batch_size': 16,
-    'epochs': 1100
-}
-print(f"Predicitve {impute_model}:")
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"model mse: {best_loss}")
-# print(f"Predicitve {impute_model}")
-model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
-
-impute_model = 'mvts_orig' 
-args = {
-    'name': f"pred_model_{impute_model}_nn",
-    'batch_size': 16,
-    'epochs': 1100
-}
-print(f"Predicitve {impute_model}:")
-x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
-model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
-start_time = time.time()
-_, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
-end_time = time.time()
-print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
-print(f"model mse: {best_loss}")
+# impute_model = 'saits_orig' 
+# args = {
+#     'name': f"pred_model_{impute_model}_nn",
+#     'batch_size': 16,
+#     'epochs': 1100
+# }
+# print(f"Predicitve {impute_model}:")
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
 # print(f"model mse: {best_loss}")
-model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
-model.load_state_dict(torch.load(model_path))
-evaluate(model, x_test, y_test, 1, criterion)
-print()
+# # print(f"Predicitve {impute_model}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
+
+# impute_model = 'mice_orig' 
+# args = {
+#     'name': f"pred_model_{impute_model}_nn",
+#     'batch_size': 16,
+#     'epochs': 1100
+# }
+# print(f"Predicitve {impute_model}:")
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"model mse: {best_loss}")
+# # print(f"Predicitve {impute_model}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
+
+# impute_model = 'mvts_orig' 
+# args = {
+#     'name': f"pred_model_{impute_model}_nn",
+#     'batch_size': 16,
+#     'epochs': 1100
+# }
+# print(f"Predicitve {impute_model}:")
+# x_train, y_train, x_test, y_test = initialize_input(impute_model, n_random)
+# model, optimizer, criterion = initialize_model(impute_model, x_train, n_random)
+# start_time = time.time()
+# _, _, best_loss = training_loop(model, x_train, y_train, x_test, y_test, args, optimizer, criterion)
+# end_time = time.time()
+# print(f"total time taken: {format_seconds_to_hhmmss(end_time - start_time)}")
+# print(f"model mse: {best_loss}")
+# # print(f"model mse: {best_loss}")
+# model_path = f"./rnn_models/pred_model_{impute_model}_nn.pt"#{n_random}.pt"
+# model.load_state_dict(torch.load(model_path))
+# evaluate(model, x_test, y_test, 1, criterion)
+# print()
