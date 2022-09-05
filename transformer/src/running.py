@@ -80,7 +80,7 @@ def setup(args):
     config['initial_timestamp'] = formatted_timestamp
     if (not config['no_timestamp']) or (len(config['experiment_name']) == 0):
         rand_suffix = "".join(random.choices(string.ascii_letters + string.digits, k=3))
-        output_dir += "_" + formatted_timestamp + "_" + rand_suffix
+        # output_dir += "_" + formatted_timestamp + "_" + rand_suffix
     config['output_dir'] = output_dir
     config['save_dir'] = os.path.join(output_dir, 'checkpoints')
     config['pred_dir'] = os.path.join(output_dir, 'predictions')

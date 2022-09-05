@@ -836,7 +836,6 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
         }
         l_needed = []
         for l in L:
-            # season_idx = seasons[eval_season]
             season_idx = seasons[eval_season]
             feature_idx = features.index(given_feature)
             X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
@@ -854,7 +853,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
             linear_mse = 0
             neg = 0
             for i in tqdm(range(iter)):
-                # i.set_description(f"For {given_feature} & L = {l}")
+
                 real_values = []
                 imputed_brits = []
                 imputed_saits = []
@@ -885,7 +884,7 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                     eval_ = np.squeeze(eval_)
                     imputation_brits = ret['imputations'].data.cpu().numpy()
                     imputation_brits = np.squeeze(imputation_brits)
-                    imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
+                    imputed_brits = imputation_brits[row_indices, feature_idx]
                     
                     Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
                     X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth

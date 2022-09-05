@@ -146,8 +146,8 @@ def prepare_brits_input(df, season_array, max_length, features, mean, std, model
     X, Y = split_XY(df, max_length, seasons, features)
     np.save(f'{model_dir}/mean.npy', mean)
     np.save(f'{model_dir}/std.npy', std)
-    X = X[:-2]
-    Y = Y[:-2]
+    # X = X[:-2]
+    # Y = Y[:-2]
     for i in range(X.shape[0]):
         parse_id(X[i], Y[i], mean, std, features)
 

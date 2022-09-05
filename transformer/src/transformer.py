@@ -258,7 +258,6 @@ def run_transformer(config):
         epoch_start_time = time.time()
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
         epoch_runtime = time.time() - epoch_start_time
-        print()
         print_str = 'Epoch {} Training Summary: '.format(epoch)
         for k, v in aggr_metrics_train.items():
             tensorboard_writer.add_scalar('{}/train'.format(k), v, epoch)
