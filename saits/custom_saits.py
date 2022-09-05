@@ -152,7 +152,8 @@ class SAITS(BaseNNImputer):
                  patience=10,
                  batch_size=32,
                  weight_decay=1e-5,
-                 device=None):
+                 device=None,
+                 k=2):
         super().__init__(learning_rate, epochs, patience, batch_size, weight_decay, device)
 
         self.n_steps = n_steps
@@ -171,7 +172,7 @@ class SAITS(BaseNNImputer):
 
         self.model = _SAITS(self.n_layers, self.n_steps, self.n_features, self.d_model, self.d_inner, self.n_head,
                             self.d_k, self.d_v, self.dropout, self.diagonal_attention_mask,
-                            self.ORT_weight, self.MIT_weight)
+                            self.ORT_weight, self.MIT_weight, k=k)
         self.model = self.model.to(self.device)
         self._print_model_size()
 
