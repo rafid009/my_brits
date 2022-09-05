@@ -125,21 +125,37 @@ class _SAITS(nn.Module):
             X_tilde_final += combining_weights[i] * X_tildes[i]
 
         X_c = masks * X + (1 - masks) * X_tilde_final#3  # replace non-missing part with original data
-        return X_c, [X_tildes[0], X_tildes[-1], X_tilde_final]#3]
+        X_finals = [i for i in X_tildes]
+        X_finals.append(X_tilde_final)
+        return X_c, X_finals
+        # return X_c, [X_tildes[0], X_tildes[-1], X_tilde_final]#3]
 
     def forward(self, inputs):
         X, masks = inputs['X'], inputs['missing_mask']
         reconstruction_loss = 0
-        imputed_data, [X_tilde_1, X_tilde_2, X_tilde_3] = self.impute(inputs)
+        # imputed_data, [X_tilde_1, X_tilde_2, X_tilde_3] = self.impute(inputs)
 
-        reconstruction_loss += cal_mae(X_tilde_1, X, masks)
-        reconstruction_loss += cal_mae(X_tilde_2, X, masks)
-        final_reconstruction_MAE = cal_mae(X_tilde_3, X, masks)
-        reconstruction_loss += final_reconstruction_MAE
-        reconstruction_loss /= 3
+        # reconstruction_loss += cal_mae(X_tilde_1, X, masks)
+        # reconstruction_loss += cal_mae(X_tilde_2, X, masks)
+
+        # final_reconstruction_MAE = cal_mae(X_tilde_3, X, masks)
+        # reconstruction_loss += final_reconstruction_MAE
+        # reconstruction_loss /= 3
+
+
+        imputed_data, X_finals = self.impute(inputs)
+        total_count = 0
+        for X_tilde in X_finals:
+            reconstruction_loss += cal_mae(X_tilde, X, masks)
+            total_count += 1
+        reconstruction_loss /= total_count 
+
+        
 
         # have to cal imputation loss in the val stage; no need to cal imputation loss here in the tests stage
-        imputation_loss = cal_mae(X_tilde_3, inputs['X_intact'], inputs['indicating_mask'])
+        # imputation_loss = cal_mae(X_tilde_3, inputs['X_intact'], inputs['indicating_mask'])
+
+        imputation_loss = cal_mae(X_finals[-1], inputs['X_intact'], inputs['indicating_mask'])
 
         loss = self.ORT_weight * reconstruction_loss + self.MIT_weight * imputation_loss
 
