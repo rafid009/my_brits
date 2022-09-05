@@ -43,7 +43,7 @@ class _SAITS(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.position_enc = PositionalEncoding(d_model, n_position=d_time)
         # for operation on time dim
-        self.embedding_1 = nn.Linear(actual_d_feature, d_model)
+        # self.embedding_1 = nn.Linear(actual_d_feature, d_model)
         self.reduce_dim_z = nn.Linear(d_model, d_feature)
         # for operation on measurement dim
         self.embedding_2 = nn.Linear(actual_d_feature, d_model)
@@ -64,18 +64,21 @@ class _SAITS(nn.Module):
         for i in range(self.k):
             input_X = torch.cat([X_prime, masks], dim=2)
             if i == -1:
-                input_X = self.embedding_1(input_X)
+                # input_X = self.embedding_1(input_X)
                 enc_output = self.dropout(self.position_enc(input_X)) 
             else:
                 input_X = self.embedding_2(input_X)
-                enc_output = self.position_enc(input_X)#self.dropout(self.position_enc(input_X))
+                enc_output = self.dropout(self.position_enc(input_X))
             for encoder_layer in self.layer_stack_for_first_block:
                 enc_output, attn_weights = encoder_layer(enc_output)
             if i == -1:
                 X_tilde_1 = self.reduce_dim_z(enc_output)
                 X_prime = masks * X_prime + (1 - masks) * X_tilde_1
             else:
-                X_tildes.append(self.reduce_dim_gamma(F.relu(self.reduce_dim_beta(enc_output))))
+                enc_output_1 = F.relu(self.reduce_dim_z(enc_output))
+                enc_output_2 = F.relu(self.reduce_dim_beta(enc_output))
+                enc_output = enc_output_1 + enc_output_2
+                X_tildes.append(self.reduce_dim_gamma(enc_output))
                 X_prime = masks * X_prime + (1 - masks) * X_tildes[-1]
             attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
             if len(attn_weights.shape) == 4:
