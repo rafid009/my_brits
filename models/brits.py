@@ -34,9 +34,9 @@ class BRITSModel(nn.Module):
     def merge_ret(self, ret_f, ret_b):
         loss_f = ret_f['loss']
         loss_b = ret_b['loss']
-        # loss_c = self.get_consistency_loss(ret_f['imputations'], ret_b['imputations'])
+        loss_c = self.get_consistency_loss(ret_f['imputations'], ret_b['imputations'])
 
-        loss = loss_f + loss_b #+ loss_c
+        loss = loss_f + loss_b + loss_c
 
         # predictions = (ret_f['predictions'] + ret_b['predictions']) / 2
         imputations = (ret_f['imputations'] + ret_b['imputations']) / 2
