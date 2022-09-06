@@ -187,28 +187,28 @@ if __name__ == "__main__":
     train_season_df = train_season_df.drop(season_array[-2], axis=0)
     mean, std = get_mean_std(train_season_df, features)
     
-    # prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir)#, complete_seasons)
-    # batch_size = 16
-    # n_epochs = 3000
-    # RNN_HID_SIZE = 64
-    # IMPUTE_WEIGHT = 0.5
-    # LABEL_WEIGHT = 1
-    # model_name = 'BRITS'
-    # model_path_name = 'BRITS'
-    # model_path = f'{model_dir}/model_{model_path_name}_LT_orig.model'#synth_{n_random}.model'
+    prepare_brits_input(season_df, season_array, max_length, features, mean, std, model_dir)#, complete_seasons)
+    batch_size = 16
+    n_epochs = 3000
+    RNN_HID_SIZE = 64
+    IMPUTE_WEIGHT = 0.5
+    LABEL_WEIGHT = 1
+    model_name = 'BRITS'
+    model_path_name = 'BRITS'
+    model_path = f'{model_dir}/model_{model_path_name}_LT_orig_consist.model'#synth_{n_random}.model'
     
-    # if model_name == 'BRITS':
-    #     model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
-    # else:
-    #     model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
-    # if os.path.exists(model_path):
-    #     model.load_state_dict(torch.load(model_path))
+    if model_name == 'BRITS':
+        model = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=n_features)
+    else:
+        model = BRITS_I(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT)
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
 
-    # if torch.cuda.is_available():
-    #     model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
-    # train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
-    # print(f"=========== BRITS Training Ends ===========")
+    train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
+    print(f"=========== BRITS Training Ends ===========")
 
     # SAITS
     print(f"=========== SAITS Training Starts ===========")
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     for i in range(X.shape[0]):
         X[i] = (X[i] - mean)/std
-    k = 3
+    k = 2
     filename = f'{model_dir}/model_saits_orig_{k}_para.model'#synth_{n_random}.model'
     # print(f"X: {X.shape}")
     # X = X.reshape(num_samples, 48, -1)

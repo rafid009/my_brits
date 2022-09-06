@@ -165,7 +165,7 @@ model_dir = "./model_abstract"
 
 ############## Load BRITS ##############
 model_brits = BRITS(rnn_hid_size=RNN_HID_SIZE, impute_weight=IMPUTE_WEIGHT, label_weight=LABEL_WEIGHT, feature_len=len(features))
-model_brits_path = f"{model_dir}/model_BRITS_LT_orig.model"#{n_random}.model"
+model_brits_path = f"{model_dir}/model_BRITS_LT_orig_consist.model"#{n_random}.model"
 if os.path.exists(model_brits_path):
     model_brits.load_state_dict(torch.load(model_brits_path))
 
@@ -175,7 +175,7 @@ model_brits.eval()
 
 ############## Load SAITS ##############
 k = 2
-saits_file = f"{model_dir}/model_saits_orig_{k}.model"#{n_random}.model"
+saits_file = f"{model_dir}/model_saits_orig_{k}_para.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
@@ -591,27 +591,27 @@ plot_mse_folder = 'overlapping_mse/'
 def evaluate_imputation(mse_folder):
     filename = 'json/json_eval_2_LT'
     given_features = [
-        # 'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
-        # 'MIN_AT',
-        # 'AVG_AT', # average temp is AgWeather Network
-        # 'MAX_AT',
-        # 'MIN_REL_HUMIDITY',
-        # 'AVG_REL_HUMIDITY',
-        # 'MAX_REL_HUMIDITY',
-        # 'MIN_DEWPT',
-        # 'AVG_DEWPT',
-        # 'MAX_DEWPT',
-        # 'P_INCHES', # precipitation
-        # 'WS_MPH', # wind speed. if no sensor then value will be na
-        # 'MAX_WS_MPH', 
-        # 'LW_UNITY', # leaf wetness sensor
-        # 'SR_WM2', # solar radiation # different from zengxian
-        # 'MIN_ST8', # diff from zengxian
-        # 'ST8', # soil temperature # diff from zengxian
-        # 'MAX_ST8', # diff from zengxian
-        # #'MSLP_HPA', # barrometric pressure # diff from zengxian
-        # 'ETO', # evaporation of soil water lost to atmosphere
-        # 'ETR',
+        'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
+        'MIN_AT',
+        'AVG_AT', # average temp is AgWeather Network
+        'MAX_AT',
+        'MIN_REL_HUMIDITY',
+        'AVG_REL_HUMIDITY',
+        'MAX_REL_HUMIDITY',
+        'MIN_DEWPT',
+        'AVG_DEWPT',
+        'MAX_DEWPT',
+        'P_INCHES', # precipitation
+        'WS_MPH', # wind speed. if no sensor then value will be na
+        'MAX_WS_MPH', 
+        'LW_UNITY', # leaf wetness sensor
+        'SR_WM2', # solar radiation # different from zengxian
+        'MIN_ST8', # diff from zengxian
+        'ST8', # soil temperature # diff from zengxian
+        'MAX_ST8', # diff from zengxian
+        #'MSLP_HPA', # barrometric pressure # diff from zengxian
+        'ETO', # evaporation of soil water lost to atmosphere
+        'ETR',
         'LTE50' # ???
     ]
     
@@ -655,9 +655,9 @@ def evaluate_imputation(mse_folder):
                         ret = model_brits.run_on_batch(data, None)
                         eval_ = ret['evals'].data.cpu().numpy()
                         eval_ = np.squeeze(eval_)
-                        # imputation_brits = ret['imputations'].data.cpu().numpy()
-                        # imputation_brits = np.squeeze(imputation_brits)
-                        # imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
+                        imputation_brits = ret['imputations'].data.cpu().numpy()
+                        imputation_brits = np.squeeze(imputation_brits)
+                        imputed_brits = imputation_brits[row_indices, feature_idx]#unnormalize(imputation_brits[row_indices, feature_idx], mean, std, feature_idx)
                         # print(f"imputed brits: {imputed_brits}")
                         Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
                         # X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
@@ -765,7 +765,7 @@ def evaluate_imputation(mse_folder):
                         real_values = eval_[row_indices, feature_idx]
                     # print(f"real: {real_values}")
 
-                # model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
+                model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
                 model_mse['SAITS'] += np.sqrt((real_values - imputed_saits) ** 2).mean()
                 # model_mse['MICE'] += np.sqrt((real_values - imputed_mice) ** 2).mean()
                 # model_mse['MVTS'] += np.sqrt((real_values - imputed_transformer) ** 2).mean()
