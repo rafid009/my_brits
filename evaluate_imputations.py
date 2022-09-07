@@ -1458,88 +1458,88 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         imputed_saits = imputation_saits[row_indices, feature_idx]
 
                         # MICE
-                        ret_eval = copy.deepcopy(eval_)
-                        ret_eval[row_indices, feature_idx] = np.nan
-                        imputation_mice = model_mice.transform(ret_eval)
-                        imputed_mice = imputation_mice[row_indices, feature_idx]
+                        # ret_eval = copy.deepcopy(eval_)
+                        # ret_eval[row_indices, feature_idx] = np.nan
+                        # imputation_mice = model_mice.transform(ret_eval)
+                        # imputed_mice = imputation_mice[row_indices, feature_idx]
                         
-                        ret_eval = copy.deepcopy(eval_)
-                        ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
-                        ret_eval[row_indices, feature_idx] = np.nan
-                        test_df = pd.DataFrame(ret_eval, columns=features)
-                        # print(f"test df: {test_df.columns}")
-                        add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_2.csv')
+                        # ret_eval = copy.deepcopy(eval_)
+                        # ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                        # ret_eval[row_indices, feature_idx] = np.nan
+                        # test_df = pd.DataFrame(ret_eval, columns=features)
+                        # # print(f"test df: {test_df.columns}")
+                        # add_season_id_and_save('./transformer/data_dir', test_df, filename=f'ColdHardiness_Grape_Merlot_test_2.csv')
 
-                        params = {
-                            'config_filepath': None, 
-                            'output_dir': './transformer/output/', 
-                            'data_dir': './transformer/data_dir/', 
-                            'load_model': f'./transformer/output/mvts-orig/checkpoints/model_best.pth', 
-                            'resume': False, 
-                            'change_output': False, 
-                            'save_all': False, 
-                            'experiment_name': 'MVTS_test_2',
-                            'comment': 'imputation test', 
-                            'no_timestamp': False, 
-                            'records_file': 'Imputation_records.csv', 
-                            'console': False, 
-                            'print_interval': 1, 
-                            'gpu': '-1', 
-                            'n_proc': 1, 
-                            'num_workers': 0, 
-                            'seed': None, 
-                            'limit_size': None, 
-                            'test_only': 'testset', 
-                            'data_class': 'agaid', 
-                            'labels': None, 
-                            'test_from': './transformer/test_indices.txt', 
-                            'test_ratio': 0, 
-                            'val_ratio': 0, 
-                            'pattern': None, 
-                            'val_pattern': None, 
-                            'test_pattern': 'Merlot_test', 
-                            'normalization': 'standardization', 
-                            'norm_from': None, 
-                            'subsample_factor': None, 
-                            'task': 'imputation', 
-                            'masking_ratio': 0.15, 
-                            'mean_mask_length': 10.0, 
-                            'mask_mode': 'separate', 
-                            'mask_distribution': 'geometric', 
-                            'exclude_feats': None, 
-                            'mask_feats': [0, 1], 
-                            'start_hint': 0.0, 
-                            'end_hint': 0.0, 
-                            'harden': True, 
-                            'epochs': 1000, 
-                            'val_interval': 2, 
-                            'optimizer': 'Adam', 
-                            'lr': 0.0009, 
-                            'lr_step': [1000000], 
-                            'lr_factor': [0.1], 
-                            'batch_size': 16, 
-                            'l2_reg': 0, 
-                            'global_reg': False, 
-                            'key_metric': 'loss', 
-                            'freeze': False, 
-                            'model': 'transformer', 
-                            'max_seq_len': 252, 
-                            'data_window_len': None, 
-                            'd_model': 128, 
-                            'dim_feedforward': 256, 
-                            'num_heads': 8, 
-                            'num_layers': 3, 
-                            'dropout': 0.1, 
-                            'pos_encoding': 'learnable', 
-                            'activation': 'relu', 
-                            'normalization_layer': 'BatchNorm'
-                        }
+                        # params = {
+                        #     'config_filepath': None, 
+                        #     'output_dir': './transformer/output/', 
+                        #     'data_dir': './transformer/data_dir/', 
+                        #     'load_model': f'./transformer/output/mvts-orig/checkpoints/model_best.pth', 
+                        #     'resume': False, 
+                        #     'change_output': False, 
+                        #     'save_all': False, 
+                        #     'experiment_name': 'MVTS_test_2',
+                        #     'comment': 'imputation test', 
+                        #     'no_timestamp': False, 
+                        #     'records_file': 'Imputation_records.csv', 
+                        #     'console': False, 
+                        #     'print_interval': 1, 
+                        #     'gpu': '-1', 
+                        #     'n_proc': 1, 
+                        #     'num_workers': 0, 
+                        #     'seed': None, 
+                        #     'limit_size': None, 
+                        #     'test_only': 'testset', 
+                        #     'data_class': 'agaid', 
+                        #     'labels': None, 
+                        #     'test_from': './transformer/test_indices.txt', 
+                        #     'test_ratio': 0, 
+                        #     'val_ratio': 0, 
+                        #     'pattern': None, 
+                        #     'val_pattern': None, 
+                        #     'test_pattern': 'Merlot_test', 
+                        #     'normalization': 'standardization', 
+                        #     'norm_from': None, 
+                        #     'subsample_factor': None, 
+                        #     'task': 'imputation', 
+                        #     'masking_ratio': 0.15, 
+                        #     'mean_mask_length': 10.0, 
+                        #     'mask_mode': 'separate', 
+                        #     'mask_distribution': 'geometric', 
+                        #     'exclude_feats': None, 
+                        #     'mask_feats': [0, 1], 
+                        #     'start_hint': 0.0, 
+                        #     'end_hint': 0.0, 
+                        #     'harden': True, 
+                        #     'epochs': 1000, 
+                        #     'val_interval': 2, 
+                        #     'optimizer': 'Adam', 
+                        #     'lr': 0.0009, 
+                        #     'lr_step': [1000000], 
+                        #     'lr_factor': [0.1], 
+                        #     'batch_size': 16, 
+                        #     'l2_reg': 0, 
+                        #     'global_reg': False, 
+                        #     'key_metric': 'loss', 
+                        #     'freeze': False, 
+                        #     'model': 'transformer', 
+                        #     'max_seq_len': 252, 
+                        #     'data_window_len': None, 
+                        #     'd_model': 128, 
+                        #     'dim_feedforward': 256, 
+                        #     'num_heads': 8, 
+                        #     'num_layers': 3, 
+                        #     'dropout': 0.1, 
+                        #     'pos_encoding': 'learnable', 
+                        #     'activation': 'relu', 
+                        #     'normalization_layer': 'BatchNorm'
+                        # }
 
-                        transformer_preds = run_transformer(params)
-                        # # print(f'trasformer preds: {transformer_preds.shape}')
+                        # transformer_preds = run_transformer(params)
+                        # # # print(f'trasformer preds: {transformer_preds.shape}')
                         
-                        imputation_transformer = np.squeeze(transformer_preds)
-                        imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+                        # imputation_transformer = np.squeeze(transformer_preds)
+                        # imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
 
 
                         # REAL
@@ -1552,11 +1552,11 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         mse_1['SAITS'] += ((real_values[0] - imputed_saits[0]) ** 2)
                         season_mse_1['SAITS'].append(((real_values[0] - imputed_saits[0]) ** 2))
 
-                        mse_1['MICE'] += ((real_values[0] - imputed_mice[0]) ** 2)
-                        season_mse_1['MICE'].append(((real_values[0] - imputed_mice[0]) ** 2))
+                        # mse_1['MICE'] += ((real_values[0] - imputed_mice[0]) ** 2)
+                        # season_mse_1['MICE'].append(((real_values[0] - imputed_mice[0]) ** 2))
 
-                        mse_1['MVTS'] += ((real_values[0] - imputed_transformer[0]) ** 2)
-                        season_mse_1['MVTS'].append(((real_values[0] - imputed_transformer[0]) ** 2))
+                        # mse_1['MVTS'] += ((real_values[0] - imputed_transformer[0]) ** 2)
+                        # season_mse_1['MVTS'].append(((real_values[0] - imputed_transformer[0]) ** 2))
 
                         # Next day MSE
                         mse_2['BRITS'] += ((real_values[1] - imputed_brits[1]) ** 2)
@@ -1565,11 +1565,11 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         mse_2['SAITS'] += ((real_values[1] - imputed_saits[1]) ** 2)
                         season_mse_2['SAITS'].append(((real_values[1] - imputed_saits[1]) ** 2))
 
-                        mse_2['MICE'] += ((real_values[1] - imputed_mice[1]) ** 2)
-                        season_mse_2['MICE'].append(((real_values[1] - imputed_mice[1]) ** 2))
+                        # mse_2['MICE'] += ((real_values[1] - imputed_mice[1]) ** 2)
+                        # season_mse_2['MICE'].append(((real_values[1] - imputed_mice[1]) ** 2))
 
-                        mse_2['MVTS'] += ((real_values[1] - imputed_transformer[1]) ** 2)
-                        season_mse_2['MVTS'].append(((real_values[1] - imputed_transformer[1]) ** 2))
+                        # mse_2['MVTS'] += ((real_values[1] - imputed_transformer[1]) ** 2)
+                        # season_mse_2['MVTS'].append(((real_values[1] - imputed_transformer[1]) ** 2))
 
                         mse_3['BRITS'] += ((real_values[2] - imputed_brits[2]) ** 2)
                         season_mse_3['BRITS'].append(((real_values[2] - imputed_brits[2]) ** 2))
@@ -1577,11 +1577,11 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
                         mse_3['SAITS'] += ((real_values[2] - imputed_saits[2]) ** 2)
                         season_mse_3['SAITS'].append(((real_values[2] - imputed_saits[2]) ** 2))
 
-                        mse_3['MICE'] += ((real_values[2] - imputed_mice[2]) ** 2)
-                        season_mse_3['MICE'].append(((real_values[2] - imputed_mice[2]) ** 2))
+                        # mse_3['MICE'] += ((real_values[2] - imputed_mice[2]) ** 2)
+                        # season_mse_3['MICE'].append(((real_values[2] - imputed_mice[2]) ** 2))
 
-                        mse_3['MVTS'] += ((real_values[2] - imputed_transformer[2]) ** 2)
-                        season_mse_2['MVTS'].append(((real_values[2] - imputed_transformer[2]) ** 2))
+                        # mse_3['MVTS'] += ((real_values[2] - imputed_transformer[2]) ** 2)
+                        # season_mse_2['MVTS'].append(((real_values[2] - imputed_transformer[2]) ** 2))
                         # mse_2 += ((real_values[1] - imputed_brits[1]) ** 2)
                         trial_count += 1
 
@@ -1598,8 +1598,8 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
 
                         draw_data['BRITS'] = unnormalize(imputation_brits[:, feature_idx], mean, std, feature_idx)
                         draw_data['SAITS'] = unnormalize(imputation_saits[:, feature_idx], mean, std, feature_idx)
-                        draw_data['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
-                        draw_data['MVTS'] = unnormalize(imputation_transformer[:, feature_idx], mean, std, feature_idx).numpy()
+                        # draw_data['MICE'] = unnormalize(imputation_mice[:, feature_idx], mean, std, feature_idx)
+                        # draw_data['MVTS'] = unnormalize(imputation_transformer[:, feature_idx], mean, std, feature_idx).numpy()
 
                         # draws['real'][row_indices] = 0
                         if data_folder is not None:
