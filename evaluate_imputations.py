@@ -1972,9 +1972,9 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 # do_data_plots(data_plots_folder, 10, is_original=True)
 # do_data_plots(data_plots_folder, 10, is_original=False)
 
-# forward_folder = 'forward_LT_brits_saits_13'
+forward_folder = 'forward_LT_brits_saits_13'
 # forward_data_folder = 'forward_LT_data_brits_saits_13'
-# forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
+forward_prediction_LT_day(forward_folder, slide=True)# data_folder=forward_data_folder)
 
 # forward_folder = 'forward_LT_2'
 # forward_data_folder = None#f"{forward_folder}/data"
@@ -1998,4 +1998,4 @@ def do_data_plots(data_folder, missing_length, is_original=False):
 
 # forward_prediction_LT_day(forward_folder, data_folder=data_plots_LT, diff_folder=diff_plots_LT, slide=False)
 
-evaluate_imputation(None)
+# evaluate_imputation(None)
