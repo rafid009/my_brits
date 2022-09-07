@@ -21,24 +21,26 @@ from pypots.utils.metrics import cal_mae
 
 class _SAITS(nn.Module):
     def __init__(self, n_layers, d_time, d_feature, d_model, d_inner, n_head, d_k, d_v, dropout,
-                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, k=2):
+                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, k=2, original=False):
         super().__init__()
         self.n_layers = n_layers
         actual_d_feature = d_feature * 2
         self.ORT_weight = ORT_weight
         self.MIT_weight = MIT_weight
         self.k = k
+        self.original = original
 
         self.layer_stack_for_first_block = nn.ModuleList([
             EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
                          diagonal_attention_mask)
             for _ in range(n_layers)
         ])
-        self.layer_stack_for_second_block = nn.ModuleList([
-            EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
-                         diagonal_attention_mask)
-            for _ in range(n_layers)
-        ])
+        if self.original:
+            self.layer_stack_for_second_block = nn.ModuleList([
+                EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
+                            diagonal_attention_mask)
+                for _ in range(n_layers)
+            ])
 
         self.dropout = nn.Dropout(p=dropout)
         self.position_enc = PositionalEncoding(d_model, n_position=d_time)
@@ -75,9 +77,14 @@ class _SAITS(nn.Module):
                 enc_output = self.position_enc(input_X)
             else:
                 enc_output = self.dropout(self.position_enc(input_X)) 
+            
 
-            for encoder_layer in self.layer_stack_for_first_block:
-                enc_output, attn_weights = encoder_layer(enc_output)
+            if self.original and i != 0:
+                for encoder_layer in self.layer_stack_for_second_block:
+                    enc_output, attn_weights = encoder_layer(enc_output)
+            else:
+                for encoder_layer in self.layer_stack_for_first_block:
+                    enc_output, attn_weights = encoder_layer(enc_output)
 
             if i == 0:
                 X_tilde_1 = self.reduce_dim_z(enc_output)
@@ -195,7 +202,8 @@ class SAITS(BaseNNImputer):
                  batch_size=32,
                  weight_decay=1e-5,
                  device=None,
-                 k=2):
+                 k=2,
+                 original=False):
         super().__init__(learning_rate, epochs, patience, batch_size, weight_decay, device)
 
         self.n_steps = n_steps
@@ -214,7 +222,7 @@ class SAITS(BaseNNImputer):
 
         self.model = _SAITS(self.n_layers, self.n_steps, self.n_features, self.d_model, self.d_inner, self.n_head,
                             self.d_k, self.d_v, self.dropout, self.diagonal_attention_mask,
-                            self.ORT_weight, self.MIT_weight, k=k)
+                            self.ORT_weight, self.MIT_weight, k=k, original=original)
         self.model = self.model.to(self.device)
         self._print_model_size()
 

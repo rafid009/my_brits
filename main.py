@@ -225,13 +225,13 @@ if __name__ == "__main__":
     for i in range(X.shape[0]):
         X[i] = (X[i] - mean)/std
     k = 2
-    filename = f'{model_dir}/model_saits_orig_{k}_para.model'#synth_{n_random}.model'
+    filename = f'{model_dir}/model_saits_orig_{k}_orig.model'#synth_{n_random}.model'
     # print(f"X: {X.shape}")
     # X = X.reshape(num_samples, 48, -1)
     X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
     X = masked_fill(X, 1 - missing_mask, np.nan)
     # Model training. This is PyPOTS showtime. 
-    saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=200, k=k)
+    saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=200, k=k, original=True)
 
     saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
     pickle.dump(saits, open(filename, 'wb'))

@@ -175,8 +175,8 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-k = 5
-saits_file = f"{model_dir}/model_saits_orig_3_para.model"#{n_random}.model"
+k = 2
+saits_file = f"{model_dir}/model_saits_orig_{k}_orig.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
