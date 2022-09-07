@@ -52,7 +52,7 @@ class _SAITS(nn.Module):
         # for delta decay factor
         self.weight_combine = nn.Linear(d_feature + d_time, d_feature)
 
-    def impute(self, inputs):
+    def impute(self, inputs, k=-1):
         X, masks = inputs['X'], inputs['missing_mask']
 
         X_tilde_1 = None
@@ -61,7 +61,9 @@ class _SAITS(nn.Module):
         X_tildes = []
         attn_weights = None
         combining_weights = []
-        for i in range(self.k):
+        if k == -1:
+            k = self.k
+        for i in range(k):
             input_X = torch.cat([X_prime, masks], dim=2)
             if i == 0:
                 input_X = self.embedding_1(input_X)

@@ -174,8 +174,8 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-k = 2
-saits_file = f"{model_dir}/model_saits_orig_{k}_para.model"#{n_random}.model"
+k = 4
+saits_file = f"{model_dir}/model_saits_orig_3_para.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
 
@@ -893,92 +893,92 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
                     X_intact, Xe, missing_mask, indicating_mask = mcar(Xeval, 0.1) # hold out 10% observed values as ground truth
                     
                     Xe = masked_fill(Xe, 1 - missing_mask, np.nan)
-                    imputation_saits = model_saits.impute(Xeval)
+                    imputation_saits = model_saits.impute(Xeval, k=k)
                     # print(f"SAITS imputation: {imputation_saits}")
                     imputation_saits = np.squeeze(imputation_saits)
                     imputed_saits = imputation_saits[row_indices, feature_idx]
 
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    imputation_mice = model_mice.transform(ret_eval)
-                    imputed_mice = imputation_mice[row_indices, feature_idx]
+                    # ret_eval = copy.deepcopy(eval_)
+                    # ret_eval[row_indices, feature_idx] = np.nan
+                    # imputation_mice = model_mice.transform(ret_eval)
+                    # imputed_mice = imputation_mice[row_indices, feature_idx]
                     
-                    ret_eval = copy.deepcopy(eval_)
-                    ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
-                    ret_eval[row_indices, feature_idx] = np.nan
-                    test_df = pd.DataFrame(ret_eval, columns=features)
-                    add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
+                    # ret_eval = copy.deepcopy(eval_)
+                    # ret_eval = unnormalize(ret_eval, mean, std, feature_idx)
+                    # ret_eval[row_indices, feature_idx] = np.nan
+                    # test_df = pd.DataFrame(ret_eval, columns=features)
+                    # add_season_id_and_save('./transformer/data_dir', test_df, filename='ColdHardiness_Grape_Merlot_test.csv')
 
-                    params = {
-                        'config_filepath': None, 
-                        'output_dir': './transformer/output/', 
-                        'data_dir': './transformer/data_dir/', 
-                        'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
-                        'resume': False, 
-                        'change_output': False, 
-                        'save_all': False, 
-                        'experiment_name': 'MVTS_test',
-                        'comment': 'imputation test', 
-                        'no_timestamp': False, 
-                        'records_file': 'Imputation_records.csv', 
-                        'console': False, 
-                        'print_interval': 1, 
-                        'gpu': '0', 
-                        'n_proc': 1, 
-                        'num_workers': 0, 
-                        'seed': None, 
-                        'limit_size': None, 
-                        'test_only': 'testset', 
-                        'data_class': 'agaid', 
-                        'labels': None, 
-                        'test_from': './transformer/test_indices.txt', 
-                        'test_ratio': 0, 
-                        'val_ratio': 0, 
-                        'pattern': None, 
-                        'val_pattern': None, 
-                        'test_pattern': 'Merlot_test', 
-                        'normalization': 'standardization', 
-                        'norm_from': None, 
-                        'subsample_factor': None, 
-                        'task': 'imputation', 
-                        'masking_ratio': 0.15, 
-                        'mean_mask_length': 10.0, 
-                        'mask_mode': 'separate', 
-                        'mask_distribution': 'geometric', 
-                        'exclude_feats': None, 
-                        'mask_feats': [0, 1], 
-                        'start_hint': 0.0, 
-                        'end_hint': 0.0, 
-                        'harden': True, 
-                        'epochs': 1000, 
-                        'val_interval': 2, 
-                        'optimizer': 'Adam', 
-                        'lr': 0.0009, 
-                        'lr_step': [1000000], 
-                        'lr_factor': [0.1], 
-                        'batch_size': 16, 
-                        'l2_reg': 0, 
-                        'global_reg': False, 
-                        'key_metric': 'loss', 
-                        'freeze': False, 
-                        'model': 'transformer', 
-                        'max_seq_len': 252, 
-                        'data_window_len': None, 
-                        'd_model': 128, 
-                        'dim_feedforward': 256, 
-                        'num_heads': 8, 
-                        'num_layers': 3, 
-                        'dropout': 0.1, 
-                        'pos_encoding': 'learnable', 
-                        'activation': 'relu', 
-                        'normalization_layer': 'BatchNorm'
-                    }
+                    # params = {
+                    #     'config_filepath': None, 
+                    #     'output_dir': './transformer/output/', 
+                    #     'data_dir': './transformer/data_dir/', 
+                    #     'load_model': './transformer/output/mvts-model/checkpoints/model_best.pth', 
+                    #     'resume': False, 
+                    #     'change_output': False, 
+                    #     'save_all': False, 
+                    #     'experiment_name': 'MVTS_test',
+                    #     'comment': 'imputation test', 
+                    #     'no_timestamp': False, 
+                    #     'records_file': 'Imputation_records.csv', 
+                    #     'console': False, 
+                    #     'print_interval': 1, 
+                    #     'gpu': '0', 
+                    #     'n_proc': 1, 
+                    #     'num_workers': 0, 
+                    #     'seed': None, 
+                    #     'limit_size': None, 
+                    #     'test_only': 'testset', 
+                    #     'data_class': 'agaid', 
+                    #     'labels': None, 
+                    #     'test_from': './transformer/test_indices.txt', 
+                    #     'test_ratio': 0, 
+                    #     'val_ratio': 0, 
+                    #     'pattern': None, 
+                    #     'val_pattern': None, 
+                    #     'test_pattern': 'Merlot_test', 
+                    #     'normalization': 'standardization', 
+                    #     'norm_from': None, 
+                    #     'subsample_factor': None, 
+                    #     'task': 'imputation', 
+                    #     'masking_ratio': 0.15, 
+                    #     'mean_mask_length': 10.0, 
+                    #     'mask_mode': 'separate', 
+                    #     'mask_distribution': 'geometric', 
+                    #     'exclude_feats': None, 
+                    #     'mask_feats': [0, 1], 
+                    #     'start_hint': 0.0, 
+                    #     'end_hint': 0.0, 
+                    #     'harden': True, 
+                    #     'epochs': 1000, 
+                    #     'val_interval': 2, 
+                    #     'optimizer': 'Adam', 
+                    #     'lr': 0.0009, 
+                    #     'lr_step': [1000000], 
+                    #     'lr_factor': [0.1], 
+                    #     'batch_size': 16, 
+                    #     'l2_reg': 0, 
+                    #     'global_reg': False, 
+                    #     'key_metric': 'loss', 
+                    #     'freeze': False, 
+                    #     'model': 'transformer', 
+                    #     'max_seq_len': 252, 
+                    #     'data_window_len': None, 
+                    #     'd_model': 128, 
+                    #     'dim_feedforward': 256, 
+                    #     'num_heads': 8, 
+                    #     'num_layers': 3, 
+                    #     'dropout': 0.1, 
+                    #     'pos_encoding': 'learnable', 
+                    #     'activation': 'relu', 
+                    #     'normalization_layer': 'BatchNorm'
+                    # }
 
-                    transformer_preds = run_transformer(params)
-                    # # print(f'trasformer preds: {transformer_preds.shape}')
+                    # transformer_preds = run_transformer(params)
+                    # # # print(f'trasformer preds: {transformer_preds.shape}')
                     
-                    imputation_transformer = np.squeeze(transformer_preds)
-                    imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
+                    # imputation_transformer = np.squeeze(transformer_preds)
+                    # imputed_transformer = imputation_transformer[row_indices, feature_idx].cpu().detach().numpy()
 
                     ret_eval = copy.deepcopy(eval_)
                     # imputed_mean = unnormalize(ret_eval, mean, std, feature_idx)
@@ -996,8 +996,8 @@ def do_evaluation(mse_folder, eval_type, eval_season='2020-2021'):
 
                 brits_mse += ((real_values - imputed_brits) ** 2).mean()
                 saits_mse += ((real_values - imputed_saits) ** 2).mean()
-                mice_mse += ((real_values - imputed_mice) ** 2).mean()
-                transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
+                # mice_mse += ((real_values - imputed_mice) ** 2).mean()
+                # transformer_mse += ((real_values - imputed_transformer) ** 2).mean()
                 mean_mse += ((real_values - imputed_mean) ** 2).mean()
                 linear_mse += ((real_values - imputed_linear) ** 2).mean()
                 # print(f"real: {real_values}\nlinear mse: {linear_mse}")
