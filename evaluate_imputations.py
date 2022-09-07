@@ -175,7 +175,7 @@ if torch.cuda.is_available():
 model_brits.eval()
 
 ############## Load SAITS ##############
-k = 4
+k = 5
 saits_file = f"{model_dir}/model_saits_orig_3_para.model"#{n_random}.model"
 model_saits = pickle.load(open(saits_file, 'rb'))
 
@@ -1454,7 +1454,7 @@ def forward_prediction_LT_day(forward_folder, slide=True, same=True, data_folder
 
                         # SAITS
                         Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
-                        imputation_saits = model_saits.impute(Xeval)
+                        imputation_saits = model_saits.impute(Xeval, k)
                         imputation_saits = np.squeeze(imputation_saits)
                         imputed_saits = imputation_saits[row_indices, feature_idx]
 

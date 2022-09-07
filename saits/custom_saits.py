@@ -63,7 +63,7 @@ class _SAITS(nn.Module):
         combining_weights = []
         if k == -1:
             k = self.k
-        print(f"k: {k}")
+        # print(f"k: {k}")
         for i in range(k):
             input_X = torch.cat([X_prime, masks], dim=2)
             if i == 0:
