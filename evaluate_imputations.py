@@ -23,8 +23,9 @@ from tqdm import tqdm
 from transformer.src.transformer import run_transformer, add_season_id_and_save
 import warnings
 import matplotlib
+from saits.custom_saits import SAITS
 from pypots.data import mcar, masked_fill
-from pypots.imputation import SAITS
+# from pypots.imputation import SAITS
 from pypots.utils.metrics import cal_mae, cal_mse
 import pickle
 from linear_imputation import impute, Imputer

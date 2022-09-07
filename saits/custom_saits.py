@@ -63,16 +63,22 @@ class _SAITS(nn.Module):
         combining_weights = []
         if k == -1:
             k = self.k
+        print(f"k: {k}")
         for i in range(k):
             input_X = torch.cat([X_prime, masks], dim=2)
             if i == 0:
-                input_X = self.embedding_1(input_X)
-                enc_output = self.dropout(self.position_enc(input_X)) 
+                input_X = self.embedding_1(input_X) 
             else:
                 input_X = self.embedding_2(input_X)
+                
+            if i == (k - 1):
                 enc_output = self.position_enc(input_X)
+            else:
+                enc_output = self.dropout(self.position_enc(input_X)) 
+
             for encoder_layer in self.layer_stack_for_first_block:
                 enc_output, attn_weights = encoder_layer(enc_output)
+
             if i == 0:
                 X_tilde_1 = self.reduce_dim_z(enc_output)
                 X_prime = masks * X_prime + (1 - masks) * X_tilde_1
@@ -128,11 +134,9 @@ class _SAITS(nn.Module):
         X_tilde_final = 0
         for i in range(len(X_tildes)):
             X_tilde_final += combining_weights[i] * X_tildes[i]
-
         X_c = masks * X + (1 - masks) * X_tilde_final#3  # replace non-missing part with original data
-        X_finals = [i for i in X_tildes]
-        X_finals.append(X_tilde_final)
-        return X_c, X_finals
+        X_tildes.append(X_tilde_final)
+        return X_c, X_tildes
         # return X_c, [X_tildes[0], X_tildes[-1], X_tilde_final]#3]
 
     def forward(self, inputs, k=-1):
