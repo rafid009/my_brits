@@ -68,7 +68,7 @@ class _SAITS(nn.Module):
                 enc_output = self.dropout(self.position_enc(input_X)) 
             else:
                 input_X = self.embedding_2(input_X)
-                enc_output = self.dropout(self.position_enc(input_X))
+                enc_output = self.position_enc(input_X)
             for encoder_layer in self.layer_stack_for_first_block:
                 enc_output, attn_weights = encoder_layer(enc_output)
             if i == 0:
