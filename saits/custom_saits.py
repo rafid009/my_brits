@@ -135,7 +135,7 @@ class _SAITS(nn.Module):
         return X_c, X_finals
         # return X_c, [X_tildes[0], X_tildes[-1], X_tilde_final]#3]
 
-    def forward(self, inputs):
+    def forward(self, inputs, k=-1):
         X, masks = inputs['X'], inputs['missing_mask']
         reconstruction_loss = 0
         # imputed_data, [X_tilde_1, X_tilde_2, X_tilde_3] = self.impute(inputs)
@@ -148,7 +148,7 @@ class _SAITS(nn.Module):
         # reconstruction_loss /= 3
 
 
-        imputed_data, X_finals = self.impute(inputs)
+        imputed_data, X_finals = self.impute(inputs, k)
         total_count = 0
         for X_tilde in X_finals:
             reconstruction_loss += cal_mae(X_tilde, X, masks)
@@ -257,7 +257,7 @@ class SAITS(BaseNNImputer):
 
         return inputs
 
-    def impute(self, X):
+    def impute(self, X, k=-1):
         X = self.check_input(self.n_steps, self.n_features, X)
         self.model.eval()  # set the model as eval status to freeze it.
         test_set = BaseDataset(X)
@@ -267,7 +267,7 @@ class SAITS(BaseNNImputer):
         with torch.no_grad():
             for idx, data in enumerate(test_loader):
                 inputs = {'X': data[1], 'missing_mask': data[2]}
-                imputed_data, _ = self.model.impute(inputs)
+                imputed_data, _ = self.model.impute(inputs, k)
                 imputation_collector.append(imputed_data)
 
         imputation_collector = torch.cat(imputation_collector)
