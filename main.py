@@ -224,8 +224,8 @@ if __name__ == "__main__":
 
     for i in range(X.shape[0]):
         X[i] = (X[i] - mean)/std
-    k = 3
-    filename = f'{model_dir}/model_saits_orig_{k}_not_orig.model'#synth_{n_random}.model'
+    k = 2
+    filename = f'{model_dir}/model_saits_orig_{k}_orig.model'#synth_{n_random}.model'
     # print(f"X: {X.shape}")
     # X = X.reshape(num_samples, 48, -1)
     X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth

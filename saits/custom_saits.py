@@ -21,7 +21,7 @@ from pypots.utils.metrics import cal_mae
 
 class _SAITS(nn.Module):
     def __init__(self, n_layers, d_time, d_feature, d_model, d_inner, n_head, d_k, d_v, dropout,
-                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, k=2, original=False):
+                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, k=2, not_original=False, original=False):
         super().__init__()
         self.n_layers = n_layers
         actual_d_feature = d_feature * 2
@@ -29,6 +29,7 @@ class _SAITS(nn.Module):
         self.MIT_weight = MIT_weight
         self.k = k
         self.original = original
+        self.not_original = not_original
 
         self.layer_stack_for_first_block = nn.ModuleList([
             EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
@@ -68,75 +69,76 @@ class _SAITS(nn.Module):
         # print(f"k: {k}")
         for i in range(k):
             input_X = torch.cat([X_prime, masks], dim=2)
-            if i == 0:
-                input_X = self.embedding_1(input_X) 
-            else:
-                input_X = self.embedding_2(input_X)
-                
-            if i == (k - 1):
-                enc_output = self.position_enc(input_X)
-            else:
-                enc_output = self.dropout(self.position_enc(input_X)) 
-            
+            if self.original:
+                input_X = self.embedding_1(input_X)
+                enc_output = self.dropout(self.position_enc(input_X))  # namely, term e in the math equation
+                for encoder_layer in self.layer_stack_for_first_block:
+                    enc_output, _ = encoder_layer(enc_output)
 
-            if self.original and i != 0:
+                X_tilde_1 = self.reduce_dim_z(enc_output)
+                X_prime = masks * X + (1 - masks) * X_tilde_1
+
+                # second DMSA block
+                input_X_for_second = torch.cat([X_prime, masks], dim=2)
+                input_X_for_second = self.embedding_2(input_X_for_second)
+                enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
                 for encoder_layer in self.layer_stack_for_second_block:
                     enc_output, attn_weights = encoder_layer(enc_output)
-            else:
-                for encoder_layer in self.layer_stack_for_first_block:
-                    enc_output, attn_weights = encoder_layer(enc_output)
 
-            if i == 0:
-                X_tilde_1 = self.reduce_dim_z(enc_output)
-                X_prime = masks * X_prime + (1 - masks) * X_tilde_1
+                X_tilde_2 = self.reduce_dim_gamma(F.relu(self.reduce_dim_beta(enc_output)))
+
+                attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
+                if len(attn_weights.shape) == 4:
+                    # if having more than 1 head, then average attention weights from all heads
+                    attn_weights = torch.transpose(attn_weights, 1, 3)
+                    attn_weights = attn_weights.mean(dim=3)
+                    attn_weights = torch.transpose(attn_weights, 1, 2)
+
+                combined_weights = torch.sigmoid(
+                    self.weight_combine(torch.cat([masks, attn_weights], dim=2))
+                )  # namely term eta
+                X_tilde_3 = (1 - combined_weights) * X_tilde_2 + combined_weights * X_tilde_1
+                X_tildes.append(X_tilde_3)
             else:
-                # enc_output_1 = F.relu(self.reduce_dim_z(enc_output))
-                enc_output = F.relu(self.reduce_dim_beta(enc_output))
-                # enc_output = enc_output_1 + enc_output_2
-                X_tildes.append(self.reduce_dim_gamma(enc_output))
-                X_prime = masks * X_prime + (1 - masks) * X_tildes[-1]
-            attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
-            if len(attn_weights.shape) == 4:
-                # if having more than 1 head, then average attention weights from all heads
-                attn_weights = torch.transpose(attn_weights, 1, 3)
-                attn_weights = attn_weights.mean(dim=3)
-                attn_weights = torch.transpose(attn_weights, 1, 2)
+                if i == 0:
+                    input_X = self.embedding_1(input_X) 
+                else:
+                    input_X = self.embedding_2(input_X)
+                    
+                if i == (k - 1):
+                    enc_output = self.position_enc(input_X)
+                else:
+                    enc_output = self.dropout(self.position_enc(input_X)) 
+                
+
+                if self.not_original and i != 0:
+                    for encoder_layer in self.layer_stack_for_second_block:
+                        enc_output, attn_weights = encoder_layer(enc_output)
+                else:
+                    for encoder_layer in self.layer_stack_for_first_block:
+                        enc_output, attn_weights = encoder_layer(enc_output)
+
+                if i == 0:
+                    X_tilde_1 = self.reduce_dim_z(enc_output)
+                    X_prime = masks * X_prime + (1 - masks) * X_tilde_1
+                else:
+                    # enc_output_1 = F.relu(self.reduce_dim_z(enc_output))
+                    enc_output = F.relu(self.reduce_dim_beta(enc_output))
+                    # enc_output = enc_output_1 + enc_output_2
+                    X_tildes.append(self.reduce_dim_gamma(enc_output))
+                    X_prime = masks * X_prime + (1 - masks) * X_tildes[-1]
+                attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
+                if len(attn_weights.shape) == 4:
+                    # if having more than 1 head, then average attention weights from all heads
+                    attn_weights = torch.transpose(attn_weights, 1, 3)
+                    attn_weights = attn_weights.mean(dim=3)
+                    attn_weights = torch.transpose(attn_weights, 1, 2)
+                combined_weights = attn_weights
 
             combining_weights.append(torch.sigmoid(
-                self.weight_combine(torch.cat([masks, attn_weights], dim=2))
+                self.weight_combine(torch.cat([masks, combined_weights], dim=2))
             ))
         # # first DMSA block
-        # input_X_for_first = torch.cat([X, masks], dim=2)
-        # input_X_for_first = self.embedding_1(input_X_for_first)
-        # enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
-        # for encoder_layer in self.layer_stack_for_first_block:
-        #     enc_output, _ = encoder_layer(enc_output)
-
-        # X_tilde_1 = self.reduce_dim_z(enc_output)
-        # X_prime = masks * X + (1 - masks) * X_tilde_1
-
-        # # second DMSA block
-        # input_X_for_second = torch.cat([X_prime, masks], dim=2)
-        # input_X_for_second = self.embedding_2(input_X_for_second)
-        # enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
-        # for encoder_layer in self.layer_stack_for_second_block:
-        #     enc_output, attn_weights = encoder_layer(enc_output)
-
-        # X_tilde_2 = self.reduce_dim_gamma(F.relu(self.reduce_dim_beta(enc_output)))
-
-        # attention-weighted combine
-        # attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
-        # if len(attn_weights.shape) == 4:
-        #     # if having more than 1 head, then average attention weights from all heads
-        #     attn_weights = torch.transpose(attn_weights, 1, 3)
-        #     attn_weights = attn_weights.mean(dim=3)
-        #     attn_weights = torch.transpose(attn_weights, 1, 2)
-
-        # combining_weights = torch.sigmoid(
-        #     self.weight_combine(torch.cat([masks, attn_weights], dim=2))
-        # )  # namely term eta
-        # combine X_tilde_1 and X_tilde_2
-        # X_tilde_3 = (1 - combining_weights) * X_tilde_2 + combining_weights * X_tilde_1
 
         X_tilde_final = 0
         for i in range(len(X_tildes)):
@@ -203,6 +205,7 @@ class SAITS(BaseNNImputer):
                  weight_decay=1e-5,
                  device=None,
                  k=2,
+                 not_original=False,
                  original=False):
         super().__init__(learning_rate, epochs, patience, batch_size, weight_decay, device)
 
@@ -222,7 +225,7 @@ class SAITS(BaseNNImputer):
 
         self.model = _SAITS(self.n_layers, self.n_steps, self.n_features, self.d_model, self.d_inner, self.n_head,
                             self.d_k, self.d_v, self.dropout, self.diagonal_attention_mask,
-                            self.ORT_weight, self.MIT_weight, k=k, original=original)
+                            self.ORT_weight, self.MIT_weight, k=k, not_original=not_original, original=original)
         self.model = self.model.to(self.device)
         self._print_model_size()
 
