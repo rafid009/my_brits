@@ -97,8 +97,10 @@ class _SAITS(nn.Module):
                 combined_weights = torch.sigmoid(
                     self.weight_combine(torch.cat([masks, attn_weights], dim=2))
                 )  # namely term eta
+                
                 X_tilde_3 = (1 - combined_weights) * X_tilde_2 + combined_weights * X_tilde_1
                 X_tildes.append(X_tilde_3)
+                combining_weights.append(combined_weights)
             else:
                 if i == 0:
                     input_X = self.embedding_1(input_X) 
@@ -133,11 +135,10 @@ class _SAITS(nn.Module):
                     attn_weights = torch.transpose(attn_weights, 1, 3)
                     attn_weights = attn_weights.mean(dim=3)
                     attn_weights = torch.transpose(attn_weights, 1, 2)
-                combined_weights = attn_weights
 
-            combining_weights.append(torch.sigmoid(
-                self.weight_combine(torch.cat([masks, combined_weights], dim=2))
-            ))
+                    combining_weights.append(torch.sigmoid(
+                        self.weight_combine(torch.cat([masks, attn_weights], dim=2))
+                    ))
         # # first DMSA block
 
         X_tilde_final = 0
