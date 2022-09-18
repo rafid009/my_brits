@@ -140,7 +140,6 @@ class _SAITS(nn.Module):
                         self.weight_combine(torch.cat([masks, attn_weights], dim=2))
                     ))
         # # first DMSA block
-
         X_tilde_final = 0
         for i in range(len(X_tildes)):
             X_tilde_final += combining_weights[i] * X_tildes[i]
