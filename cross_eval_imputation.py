@@ -604,7 +604,7 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, t
     return indices, values, evals
 
 
-def evaluate_imputation(season, season_df, season_array, max_length, models, mean, std, suffix):
+def evaluate_imputation(results, season, season_df, season_array, max_length, models, mean, std, suffix):
     out_folder = 'cross_val_imputation_outs'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
@@ -636,6 +636,7 @@ def evaluate_imputation(season, season_df, season_array, max_length, models, mea
     ]
     print(f"Season: {season}")
     out_file.write(f"Season: {season}\n")
+    results[season] = {}
     for feature in given_features:
         feature_idx = features.index(feature)
         X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
@@ -801,9 +802,10 @@ def evaluate_imputation(season, season_df, season_array, max_length, models, mea
         # print(f"\tFor feature: {feature}\n\t\tBRITS: {model_mse['BRITS']/total_count}\n\t\tSAITS: {model_mse['SAITS']/total_count}\n\t\tMICE: {model_mse['MICE']/total_count}\n\t\tMVTS: {model_mse['MVTS']/total_count}\n\t\tLINEAR: {model_mse['LINEAR']/total_count}")
         print(f"\tFor feature: {feature}\n\t\tSAITS: {model_mse['SAITS']/total_count}\n")
         out_file.write(f"For feature: {feature}\n\tSAITS: {model_mse['SAITS']/total_count}\n")
+        results[season][feature] = model_mse['SAITS']/total_count
     out_file.close()
 
-def forward_prediction_LT_day(models, given_season, season_df, max_length, season_array, mean, std, suffix, slide=False, same=True, data_folder=None, diff_folder=None):
+def forward_prediction_LT_day(results, models, given_season, season_df, max_length, season_array, mean, std, suffix, slide=False, same=True, data_folder=None, diff_folder=None):
     out_folder = 'cross_val_LT_preds'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
@@ -1103,17 +1105,20 @@ def forward_prediction_LT_day(models, given_season, season_df, max_length, seaso
     # print(f"For season = {given_season} same day prediction results:\n\tBRITS mse = {np.array(season_mse_1['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_1['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_1['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_1['MVTS']).mean()}")
     # print(f"For season = {given_season} next day prediction results:\n\tBRITS mse = {np.array(season_mse_2['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_2['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_2['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_2['MVTS']).mean()}")
     # print(f"For season = {given_season} next 2 day prediction results:\n\tBRITS mse = {np.array(season_mse_3['BRITS']).mean()}\n\tSAITS mse = {np.array(season_mse_3['SAITS']).mean()}\n\tMICE mse = {np.array(season_mse_3['MICE']).mean()}\n\tMVTS mse = {np.array(season_mse_3['MVTS']).mean()}")
-    
-    print(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {np.array(season_mse_1['SAITS']).mean()}\n")
-    print(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {np.array(season_mse_2['SAITS']).mean()}\n")
-    print(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {np.array(season_mse_3['SAITS']).mean()}\n")
-    out_file.write(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {np.array(season_mse_1['SAITS']).mean()}\n")
-    out_file.write(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {np.array(season_mse_2['SAITS']).mean()}\n")
-    out_file.write(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {np.array(season_mse_3['SAITS']).mean()}\n")
+    same_mse = np.array(season_mse_1['SAITS']).mean()
+    next_1_mse = np.array(season_mse_2['SAITS']).mean()
+    next_2_mse = np.array(season_mse_3['SAITS']).mean()
+    print(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {same_mse}\n")
+    print(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {next_1_mse}\n")
+    print(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {next_2_mse}\n")
+    out_file.write(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {same_mse)}\n")
+    out_file.write(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {next_1_mse}\n")
+    out_file.write(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {next_2_mse}\n")
     ferguson_mse, ferguson_preds = get_FG(season_df, 'LTE50', 'PREDICTED_LTE50', season_array[0])
     print(f"For season = {given_season} Ferguson mse = {ferguson_mse}\n")
     out_file.write(f"For season = {given_season} Ferguson mse = {ferguson_mse}\n")
     out_file.close()
+    results[given_season] = {'same': same_mse, 'next_1': next_1_mse, 'next_2': next_2_mse}
 
 # def evaluate_imputation_model(model_dir, model_name, suffix, test_season_df, test_seasons, mean, std, max_length):
 #     model_path = f"{model_dir}/model_{model_name}_{suffix}.model"
@@ -1148,6 +1153,8 @@ def cross_eval_imputation(df_file, model_dir):
     df = pd.read_csv(df_file)
     modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    result_LT_day = {}
+    result_imputation = {}
     for i in range(len(season_array)):
         test_seasons = season_array[i]
         test_season_name = idx_to_seasons[i]
@@ -1169,8 +1176,16 @@ def cross_eval_imputation(df_file, model_dir):
             model_path = train_imputation_model(train_season_df, train_seasons, max_length, mean, std, model, suffix, model_dir)
             model_loaded = pickle.load(open(model_path, 'rb'))
             models[model] = model_loaded
-            evaluate_imputation(test_season_name, test_season_df, [test_seasons], max_length, models, mean, std, suffix)
-            forward_prediction_LT_day(models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix)
+            evaluate_imputation(result_imputation, test_season_name, test_season_df, [test_seasons], max_length, models, mean, std, suffix)
+            forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix)
+    df_imputation = pd.DataFrame(result_imputation)
+    df_LT_day = pd.DataFrame(result_LT_day)
+    dir = 'cross_val_csvs'
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    df_imputation.to_csv(f'{dir}/result_imputation.csv')
+    df_LT_day.to_csv(f"{dir}/result_LT_day.csv")
+    
         
 
 
