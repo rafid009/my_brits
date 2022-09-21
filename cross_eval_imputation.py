@@ -1185,11 +1185,6 @@ def cross_eval_imputation(df_file, model_dir):
         os.makedirs(dir)
     df_imputation.to_csv(f'{dir}/result_imputation.csv')
     df_LT_day.to_csv(f"{dir}/result_LT_day.csv")
-    
-        
-
-
-
 
 if __name__ == "__main__":
     df_file = f'ColdHardiness_Grape_Merlot_2.csv'
