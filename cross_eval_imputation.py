@@ -1111,7 +1111,7 @@ def forward_prediction_LT_day(results, models, given_season, season_df, max_leng
     print(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {same_mse}\n")
     print(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {next_1_mse}\n")
     print(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {next_2_mse}\n")
-    out_file.write(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {same_mse)}\n")
+    out_file.write(f"For season = {given_season} same day prediction results:\n\tSAITS mse = {same_mse}\n")
     out_file.write(f"For season = {given_season} next day prediction results:\n\tSAITS mse = {next_1_mse}\n")
     out_file.write(f"For season = {given_season} next 2 day prediction results:\n\tSAITS mse = {next_2_mse}\n")
     ferguson_mse, ferguson_preds = get_FG(season_df, 'LTE50', 'PREDICTED_LTE50', season_array[0])
