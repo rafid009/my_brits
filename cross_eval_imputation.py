@@ -673,7 +673,7 @@ def evaluate_imputation(results, season, season_df, season_array, max_length, mo
 
             row_indices = missing_indices // len(features)
             Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))               
-            imputation_saits = models['SAITS'].impute(Xeval)
+            imputation_saits = models['SAITS'].impute(Xeval, k=k, is_test=True)
             imputation_saits = np.squeeze(imputation_saits)
             imputed_saits = imputation_saits[row_indices, feature_idx]
             real_values = eval[row_indices, feature_idx]
@@ -923,7 +923,7 @@ def forward_prediction_LT_day(results, models, given_season, season_df, max_leng
 
                     # SAITS
                     Xeval = np.reshape(Xeval, (1, Xeval.shape[0], Xeval.shape[1]))
-                    imputation_saits = models['SAITS'].impute(Xeval)
+                    imputation_saits = models['SAITS'].impute(Xeval, k=k, is_test=True)
                     imputation_saits = np.squeeze(imputation_saits)
                     imputed_saits = imputation_saits[row_indices, feature_idx]
 

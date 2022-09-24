@@ -63,6 +63,9 @@ class _SAITS(nn.Module):
         X_tildes = []
         attn_weights = None
         combining_weights = []
+        if not is_test:
+            k = self.k
+            
         if k == -1:
              # first DMSA block
             input_X_for_first = torch.cat([X, masks], dim=2)
@@ -99,8 +102,7 @@ class _SAITS(nn.Module):
             X_tildes.append(X_tilde_1)
             X_tildes.append(X_tilde_2)
         else:
-            if not is_test:
-                k = self.k
+            
             # print(f"k: {k}")
             for i in range(k):
                 input_X = torch.cat([X_prime, masks], dim=2)
@@ -459,7 +461,7 @@ class SAITS(BaseNNImputer):
 
         return inputs
 
-    def impute(self, X, k):
+    def impute(self, X, k, is_test=False):
         X = self.check_input(self.n_steps, self.n_features, X)
         self.model.eval()  # set the model as eval status to freeze it.
         test_set = BaseDataset(X)
@@ -469,7 +471,7 @@ class SAITS(BaseNNImputer):
         with torch.no_grad():
             for idx, data in enumerate(test_loader):
                 inputs = {'X': data[1], 'missing_mask': data[2]}
-                imputed_data, _ = self.model.impute(inputs, k)
+                imputed_data, _ = self.model.impute(inputs, k, is_test=is_test)
                 imputation_collector.append(imputed_data)
 
         imputation_collector = torch.cat(imputation_collector)
