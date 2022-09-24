@@ -364,7 +364,7 @@ def train_imputation_model(season_df, season_array, max_length, mean, std, model
             saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k, original=True)
         saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
         pickle.dump(saits, open(model_path, 'wb'))
-        imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
+        imputation = saits.impute(X, k=k)  # impute the originally-missing values and artificially-missing values
         mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
         print(f"SAITS Validation MSE: {mse}")
     elif model_name == "MICE":
