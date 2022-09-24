@@ -330,7 +330,7 @@ def evaluate(model, val_iter):
     return mse
 
 
-def train_imputation_model(season_df, season_array, max_length, mean, std, model_name, suffix, model_dir):
+def train_imputation_model(season_df, season_array, max_length, mean, std, model_name, suffix, model_dir, k=-1):
     print(f"=========== {model_name} Training Ends ===========")
     model_path = f'{model_dir}/model_{model_name}_{suffix}.model'
     if model_name == "BRITS":
@@ -347,7 +347,8 @@ def train_imputation_model(season_df, season_array, max_length, mean, std, model
             model = model.cuda()
         train(model, n_epochs, batch_size, model_path, data_file='./json/json_without_LT')
     elif model_name == "SAITS":
-        k = 5
+        # k = 5
+        model_path = f'{model_dir}/model_{model_name}_{suffix}_{k if k != -1 else 0}.model'
         X, Y = split_XY(season_df, max_length, season_array, features)
 
         for i in range(X.shape[0]):
@@ -357,7 +358,10 @@ def train_imputation_model(season_df, season_array, max_length, mean, std, model
         X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
         X = masked_fill(X, 1 - missing_mask, np.nan)
         # Model training. This is PyPOTS showtime.
-        saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k, original=True)
+        if k == -1:
+            saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k)
+        else:
+            saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k, original=True)
         saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
         pickle.dump(saits, open(model_path, 'wb'))
         imputation = saits.impute(X)  # impute the originally-missing values and artificially-missing values
@@ -604,11 +608,11 @@ def forward_parse_id_day(fs, x, y, mean, std, feature_impute_idx, existing_LT, t
     return indices, values, evals
 
 
-def evaluate_imputation(results, season, season_df, season_array, max_length, models, mean, std, suffix):
+def evaluate_imputation(results, season, season_df, season_array, max_length, models, mean, std, suffix, k):
     out_folder = 'cross_val_imputation_outs'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
-    out_file = open(f'{out_folder}/cv_{season}_{suffix}.txt', 'w')
+    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}.txt', 'w')
     filename = 'json/json_eval_2_LT'
     given_features = [
         'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
@@ -805,11 +809,11 @@ def evaluate_imputation(results, season, season_df, season_array, max_length, mo
         results[season][feature] = model_mse['SAITS']/total_count
     out_file.close()
 
-def forward_prediction_LT_day(results, models, given_season, season_df, max_length, season_array, mean, std, suffix, slide=False, same=True, data_folder=None, diff_folder=None):
+def forward_prediction_LT_day(results, models, given_season, season_df, max_length, season_array, mean, std, suffix, slide=False, same=True, data_folder=None, diff_folder=None, k=-1):
     out_folder = 'cross_val_LT_preds'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
-    out_file = open(f'{out_folder}/cv_{given_season}_{suffix}.txt', 'w')
+    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}.txt', 'w')
     filename = 'json/json_eval_forward_LT'
     feature_idx = features.index('LTE50')
     X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
@@ -1153,38 +1157,42 @@ def cross_eval_imputation(df_file, model_dir):
     df = pd.read_csv(df_file)
     modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-    result_LT_day = {}
-    result_imputation = {}
-    for i in range(len(season_array)):
-        test_seasons = season_array[i]
-        test_season_name = idx_to_seasons[i]
-        suffix = test_season_name
-        if i == 0:
-            train_seasons = season_array[(i + 1):]
-        elif i == len(season_array) - 1:
-            train_seasons = season_array[:i]
-        else:
-            train_seasons = copy.deepcopy(season_array[:i])
-            rest = copy.deepcopy(season_array[(i + 1):])
-            train_seasons.extend(rest)
+    ks = [-1, 3, 4, 5, 6]
 
-        train_season_df = season_df.drop(test_seasons, axis=0)
-        mean, std = get_mean_std(train_season_df, features)
+    for k in ks:
+        result_LT_day = {}
+        result_imputation = {}
+        for i in range(len(season_array)):
+            test_seasons = season_array[i]
+            test_season_name = idx_to_seasons[i]
+            suffix = test_season_name
+            if i == 0:
+                train_seasons = season_array[(i + 1):]
+            elif i == len(season_array) - 1:
+                train_seasons = season_array[:i]
+            else:
+                train_seasons = copy.deepcopy(season_array[:i])
+                rest = copy.deepcopy(season_array[(i + 1):])
+                train_seasons.extend(rest)
 
-        test_season_df = season_df.loc[test_seasons]
-        for model in models.keys():
-            model_path = train_imputation_model(train_season_df, train_seasons, max_length, mean, std, model, suffix, model_dir)
-            model_loaded = pickle.load(open(model_path, 'rb'))
-            models[model] = model_loaded
-            evaluate_imputation(result_imputation, test_season_name, test_season_df, [test_seasons], max_length, models, mean, std, suffix)
-            forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix)
-    df_imputation = pd.DataFrame(result_imputation)
-    df_LT_day = pd.DataFrame(result_LT_day)
-    dir = 'cross_val_csvs'
-    if not os.path.isdir(dir):
-        os.makedirs(dir)
-    df_imputation.to_csv(f'{dir}/result_imputation.csv')
-    df_LT_day.to_csv(f"{dir}/result_LT_day.csv")
+            train_season_df = season_df.drop(test_seasons, axis=0)
+            mean, std = get_mean_std(train_season_df, features)
+
+            test_season_df = season_df.loc[test_seasons]
+            
+            for model in models.keys():
+                model_path = train_imputation_model(train_season_df, train_seasons, max_length, mean, std, model, suffix, model_dir, k)
+                model_loaded = pickle.load(open(model_path, 'rb'))
+                models[model] = model_loaded
+                evaluate_imputation(result_imputation, test_season_name, test_season_df, [test_seasons], max_length, models, mean, std, suffix, k)
+                forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix, k)
+        df_imputation = pd.DataFrame(result_imputation)
+        df_LT_day = pd.DataFrame(result_LT_day)
+        dir = 'cross_val_csvs'
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
+        df_imputation.to_csv(f'{dir}/result_imputation_{k if k != -1 else 0}.csv')
+        df_LT_day.to_csv(f"{dir}/result_LT_day_{k if k != -1 else 0}.csv")
 
 if __name__ == "__main__":
     df_file = f'ColdHardiness_Grape_Merlot_2.csv'
