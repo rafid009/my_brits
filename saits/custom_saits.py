@@ -35,7 +35,7 @@ class _SAITS(nn.Module):
                          diagonal_attention_mask)
             for _ in range(n_layers)
         ])
-        if self.original:
+        if self.original or self.k == -1:
             self.layer_stack_for_second_block = nn.ModuleList([
                 EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
                             diagonal_attention_mask)
