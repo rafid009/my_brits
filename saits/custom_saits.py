@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
 from pypots.data.base import BaseDataset
-from saits.dataset_for_mit import DatasetForMIT
+from dataset_for_mit import DatasetForMIT
 from pypots.data.integration import mcar, masked_fill
 from pypots.imputation.base import BaseNNImputer
 from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
@@ -418,12 +418,12 @@ class SAITS(BaseNNImputer):
             return X
 
 
-    def fit(self, train_X, val_X=None, rate=0.2):
+    def fit(self, train_X, val_X=None, rate=0.2, is_rand=False):
         train_X = self.check_input(self.n_steps, self.n_features, train_X)
         if val_X is not None:
             val_X = self.check_input(self.n_steps, self.n_features, val_X)
 
-        training_set = DatasetForMIT(train_X, rate=rate)
+        training_set = DatasetForMIT(train_X, rate=rate, is_rand=is_rand)
         training_loader = DataLoader(training_set, batch_size=self.batch_size, shuffle=True)
         if val_X is None:
             self._train_model(training_loader)

@@ -612,7 +612,7 @@ def evaluate_imputation(results, season, season_df, season_array, max_length, mo
     out_folder = 'cross_val_imputation_outs'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
-    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}_rand.txt', 'w')
+    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}.txt', 'w')
     filename = 'json/json_eval_2_LT'
     given_features = [
         'MEAN_AT', # mean temperature is the calculation of (max_f+min_f)/2 and then converted to Celsius. # they use this one
@@ -791,8 +791,8 @@ def evaluate_imputation(results, season, season_df, season_array, max_length, mo
 
                 # real_values = eval[row_indices, feature_idx]
                 # print(f"real: {real_values}")
-            # print(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
-            # out_file.write(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
+            print(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
+            out_file.write(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
             # model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
             model_mse['SAITS'] += np.sqrt((real_values - imputed_saits) ** 2).mean()
             # model_mse['MICE'] += np.sqrt((real_values - imputed_mice) ** 2).mean()
@@ -814,7 +814,7 @@ def forward_prediction_LT_day(results, models, given_season, season_df, max_leng
     out_folder = 'cross_val_LT_preds'
     if not os.path.isdir(out_folder):
         os.makedirs(out_folder)
-    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}_rand.txt', 'w')
+    out_file = open(f'{out_folder}/cv_{suffix}_{k if k != -1 else 0}.txt', 'w')
     filename = 'json/json_eval_forward_LT'
     feature_idx = features.index('LTE50')
     X, Y, pads = split_XY(season_df, max_length, season_array, features, is_pad=True)
@@ -1189,7 +1189,7 @@ def cross_eval_imputation(df_file, model_dir):
                 forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix, k)
         df_imputation = pd.DataFrame(result_imputation)
         df_LT_day = pd.DataFrame(result_LT_day)
-        dir = 'cross_val_csvs_rand'
+        dir = 'cross_val_csvs_1'
         if not os.path.isdir(dir):
             os.makedirs(dir)
         df_imputation.to_csv(f'{dir}/result_imputation_{k if k != -1 else 0}.csv')
