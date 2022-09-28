@@ -791,7 +791,8 @@ def evaluate_imputation(results, season, season_df, season_array, max_length, mo
 
                 # real_values = eval[row_indices, feature_idx]
                 # print(f"real: {real_values}")
-
+            print(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
+            out_file.write(f"\n\nFor festure = {feature} trial: {i}\nreal: {real_values}\nimputed: {imputed_saits}\n\n")
             # model_mse['BRITS'] += np.sqrt((real_values - imputed_brits) ** 2).mean()
             model_mse['SAITS'] += np.sqrt((real_values - imputed_saits) ** 2).mean()
             # model_mse['MICE'] += np.sqrt((real_values - imputed_mice) ** 2).mean()
@@ -1157,8 +1158,8 @@ def cross_eval_imputation(df_file, model_dir):
     df = pd.read_csv(df_file)
     modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-    ks = [-1, 3, 4, 5, 6]
-
+    # ks = [-1, 3, 4, 5, 6]
+    ks = [5]
     for k in ks:
         result_LT_day = {}
         result_imputation = {}
@@ -1186,9 +1187,10 @@ def cross_eval_imputation(df_file, model_dir):
                 models[model] = model_loaded
                 evaluate_imputation(result_imputation, test_season_name, test_season_df, [test_seasons], max_length, models, mean, std, suffix, k)
                 forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix, k)
+            break
         df_imputation = pd.DataFrame(result_imputation)
         df_LT_day = pd.DataFrame(result_LT_day)
-        dir = 'cross_val_csvs'
+        dir = 'cross_val_csvs_1'
         if not os.path.isdir(dir):
             os.makedirs(dir)
         df_imputation.to_csv(f'{dir}/result_imputation_{k if k != -1 else 0}.csv')
