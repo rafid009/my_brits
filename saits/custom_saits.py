@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
 from pypots.data.base import BaseDataset
-from pypots.data.dataset_for_mit import DatasetForMIT
+from saits.dataset_for_mit import DatasetForMIT
 from pypots.data.integration import mcar, masked_fill
 from pypots.imputation.base import BaseNNImputer
 from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
