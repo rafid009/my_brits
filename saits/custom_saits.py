@@ -255,15 +255,20 @@ class _SAITS(nn.Module):
             
         if k == -1:
              # first DMSA block
+            print(f"X orig: {X.shape}")
             input_X_for_first = torch.cat([X, masks], dim=2)
+            print(f"X first: {input_X_for_first.shape}")
             input_X_for_first = self.embedding_1(input_X_for_first)
+            print(f"X after emb 1: {input_X_for_first.shape}")
             enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
+            print(f"enc output before encoder 1: {enc_output.shape}")
             for encoder_layer in self.layer_stack_for_first_block:
                 enc_output, _ = encoder_layer(enc_output)
-
+            print(f"enc output after encoder 1: {enc_output.shape}")
             X_tilde_1 = self.reduce_dim_z(enc_output)
+            print(f"X_tilde1: {X_tilde_1.shape}")
             X_prime = masks * X + (1 - masks) * X_tilde_1
-
+            print(f"X prime: {X_prime.shape}")
             # second DMSA block
             input_X_for_second = torch.cat([X_prime, masks], dim=2)
             input_X_for_second = self.embedding_2(input_X_for_second)

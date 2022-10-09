@@ -355,8 +355,8 @@ def train_imputation_model(season_df, season_array, max_length, mean, std, model
             X[i] = (X[i] - mean)/std
 
         # filename = f'{model_dir}/model_{model_name}_{suffix}.model'
-        X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
-        X = masked_fill(X, 1 - missing_mask, np.nan)
+        # X_intact, X, missing_mask, indicating_mask = mcar(X, 0.1) # hold out 10% observed values as ground truth
+        # X = masked_fill(X, 1 - missing_mask, np.nan)
         # Model training. This is PyPOTS showtime.
         if k == -1:
             saits = SAITS(n_steps=252, n_features=len(features), n_layers=2, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k)
@@ -364,9 +364,9 @@ def train_imputation_model(season_df, season_array, max_length, mean, std, model
             saits = SAITS(n_steps=252, n_features=len(features), n_layers=3, d_model=256, d_inner=128, n_head=4, d_k=64, d_v=64, dropout=0.1, epochs=3000, patience=300, k=k, original=True)
         saits.fit(X)  # train the model. Here I use the whole dataset as the training set, because ground truth is not visible to the model.
         pickle.dump(saits, open(model_path, 'wb'))
-        imputation = saits.impute(X, k=k)  # impute the originally-missing values and artificially-missing values
-        mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
-        print(f"SAITS Validation MSE: {mse}")
+        # imputation = saits.impute(X, k=k)  # impute the originally-missing values and artificially-missing values
+        # mse = cal_mse(imputation, X_intact, indicating_mask)  # calculate mean absolute error on the ground truth (artificially-missing values)
+        # print(f"SAITS Validation MSE: {mse}")
     elif model_name == "MICE":
         normalized_season_df = season_df[features].copy()
         normalized_season_df = (normalized_season_df - mean) /std
@@ -1158,8 +1158,8 @@ def cross_eval_imputation(df_file, model_dir):
     df = pd.read_csv(df_file)
     modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)#False, is_year=True)
     season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
-    # ks = [-1, 3, 4, 5, 6]
-    ks = [5]
+    ks = [-1, 3, 4, 5, 6]
+    # ks = [5]
     for k in ks:
         result_LT_day = {}
         result_imputation = {}
@@ -1189,11 +1189,11 @@ def cross_eval_imputation(df_file, model_dir):
                 forward_prediction_LT_day(result_LT_day, models, test_season_name, test_season_df, max_length, [test_seasons], mean, std, suffix, k)
         df_imputation = pd.DataFrame(result_imputation)
         df_LT_day = pd.DataFrame(result_LT_day)
-        dir = 'cross_val_csvs_1'
+        dir = 'cross_val_csvs'
         if not os.path.isdir(dir):
             os.makedirs(dir)
-        df_imputation.to_csv(f'{dir}/result_imputation_{k if k != -1 else 0}.csv')
-        df_LT_day.to_csv(f"{dir}/result_LT_day_{k if k != -1 else 0}.csv")
+        df_imputation.T.to_csv(f'{dir}/result_imputation_{k if k != -1 else 0}.csv')
+        df_LT_day.T.to_csv(f"{dir}/result_LT_day_{k if k != -1 else 0}.csv")
 
 if __name__ == "__main__":
     df_file = f'ColdHardiness_Grape_Merlot_2.csv'
