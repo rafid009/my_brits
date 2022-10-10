@@ -60,6 +60,7 @@ class DiffModel(nn.Module):
         self.time_emb_dim = config['time_emb']
         
         self.num_steps = config['n_steps']
+        self.diff_steps = config['diff_steps']
         self.betas = self.beta_schedule(config['schedule'], config['beta_start'], config['beta_end'])
         self.alpha_s = 1 - self.betas
         self.alpha_hats = torch.cumprod(self.alpha_s, dim=0)
@@ -69,17 +70,17 @@ class DiffModel(nn.Module):
         self.comp_alpha_hats_sqrt = torch.tensor(comp_alpha_sqrt).float().unsqueeze(1).unsqueeze(1)
         self.diff_model = DiffSAITS(d_time=self.num_steps, d_feature=self.feature_dim, n_layers=config['n_layers'], \
                 d_model=config['d_model'], d_inner=config['d_inner'], n_head=config['n_head'], d_k=config['d_k'], \
-                d_v=config['d_v'], dropout=config['dropout'])
+                d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps)
         
 
     def beta_schedule(self, scheduler, start, end):
         if scheduler == "quad":
             betas = torch.linspace(
-                start ** 0.5, end ** 0.5, self.num_steps, requires_grad=False
+                start ** 0.5, end ** 0.5, self.diff_steps, requires_grad=False
             ) ** 2
         else:
             betas = torch.linspace(
-                start, end, self.num_steps, requires_grad=False
+                start, end, self.diff_steps, requires_grad=False
             )
         return betas
 
@@ -131,7 +132,7 @@ class DiffModel(nn.Module):
 
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
-        t = torch.randint(0, self.num_steps, [B])
+        t = torch.randint(0, self.diff_steps, [B])
         curr_alpha = self.alpha_hats_sqrt[t]
         noise = torch.rand_like(observed_data)
         # print(f"observed: {observed_data.shape}, curr_alpha: {curr_alpha.shape}, noise: {noise.shape}, self.comp_alphas_sqrt: {self.comp_alphas_sqrt[t].shape}")
@@ -171,7 +172,7 @@ class DiffModel(nn.Module):
         B, K, L = observed_data.shape
 
         imputed_samples = torch.zeros(B, n_samples, K, L)#.to(self.device)
-        n_steps = 20
+        n_steps = self.diff_steps
         for i in range(n_samples):
             # generate noisy observation for unconditional model
             # if self.is_unconditional == True:

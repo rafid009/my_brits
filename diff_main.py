@@ -124,6 +124,7 @@ if __name__ == '__main__':
         'batch_size': 16,
         'epochs': 200,
         'n_steps': 252,
+        'diff_steps': 50,
         'n_features': len(features),
         'n_layers': 2, 
         'd_model': 256,
@@ -142,4 +143,4 @@ if __name__ == '__main__':
         "lr": 1.0e-3
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling")
+    train(model, config, foldername="saved_diff_model_w_sampling_1")

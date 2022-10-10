@@ -33,33 +33,33 @@ class DiffusionEmbedding(nn.Module):
         self.projection2 = nn.Linear(projection_dim, projection_dim)
 
     def forward(self, diffusion_step):
-        print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
+        # print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
         x = self.embedding[diffusion_step]
-        print(f"x after emb: {x.shape}")
+        # print(f"x after emb: {x.shape}")
         x = self.projection1(x)
         x = F.silu(x)
-        print(f"x after proj1: {x.shape}")
+        # print(f"x after proj1: {x.shape}")
         x = self.projection2(x)
         x = F.silu(x)
-        print(f"x after proj2: {x.shape}")
+        # print(f"x after proj2: {x.shape}")
         return x
 
     def _build_embedding(self, num_steps, dim=64):
         steps = torch.arange(num_steps).unsqueeze(1)  # (T,1)
-        print(f"steps: {steps.shape}")
+        # print(f"steps: {steps.shape}")
         frequencies = 10.0 ** (torch.arange(dim) / (dim - 1) * 4.0).unsqueeze(0)  # (1,dim)
-        print(f"frequency: {frequencies.shape}")
+        # print(f"frequency: {frequencies.shape}")
         table = steps * frequencies  # (T,dim)
-        print(f"table 1: {table.shape}")
+        # print(f"table 1: {table.shape}")
         table = torch.cat([torch.sin(table), torch.cos(table)], dim=1)  # (T,dim*2)
-        print(f"table 2: {table.shape}")
+        # print(f"table 2: {table.shape}")
         return table
 
 
 
 class DiffSAITS(nn.Module):
     def __init__(self, n_layers, d_time, d_feature, d_model, d_inner, n_head, d_k, d_v, dropout,
-                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=128):
+                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=128, diff_steps=50):
         super().__init__()
         self.n_layers = n_layers
         actual_d_feature = d_feature * 2 + int(diff_t_emb_dim / 2)
@@ -67,7 +67,7 @@ class DiffSAITS(nn.Module):
         self.MIT_weight = MIT_weight
 
         
-        self.diffusion_embedding = DiffusionEmbedding(d_time, diff_t_emb_dim, projection_dim=int(diff_t_emb_dim / 2))
+        self.diffusion_embedding = DiffusionEmbedding(diff_steps, diff_t_emb_dim, projection_dim=int(diff_t_emb_dim / 2))
         self.diffusion_projection1 = nn.Linear(1, d_time)
 
         self.layer_stack_for_first_block = nn.ModuleList([
@@ -99,13 +99,13 @@ class DiffSAITS(nn.Module):
         diffusion_emb = self.diffusion_embedding(time_step)
         diffusion_emb = diffusion_emb.unsqueeze(-1)
         diffusion_emb = self.diffusion_projection1(diffusion_emb)
-        print(f"diff proj 1: {diffusion_emb.shape}")
+        # print(f"diff proj 1: {diffusion_emb.shape}")
         diffusion_emb = torch.transpose(diffusion_emb, -1, -2)
         # first DMSA block
-        print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+        # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
         input_X_for_first = torch.cat([X, masks, diffusion_emb], dim=2)
         input_X_for_first = self.embedding_1(input_X_for_first)
-        print(f"input_X_for_first: {input_X_for_first.shape}")
+        # print(f"input_X_for_first: {input_X_for_first.shape}")
         enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
         for encoder_layer in self.layer_stack_for_first_block:
             enc_output, _ = encoder_layer(enc_output)
