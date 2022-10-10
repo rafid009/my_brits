@@ -55,6 +55,7 @@ def train(
     for epoch_no in range(config["epochs"]):
         avg_loss = 0
         mse_total = 0
+        mae_total = 0
         evalpoints_total = 0
         model.train()
         with tqdm(train_loader) as it:
@@ -65,14 +66,11 @@ def train(
                 loss.backward()
                 avg_loss += loss.item()
                 optimizer.step()
-
-                mse_current, mae_current, eval_points = batch_eval(model, train_batch)
-                mse_total += mse_current
-                evalpoints_total += eval_points
+                
                 it.set_postfix(
                     ordered_dict={
                         "avg_epoch_loss": avg_loss / batch_no,
-                        "valid_mse": mse_total / evalpoints_total,
+                        # "valid_mse": mse_total / evalpoints_total,
                         # "mae_total": mae_total / evalpoints_total
                         "epoch": epoch_no,
                     },
@@ -80,7 +78,22 @@ def train(
                 )
 
             lr_scheduler.step()
-        
+
+            for batch_no, train_batch in enumerate(it, start=1):
+                mse_current, mae_current, eval_points = batch_eval(model, train_batch, nsample=num_samples)
+                mse_total += mse_current
+                mae_total += mae_current
+                evalpoints_total += eval_points
+
+                it.set_postfix(
+                    ordered_dict={
+                        # "avg_epoch_loss": avg_loss / batch_no,
+                        "valid_mse": mse_total / evalpoints_total,
+                        "valid_mae": mae_total / evalpoints_total,
+                        "epoch": epoch_no,
+                    },
+                    refresh=False,
+                )
 
     if foldername != "":
         if not os.path.isdir(foldername):
@@ -126,7 +139,7 @@ if __name__ == '__main__':
         'n_steps': 252,
         'diff_steps': 50,
         'n_features': len(features),
-        'n_layers': 2, 
+        'n_layers': 3, 
         'd_model': 256,
         'd_inner': 128, 
         'n_head': 4, 
@@ -143,4 +156,4 @@ if __name__ == '__main__':
         "lr": 1.0e-3
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling_1")
+    train(model, config, foldername="saved_diff_model_w_sampling_2")
