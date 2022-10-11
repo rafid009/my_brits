@@ -78,7 +78,8 @@ def train(
                 )
 
             lr_scheduler.step()
-
+        model.eval()
+        with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
                 mse_current, mae_current, eval_points = batch_eval(model, train_batch, nsample=num_samples)
                 mse_total += mse_current
@@ -94,6 +95,7 @@ def train(
                     },
                     refresh=False,
                 )
+        model.train()
 
     if foldername != "":
         if not os.path.isdir(foldername):
@@ -102,7 +104,6 @@ def train(
 
 def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
     with torch.no_grad():
-        model.eval()
         output = model.evaluate(test_batch, nsample)
 
         samples, c_target, eval_points, observed_points = output
@@ -128,14 +129,14 @@ def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
     # mse_total += mse_current.sum().item()
     # mae_total += mae_current.sum().item()
     # evalpoints_total += eval_points.sum().item()
-    model.train()
+    # model.train()
     return mse_current.sum().item(), mae_current.sum().item(), eval_points.sum().item()
 
 
 if __name__ == '__main__':
     config = {
         'batch_size': 16,
-        'epochs': 200,
+        'epochs': 100,
         'n_steps': 252,
         'diff_steps': 50,
         'n_features': len(features),
@@ -157,4 +158,4 @@ if __name__ == '__main__':
         'time_strategy': 'add'
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling_2")
+    train(model, config, foldername="saved_diff_model_w_sampling_1")
