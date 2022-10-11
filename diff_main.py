@@ -139,13 +139,13 @@ if __name__ == '__main__':
         'n_steps': 252,
         'diff_steps': 50,
         'n_features': len(features),
-        'n_layers': 3, 
+        'n_layers': 3,
         'd_model': 256,
-        'd_inner': 128, 
-        'n_head': 4, 
-        'd_k': 64, 
-        "d_v": 64, 
-        'dropout': 0.1, 
+        'd_inner': 128,
+        'n_head': 4,
+        'd_k': 64,
+        "d_v": 64,
+        'dropout': 0.1,
         'patience': 300,
         'diffusion_embedding_dim': 128,
         'beta_start': 0.0001,
@@ -153,7 +153,8 @@ if __name__ == '__main__':
         'schedule': "quad",
         'time_emb': 128,
         'target_strategy': "random",
-        "lr": 1.0e-3
+        "lr": 1.0e-3,
+        'time_strategy': 'add'
     }
     model = DiffModel(config)
     train(model, config, foldername="saved_diff_model_w_sampling_2")

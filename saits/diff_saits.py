@@ -59,17 +59,26 @@ class DiffusionEmbedding(nn.Module):
 
 class DiffSAITS(nn.Module):
     def __init__(self, n_layers, d_time, d_feature, d_model, d_inner, n_head, d_k, d_v, dropout,
-                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=128, diff_steps=50):
+                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=128, diff_steps=50, time_strategy='cat'):
         super().__init__()
         self.n_layers = n_layers
-        actual_d_feature = d_feature * 2 + int(diff_t_emb_dim / 2)
+        self.time_strategy = time_strategy
+
+        if self.time_strategy == 'cat':
+            actual_d_feature = d_feature * 2 + int(diff_t_emb_dim / 2)
+        else:
+            actual_d_feature = d_feature * 2
+
         self.ORT_weight = ORT_weight
         self.MIT_weight = MIT_weight
 
-        
         self.diffusion_embedding = DiffusionEmbedding(diff_steps, diff_t_emb_dim, projection_dim=int(diff_t_emb_dim / 2))
-        self.diffusion_projection1 = nn.Linear(1, d_time)
-
+        
+        if self.time_strategy == 'cat':
+            self.diffusion_projection1 = nn.Linear(1, d_time)
+        else:
+            self.diffusion_projection1 = nn.Linear(int(diff_t_emb_dim/2), d_time)
+        
         self.layer_stack_for_first_block = nn.ModuleList([
             EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
                          diagonal_attention_mask)
@@ -97,13 +106,25 @@ class DiffSAITS(nn.Module):
         X, masks = inputs['X'], inputs['missing_mask']
 
         diffusion_emb = self.diffusion_embedding(time_step)
-        diffusion_emb = diffusion_emb.unsqueeze(-1)
-        diffusion_emb = self.diffusion_projection1(diffusion_emb)
-        # print(f"diff proj 1: {diffusion_emb.shape}")
-        diffusion_emb = torch.transpose(diffusion_emb, -1, -2)
-        # first DMSA block
-        # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
-        input_X_for_first = torch.cat([X, masks, diffusion_emb], dim=2)
+        
+
+        if self.time_strategy == 'cat':
+            diffusion_emb = diffusion_emb.unsqueeze(-1)
+            diffusion_emb = self.diffusion_projection1(diffusion_emb)
+            # print(f"diff proj 1: {diffusion_emb.shape}")
+            diffusion_emb = torch.transpose(diffusion_emb, -1, -2)
+            # first DMSA block
+            # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+            input_X_for_first = torch.cat([X, masks, diffusion_emb], dim=2)
+        else:
+            # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+            diffusion_emb = self.diffusion_projection1(diffusion_emb)
+            # print(f"diffusion_emb: {diffusion_emb.shape}")
+            diffusion_emb = diffusion_emb.unsqueeze(-1)
+            input_X_for_first = torch.cat([X, masks], dim=2)
+            input_X_for_first += diffusion_emb
+            # print(f"input X first: {input_X_for_first.shape}")
+
         input_X_for_first = self.embedding_1(input_X_for_first)
         # print(f"input_X_for_first: {input_X_for_first.shape}")
         enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
@@ -114,7 +135,11 @@ class DiffSAITS(nn.Module):
         X_prime = masks * X + (1 - masks) * X_tilde_1
 
         # second DMSA block
-        input_X_for_second = torch.cat([X_prime, masks, diffusion_emb], dim=2)
+        if self.time_strategy == 'cat':
+            input_X_for_second = torch.cat([X_prime, masks, diffusion_emb], dim=2)
+        else:
+            input_X_for_second = torch.cat([X_prime, masks], dim=2)
+            input_X_for_second += diffusion_emb
         input_X_for_second = self.embedding_2(input_X_for_second)
         enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
         for encoder_layer in self.layer_stack_for_second_block:

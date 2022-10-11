@@ -70,7 +70,7 @@ class DiffModel(nn.Module):
         self.comp_alpha_hats_sqrt = torch.tensor(comp_alpha_sqrt).float().unsqueeze(1).unsqueeze(1)
         self.diff_model = DiffSAITS(d_time=self.num_steps, d_feature=self.feature_dim, n_layers=config['n_layers'], \
                 d_model=config['d_model'], d_inner=config['d_inner'], n_head=config['n_head'], d_k=config['d_k'], \
-                d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps)
+                d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps, time_strategy=config['time_strategy'])
         
 
     def beta_schedule(self, scheduler, start, end):
