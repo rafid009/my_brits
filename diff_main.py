@@ -79,15 +79,15 @@ def train(
         with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
                 mse_current, mae_current, eval_points = batch_eval(model, train_batch, nsample=num_samples)
-                mse_total += mse_current
-                mae_total += mae_current
+                mse_total += (mse_current / eval_points)
+                mae_total += (mae_current / eval_points)
                 evalpoints_total += eval_points
 
                 it.set_postfix(
                     ordered_dict={
                         # "avg_epoch_loss": avg_loss / batch_no,
-                        "valid_mse": mse_total / evalpoints_total,
-                        "valid_mae": mae_total / evalpoints_total,
+                        "valid_mse": mse_total  / batch_no,
+                        "valid_mae": mae_total / batch_no,
                         "epoch": epoch_no,
                     },
                     refresh=False,
