@@ -155,4 +155,4 @@ if __name__ == '__main__':
         'time_strategy': 'add'
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling_1")
+    train(model, config, foldername="saved_diff_model_w_sampling_2")
