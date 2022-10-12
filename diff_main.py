@@ -100,6 +100,7 @@ def train(
         torch.save(model.state_dict(), output_path)
 
 def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
+    mid = False
     with torch.no_grad():
         output = model.evaluate(test_batch, nsample)
 
@@ -108,20 +109,29 @@ def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
         # c_target = c_target.permute(0, 2, 1)  # (B,L,K)
         # eval_points = eval_points.permute(0, 2, 1)
         # observed_points = observed_points.permute(0, 2, 1)
-
-        samples_median = torch.mean(samples, dim=1) #samples.median(dim=1)
+        if mid:
+            samples_median = samples.median(dim=1)
+        else:
+            samples_median = torch.mean(samples, dim=1)
     # all_target.append(c_target)
     # all_evalpoint.append(eval_points)
     # all_observed_point.append(observed_points)
     # all_observed_time.append(observed_time)
     # all_generated_samples.append(samples)
-
-        mse_current = (
-            ((samples_median.values - c_target) * eval_points) ** 2
-        ) * (scaler ** 2)
-        mae_current = (
-            torch.abs((samples_median.values - c_target) * eval_points) 
-        ) * scaler
+        if mid:
+            mse_current = (
+                ((samples_median.values - c_target) * eval_points) ** 2
+            ) * (scaler ** 2)
+            mae_current = (
+                torch.abs((samples_median.values - c_target) * eval_points) 
+            ) * scaler
+        else:
+            mse_current = (
+                ((samples_median - c_target) * eval_points) ** 2
+            ) * (scaler ** 2)
+            mae_current = (
+                torch.abs((samples_median - c_target) * eval_points) 
+            ) * scaler
 
     # mse_total += mse_current.sum().item()
     # mae_total += mae_current.sum().item()
