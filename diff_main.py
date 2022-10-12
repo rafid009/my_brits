@@ -109,7 +109,7 @@ def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
         # eval_points = eval_points.permute(0, 2, 1)
         # observed_points = observed_points.permute(0, 2, 1)
 
-        samples_median = samples.median(dim=1)
+        samples_median = torch.mean(samples, dim=1) #samples.median(dim=1)
     # all_target.append(c_target)
     # all_evalpoint.append(eval_points)
     # all_observed_point.append(observed_points)
