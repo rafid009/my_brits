@@ -27,13 +27,10 @@ def train(
     
     X, Y = split_XY(season_df, max_length, season_array, features)
 
-    num_samples = len(season_array) - 2  #len(X['RecordID'].unique())
+    num_samples = len(season_array) - 2
 
     X = X[:-2]
-    Y = Y[:-2]#[complete_seasons[:-2]]
-
-    # for i in range(X.shape[0]):
-    #     X[i] = (X[i] - mean)/std
+    Y = Y[:-2]
 
     rate = 0.1
     is_rand = False
@@ -112,7 +109,7 @@ def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
         # eval_points = eval_points.permute(0, 2, 1)
         # observed_points = observed_points.permute(0, 2, 1)
 
-        samples_median = samples.mean(dim=1)
+        samples_median = samples.median(dim=1)
     # all_target.append(c_target)
     # all_evalpoint.append(eval_points)
     # all_observed_point.append(observed_points)
