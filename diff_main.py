@@ -112,7 +112,7 @@ def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
         # eval_points = eval_points.permute(0, 2, 1)
         # observed_points = observed_points.permute(0, 2, 1)
 
-        samples_median = samples.median(dim=1)
+        samples_median = samples.mean(dim=1)
     # all_target.append(c_target)
     # all_evalpoint.append(eval_points)
     # all_observed_point.append(observed_points)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         'diffusion_embedding_dim': 128,
         'beta_start': 0.0001,
         'beta_end': 0.7,
-        'schedule': "quad",
+        'schedule': "linear",
         'time_emb': 128,
         'target_strategy': "random",
         "lr": 1.0e-3,

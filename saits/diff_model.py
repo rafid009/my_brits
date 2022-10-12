@@ -1,11 +1,7 @@
 
-import math
-from matplotlib.transforms import nonsingular
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
-from pypots.data.dataset_for_mit import DatasetForMIT
 
 from saits.diff_saits import DiffSAITS
 
@@ -37,19 +33,19 @@ from saits.diff_saits import DiffSAITS
 #     + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
 
 
-class SinusoidalPositionEmbeddings(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.dim = dim
+# class SinusoidalPositionEmbeddings(nn.Module):
+#     def __init__(self, dim):
+#         super().__init__()
+#         self.dim = dim
 
-    def forward(self, time):
-        device = time.device
-        half_dim = self.dim // 2
-        embeddings = math.log(10000) / (half_dim - 1)
-        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
-        embeddings = time[:, None] * embeddings[None, :]
-        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
-        return embeddings
+#     def forward(self, time):
+#         device = time.device
+#         half_dim = self.dim // 2
+#         embeddings = math.log(10000) / (half_dim - 1)
+#         embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+#         embeddings = time[:, None] * embeddings[None, :]
+#         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
+#         return embeddings
 
 
 
@@ -174,22 +170,10 @@ class DiffModel(nn.Module):
         imputed_samples = torch.zeros(B, n_samples, K, L)#.to(self.device)
         n_steps = self.diff_steps
         for i in range(n_samples):
-            # generate noisy observation for unconditional model
-            # if self.is_unconditional == True:
-            #     noisy_obs = observed_data
-            #     noisy_cond_history = []
-            #     for t in range(self.num_steps):
-            #         noise = torch.randn_like(noisy_obs)
-            #         noisy_obs = (self.alpha_hats[t] ** 0.5) * noisy_obs + (self.betas[t] ** 0.5) * noise
-            #         noisy_cond_history.append(noisy_obs * cond_mask)
 
             current_sample = torch.randn_like(observed_data)
 
             for t in range(n_steps - 1, -1, -1):
-                # if self.is_unconditional == True:
-                #     diff_input = cond_mask * noisy_cond_history[t] + (1.0 - cond_mask) * current_sample
-                #     diff_input = diff_input.unsqueeze(1)  # (B,1,K,L)
-                # else:
                 cond_obs = cond_mask * observed_data
                 noisy_target = (1 - cond_mask) * current_sample
                 diff_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)

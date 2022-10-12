@@ -68,13 +68,14 @@ class DatasetForMIT(BaseDataset):
         """
         X = self.X[idx]
         X = torch.tensor(X)
+        X = (X - self.mean) / self.std
         if self.is_rand:
             X_intact, X, missing_mask, indicating_mask = self.mcar(X, rate=self.rate, nan=-1)
         else:
             X_intact, X, missing_mask, indicating_mask = self.mcar(X, rate=self.rate)
 
-        X = ((X - self.mean) / self.std) * indicating_mask
-        X_intact = ((X_intact - self.mean) / self.std) * missing_mask
+        # X = ((X - self.mean) / self.std) * indicating_mask
+        # X_intact = ((X_intact - self.mean) / self.std) * missing_mask
 
         sample = [
             torch.tensor(idx),
