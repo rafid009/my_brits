@@ -55,6 +55,10 @@ def train(
         mae_total = 0
         evalpoints_total = 0
         model.train()
+        print("Model weights...")
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(name, param.data)
         with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
                 optimizer.zero_grad()
@@ -75,6 +79,10 @@ def train(
                 )
 
             lr_scheduler.step()
+        print("Model weights...")
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(name, param.data)
         model.eval()
         with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
@@ -82,7 +90,7 @@ def train(
                 mse_total += (mse_current / eval_points)
                 mae_total += (mae_current / eval_points)
                 evalpoints_total += eval_points
-
+                print(f"Epoch {epoch_no}: mse: {mse_total  / batch_no} and mae: {mae_total / batch_no}")
                 it.set_postfix(
                     ordered_dict={
                         # "avg_epoch_loss": avg_loss / batch_no,
@@ -145,7 +153,7 @@ if __name__ == '__main__':
         'batch_size': 16,
         'epochs': 100,
         'n_steps': 252,
-        'diff_steps': 50,
+        'diff_steps': 100,
         'n_features': len(features),
         'n_layers': 3,
         'd_model': 256,
@@ -165,4 +173,4 @@ if __name__ == '__main__':
         'time_strategy': 'add'
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling_2")
+    train(model, config, foldername="saved_diff_model_w_sampling_1")

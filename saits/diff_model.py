@@ -129,10 +129,9 @@ class DiffModel(nn.Module):
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
-        curr_alpha = self.alpha_hats_sqrt[t]
         noise = torch.rand_like(observed_data)
         # print(f"observed: {observed_data.shape}, curr_alpha: {curr_alpha.shape}, noise: {noise.shape}, self.comp_alphas_sqrt: {self.comp_alphas_sqrt[t].shape}")
-        noise_data = curr_alpha * observed_data + self.comp_alpha_hats_sqrt[t] * noise
+        noise_data = self.alpha_hats_sqrt[t] * observed_data + self.comp_alpha_hats_sqrt[t] * noise
         # print(f"noisy data: {noise_data.shape}")
         diff_input = self.set_input_to_diffmodel(noise_data, observed_data, cond_mask)
         diff_inputs = {'X': diff_input, 'missing_mask': observed_mask}
@@ -181,8 +180,8 @@ class DiffModel(nn.Module):
                 ts = (torch.ones(B) * t).long()
                 predicted = self.diff_model(diff_inputs, ts)
 
-                coeff1 = 1 / self.alpha_s[t] ** 0.5
-                coeff2 = (1 - self.alpha_s[t]) / (1 - self.alpha_hats[t]) ** 0.5
+                coeff1 = 1 / (self.alpha_s[t] ** 0.5)
+                coeff2 = (1 - self.alpha_s[t]) / ((1 - self.alpha_hats[t]) ** 0.5)
                 current_sample = coeff1 * (current_sample - coeff2 * predicted)
 
                 if t > 0:
@@ -191,7 +190,8 @@ class DiffModel(nn.Module):
                         (1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t]) * self.betas[t]
                     ) ** 0.5
                     current_sample += sigma * noise
-
+            current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
+            print(f"Sample {i}:\n{current_sample}")
             imputed_samples[:, i] = current_sample.detach()
         return imputed_samples
 
