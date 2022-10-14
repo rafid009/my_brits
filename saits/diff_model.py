@@ -58,6 +58,7 @@ class DiffModel(nn.Module):
         self.num_steps = config['n_steps']
         self.diff_steps = config['diff_steps']
         self.betas = self.beta_schedule(config['schedule'], config['beta_start'], config['beta_end'])
+        print(f"Betas: {self.betas}")
         self.alpha_s = 1 - self.betas
         self.alpha_hats = torch.cumprod(self.alpha_s, dim=0)
         alphas_sqrt = self.alpha_hats ** 0.5
@@ -179,7 +180,7 @@ class DiffModel(nn.Module):
                 diff_inputs = {'X': diff_input, 'missing_mask': observerd_mask}
                 ts = (torch.ones(B) * t).long()
                 predicted = self.diff_model(diff_inputs, ts)
-
+                print(f"Sample {i} T = {t}:\nalphas: {self.alpha_s[t]}\nalphas_hat: {self.alpha_hats[t]}")
                 coeff1 = 1 / (self.alpha_s[t] ** 0.5)
                 coeff2 = (1 - self.alpha_s[t]) / ((1 - self.alpha_hats[t]) ** 0.5)
                 current_sample = coeff1 * (current_sample - coeff2 * predicted)
@@ -189,6 +190,8 @@ class DiffModel(nn.Module):
                     sigma = (
                         (1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t]) * self.betas[t]
                     ) ** 0.5
+                    print(f"Sigma: {sigma}")
+                    print(f"Noise: {noise}")
                     current_sample += sigma * noise
             current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
             print(f"Sample {i}:\n{current_sample}")
