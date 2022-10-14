@@ -183,6 +183,7 @@ class DiffModel(nn.Module):
                 print(f"Sample {i} T = {t}:\nalphas: {self.alpha_s[t]}\nalphas_hat: {self.alpha_hats[t]}")
                 coeff1 = 1 / (self.alpha_s[t] ** 0.5)
                 coeff2 = (1 - self.alpha_s[t]) / ((1 - self.alpha_hats[t]) ** 0.5)
+                print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
                 current_sample = coeff1 * (current_sample - coeff2 * predicted)
 
                 if t > 0:
@@ -193,8 +194,9 @@ class DiffModel(nn.Module):
                     print(f"Sigma: {sigma}")
                     print(f"Noise: {noise}")
                     current_sample += sigma * noise
+                print(f"Curr: \n{current_sample}")
             current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
-            print(f"Sample {i}:\n{current_sample}")
+            print(f"Current Sample {i}:\n{current_sample}")
             imputed_samples[:, i] = current_sample.detach()
         return imputed_samples
 
