@@ -127,6 +127,12 @@ class DiffModel(nn.Module):
 
         return inputs
 
+    def set_input_to_diffmodel(self, noisy_data, observed_data, cond_mask):
+        cond_obs = cond_mask * observed_data
+        noisy_target = (1 - cond_mask) * noisy_data
+        total_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+        return total_input
+
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
@@ -157,12 +163,6 @@ class DiffModel(nn.Module):
             # for i in range(len(cut_length)):  # to avoid double evaluation
             #     target_mask[i, ..., 0 : cut_length[i].item()] = 0
         return samples, X_intact, target_mask, observed_mask #, observed_tp
-
-    def set_input_to_diffmodel(self, noisy_data, observed_data, cond_mask):
-        cond_obs = cond_mask * observed_data
-        noisy_target = (1 - cond_mask) * noisy_data
-        total_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
-        return total_input
 
     def impute(self, observed_data, cond_mask, observerd_mask, n_samples):
         B, K, L = observed_data.shape
