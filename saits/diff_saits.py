@@ -129,7 +129,8 @@ class DiffSAITS(nn.Module):
         # print(f"input_X_for_first: {input_X_for_first.shape}")
         enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
         for encoder_layer in self.layer_stack_for_first_block:
-            enc_output, _ = F.silu(encoder_layer(enc_output))
+            enc_output, _ = encoder_layer(enc_output)
+            enc_output = F.silu(enc_output)
 
         X_tilde_1 = self.reduce_dim_z(enc_output)
         X_prime = masks * X + (1 - masks) * X_tilde_1
@@ -143,7 +144,8 @@ class DiffSAITS(nn.Module):
         input_X_for_second = self.embedding_2(input_X_for_second)
         enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
         for encoder_layer in self.layer_stack_for_second_block:
-            enc_output, attn_weights = F.silu(encoder_layer(enc_output))
+            enc_output, attn_weights = encoder_layer(enc_output)
+            enc_output = F.silu(enc_output)
 
         X_tilde_2 = self.reduce_dim_gamma(F.relu(self.reduce_dim_beta(enc_output)))
 
