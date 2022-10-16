@@ -27,7 +27,7 @@ def train(
     
     X, Y = split_XY(season_df, max_length, season_array, features)
 
-    num_samples = len(season_array) - 2
+    num_samples = 100#len(season_array) - 2
 
     X = X[:-2]
     Y = Y[:-2]
@@ -108,7 +108,7 @@ def train(
         torch.save(model.state_dict(), output_path)
 
 def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
-    mid = False
+    mid = True
     with torch.no_grad():
         output = model.evaluate(test_batch, nsample)
 

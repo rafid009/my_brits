@@ -186,7 +186,7 @@ class DatasetForMIT(BaseDataset):
         if nan == -1:
             intact_mask = torch.isnan(X_intact)
             X_mask = torch.isnan(X)
-            rand_nums = torch.rand_like(X)
+            rand_nums = torch.randn_like(X)
             X_intact[intact_mask] = rand_nums[intact_mask] #np.nan_to_num(X_intact, nan=nan)
             X[X_mask] = rand_nums[X_mask] #np.nan_to_num(X, nan=nan)
         else:
