@@ -148,6 +148,7 @@ class DiffModel(nn.Module):
         residual = (noise - predicted) * target_mask
         num_eval = target_mask.sum()
         loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        print(f"loss: {loss}\npredicted: {predicted}")
         return loss
 
     def evaluate(self, data, n_samples):
