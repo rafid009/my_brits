@@ -189,7 +189,7 @@ if __name__ == '__main__':
         'dropout': 0.1,
         'patience': 300,
         'diffusion_embedding_dim': 128,
-        'beta_start': 0.0001,
+        'beta_start': 0.01,
         'beta_end': 0.5,
         'schedule': "linear",
         'time_emb': 128,
