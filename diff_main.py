@@ -190,7 +190,7 @@ if __name__ == '__main__':
         'patience': 300,
         'diffusion_embedding_dim': 128,
         'beta_start': 0.01,
-        'beta_end': 0.5,
+        'beta_end': 0.7,
         'schedule': "linear",
         'time_emb': 128,
         'target_strategy': "random",
