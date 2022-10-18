@@ -9,6 +9,30 @@ from process_data import *
 from saits.diff_model import DiffModel
 import os
 
+def create_synthetic_data(config):
+    num_seasons = 32
+    num_steps = config['n_steps']
+    num_features = config['n_features']
+    data = np.zeros((num_seasons, num_steps, num_features))
+    value_range = [(0.1, 0.4, 0.7, 0.99), (1.2, 4.5, 15.4, 35.9), (11.0, 17.5, 40.5, 61.2), (100.1, 160.2, 500, 1000)]
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[2]):
+            low = np.random.uniform(value_range[j][0], value_range[j][1])
+            high = np.random.uniform(value_range[j][2], value_range[j][3])
+            if j == 0 or j == 2:
+                data[i, :, j] = np.linspace(low, high, data.shape[1])
+            elif j == 1:
+                data[i, :, j] = np.linspace(low ** 0.5, high ** 0.5, data.shape[1]) ** 2
+            else:
+                data[i, :, j] = np.linspace(np.cbrt(low), np.cbrt(high), data.shape[1]) ** 3
+    data_rows = data.reshape((-1, num_features))
+    mean = np.mean(data_rows, axis=0)
+    std = np.std(data_rows, axis=0)
+    return data, mean, std
+
+
+
 def train(
     model,
     config,
@@ -17,24 +41,25 @@ def train(
     valid_epoch_interval=5,
     foldername="",
 ):
-    df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
-    modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)# not_original=True)#False, is_year=True)
-    season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
+    # df = pd.read_csv(f'ColdHardiness_Grape_Merlot_2.csv')
+    # modified_df, dormant_seasons = preprocess_missing_values(df, features, is_dormant=True)# not_original=True)#False, is_year=True)
+    # season_df, season_array, max_length = get_seasons_data(modified_df, dormant_seasons, features, is_dormant=True)#False, is_year=True)
 
-    train_season_df = season_df.drop(season_array[-1], axis=0)
-    train_season_df = train_season_df.drop(season_array[-2], axis=0)
-    mean, std = get_mean_std(train_season_df, features)
+    # train_season_df = season_df.drop(season_array[-1], axis=0)
+    # train_season_df = train_season_df.drop(season_array[-2], axis=0)
+
+    # mean, std = get_mean_std(train_season_df, features)
     
-    X, Y = split_XY(season_df, max_length, season_array, features)
+    # X, Y = split_XY(season_df, max_length, season_array, features)
 
     num_samples = 100#len(season_array) - 2
 
-    X = X[:-2]
-    Y = Y[:-2]
+    # X = X[:-2]
+    # Y = Y[:-2]
 
     rate = 0.1
     is_rand = False
-    
+    X, mean, std = create_synthetic_data(config)
     training_set = DatasetForMIT(X, mean, std, rate=rate, is_rand=is_rand)
     train_loader = DataLoader(training_set, batch_size=config['batch_size'], shuffle=True)
 
@@ -152,9 +177,9 @@ if __name__ == '__main__':
     config = {
         'batch_size': 16,
         'epochs': 100,
-        'n_steps': 252,
-        'diff_steps': 150,
-        'n_features': len(features),
+        'n_steps': 50, #252,
+        'diff_steps': 50, #150,
+        'n_features': 4, #len(features),
         'n_layers': 3,
         'd_model': 256,
         'd_inner': 128,
@@ -166,11 +191,13 @@ if __name__ == '__main__':
         'diffusion_embedding_dim': 128,
         'beta_start': 0.0001,
         'beta_end': 0.5,
-        'schedule': "quad",
+        'schedule': "linear",
         'time_emb': 128,
         'target_strategy': "random",
         "lr": 1.0e-3,
         'time_strategy': 'add'
     }
     model = DiffModel(config)
-    train(model, config, foldername="saved_diff_model_w_sampling_1")
+    train(model, config, foldername="saved_diff_model_w_sampling_synth")
+    # X, mean, std = create_synthetic_data()
+    # print(f"X: {X}\n\nmean: {mean}\nstd: {std}")
