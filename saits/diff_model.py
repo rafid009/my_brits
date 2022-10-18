@@ -181,16 +181,17 @@ class DiffModel(nn.Module):
                 diff_inputs = {'X': diff_input, 'missing_mask': observerd_mask}
                 ts = (torch.ones(B) * t).long()
                 predicted = self.diff_model(diff_inputs, ts)
-                print(f"Sample {i} T = {t}:\nalphas: {self.alpha_s[t]}\nalphas_hat: {self.alpha_hats[t]}")
+                print(f"Sample {i} T = {t}:\nalphas: {self.alpha_s[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted}")
                 coeff1 = 1 / (self.alpha_s[t] ** 0.5)
                 coeff2 = (1 - self.alpha_s[t]) / ((1 - self.alpha_hats[t]) ** 0.5)
                 print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
                 current_sample = coeff1 * (current_sample - coeff2 * predicted)
+                print(f"Pre-variance: {current_sample}")
 
                 if t > 0:
                     noise = torch.randn_like(current_sample)
                     sigma = (
-                        (1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t]) * self.betas[t]
+                        ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
                     ) ** 0.5
                     print(f"Sigma: {sigma}")
                     print(f"Noise: {noise}")
