@@ -59,12 +59,16 @@ class DiffModel(nn.Module):
         self.diff_steps = config['diff_steps']
         self.betas = self.beta_schedule(config['schedule'], config['beta_start'], config['beta_end'])
         print(f"Betas: {self.betas}")
-        self.alpha_s = 1 - self.betas
-        self.alpha_hats = torch.cumprod(self.alpha_s, dim=0)
-        alphas_sqrt = self.alpha_hats ** 0.5
-        comp_alpha_sqrt = (1.0 - self.alpha_hats) ** 0.5
-        self.alpha_hats_sqrt = torch.tensor(alphas_sqrt).float().unsqueeze(1).unsqueeze(1)
-        self.comp_alpha_hats_sqrt = torch.tensor(comp_alpha_sqrt).float().unsqueeze(1).unsqueeze(1)
+        self.alphas = 1 - self.betas
+        self.alpha_hats = torch.cumprod(self.alphas, dim=0)
+        self.beta_tildes = self.betas + 0
+        for t in range(1, self.diff_steps):
+            self.beta_tildes *= (1 - self.alpha_hats[t - 1]) / (
+                1 - self.alpha_hats[t])
+        self.sigma = torch.sqrt(self.beta_tildes)
+        self.alpha_hats_sqrt = (self.alpha_hats ** 0.5).unsqueeze(1).unsqueeze(1)
+        self.comp_alpha_hats_sqrt = ((1.0 - self.alpha_hats) ** 0.5).unsqueeze(1).unsqueeze(1)
+
         self.diff_model = DiffSAITS(d_time=self.num_steps, d_feature=self.feature_dim, n_layers=config['n_layers'], \
                 d_model=config['d_model'], d_inner=config['d_inner'], n_head=config['n_head'], d_k=config['d_k'], \
                 d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps, time_strategy=config['time_strategy'])
@@ -181,18 +185,19 @@ class DiffModel(nn.Module):
                 diff_inputs = {'X': diff_input, 'missing_mask': observerd_mask}
                 ts = (torch.ones(B) * t).long()
                 predicted = self.diff_model(diff_inputs, ts)
-                print(f"Sample {i} T = {t}:\nalphas: {self.alpha_s[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted}")
-                coeff1 = 1 / (self.alpha_s[t] ** 0.5)
-                coeff2 = (1 - self.alpha_s[t]) / ((1 - self.alpha_hats[t]) ** 0.5)
+                print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted}")
+                coeff1 = 1 / torch.sqrt(self.alphas[t])
+                coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
                 print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
                 current_sample = coeff1 * (current_sample - coeff2 * predicted)
-                print(f"Pre-variance: {current_sample}")
+                print(f"Pre-variance sample: {current_sample}")
 
                 if t > 0:
                     noise = torch.randn_like(current_sample)
-                    sigma = (
-                        ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
-                    ) ** 0.5
+                    # sigma = (
+                    #     ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
+                    # ) ** 0.5
+                    sigma = self.sigma[t]
                     print(f"Sigma: {sigma}")
                     print(f"Noise: {noise}")
                     current_sample += sigma * noise
