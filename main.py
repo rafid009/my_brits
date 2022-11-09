@@ -6,8 +6,8 @@ import torch.optim as optim
 import numpy as np
 
 from pypots.data import mcar, masked_fill
-# from pypots.imputation import SAITS
-from saits.custom_saits import SAITS
+from pypots.imputation import SAITS
+# from saits.custom_saits import SAITS
 from pypots.utils.metrics import cal_mse
 from process_data import *
 import pickle

@@ -14,18 +14,21 @@ def create_synthetic_data(config):
     num_steps = config['n_steps']
     num_features = config['n_features']
     data = np.zeros((num_seasons, num_steps, num_features))
-    value_range = [(0.1, 0.4, 0.7, 0.99), (1.2, 4.5, 15.4, 35.9), (11.0, 17.5, 40.5, 61.2), (100.1, 160.2, 500, 1000)]
+    # value_range = [(0.1, 0.4, 0.7, 0.99), (1.2, 4.5, 15.4, 35.9), (11.0, 17.5, 40.5, 61.2), (100.1, 160.2, 500, 1000)]
+
+
 
     for i in range(data.shape[0]):
         for j in range(data.shape[2]):
-            low = np.random.uniform(value_range[j][0], value_range[j][1])
-            high = np.random.uniform(value_range[j][2], value_range[j][3])
-            if j == 0 or j == 2:
-                data[i, :, j] = np.linspace(low, high, data.shape[1])
-            elif j == 1:
-                data[i, :, j] = np.linspace(low ** 0.5, high ** 0.5, data.shape[1]) ** 2
-            else:
-                data[i, :, j] = np.linspace(np.cbrt(low), np.cbrt(high), data.shape[1]) ** 3
+            # low = np.random.uniform(value_range[j][0], value_range[j][1])
+            # high = np.random.uniform(value_range[j][2], value_range[j][3])
+            # if j == 0 or j == 2:
+            #     data[i, :, j] = np.linspace(low, high, data.shape[1])
+            # elif j == 1:
+            #     data[i, :, j] = np.linspace(low ** 0.5, high ** 0.5, data.shape[1]) ** 2
+            # else:
+            #     data[i, :, j] = np.linspace(np.cbrt(low), np.cbrt(high), data.shape[1]) ** 3
+            data[i, :, j] = np.sin(np.linspace(0, 2 * np.pi, data.shape[1]))
     data_rows = data.reshape((-1, num_features))
     mean = np.mean(data_rows, axis=0)
     std = np.std(data_rows, axis=0)
@@ -179,7 +182,7 @@ if __name__ == '__main__':
         'epochs': 100,
         'n_steps': 50, #252,
         'diff_steps': 100, #150,
-        'n_features': 4, #len(features),
+        'n_features': 1, #len(features),
         'n_layers': 3,
         'd_model': 256,
         'd_inner': 128,
@@ -191,7 +194,7 @@ if __name__ == '__main__':
         'diffusion_embedding_dim': 128,
         'beta_start': 0.00001,
         'beta_end': 0.05,
-        'schedule': "linear",
+        'schedule': "quad",
         'time_emb': 128,
         'target_strategy': "random",
         "lr": 1.0e-3,

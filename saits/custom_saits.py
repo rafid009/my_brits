@@ -264,6 +264,7 @@ class _SAITS(nn.Module):
             print(f"enc output before encoder 1: {enc_output.shape}")
             for encoder_layer in self.layer_stack_for_first_block:
                 enc_output, _ = encoder_layer(enc_output)
+                print(f"enc_output layer: {enc_output.shape}")
             print(f"enc output after encoder 1: {enc_output.shape}")
             X_tilde_1 = self.reduce_dim_z(enc_output)
             print(f"X_tilde1: {X_tilde_1.shape}")

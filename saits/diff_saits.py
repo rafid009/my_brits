@@ -16,7 +16,7 @@ from pypots.data.dataset_for_mit import DatasetForMIT
 from pypots.data.integration import mcar, masked_fill
 from pypots.imputation.base import BaseNNImputer
 from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
-from pypots.utils.metrics import cal_mae
+from pypots.utils.metrics import cal_mae, cal_mse
 
 
 class DiffusionEmbedding(nn.Module):
@@ -33,15 +33,15 @@ class DiffusionEmbedding(nn.Module):
         self.projection2 = nn.Linear(projection_dim, projection_dim)
 
     def forward(self, diffusion_step):
-        # print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
+        print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
         x = self.embedding[diffusion_step]
-        # print(f"x after emb: {x.shape}")
+        print(f"x after emb: {x.shape}")
         x = self.projection1(x)
         x = F.silu(x)
-        # print(f"x after proj1: {x.shape}")
+        print(f"x after proj1: {x.shape}")
         x = self.projection2(x)
         x = F.silu(x)
-        # print(f"x after proj2: {x.shape}")
+        print(f"x after proj2: {x.shape}")
         return x
 
     def _build_embedding(self, num_steps, dim=64):
@@ -55,29 +55,32 @@ class DiffusionEmbedding(nn.Module):
         # print(f"table 2: {table.shape}")
         return table
 
-
+def Conv1d_with_init(in_channels, out_channels, kernel_size):
+    layer = nn.Conv1d(in_channels, out_channels, kernel_size)
+    nn.init.kaiming_normal_(layer.weight)
+    return layer
 
 class DiffSAITS(nn.Module):
     def __init__(self, n_layers, d_time, d_feature, d_model, d_inner, n_head, d_k, d_v, dropout,
-                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=128, diff_steps=50, time_strategy='cat'):
+                 diagonal_attention_mask=True, ORT_weight=1, MIT_weight=1, diff_t_emb_dim=256, diff_steps=50, time_strategy='cat'):
         super().__init__()
         self.n_layers = n_layers
         self.time_strategy = time_strategy
 
         if self.time_strategy == 'cat':
-            actual_d_feature = d_feature * 2 + int(diff_t_emb_dim / 2)
+            actual_d_feature = d_feature * 2 + int(diff_t_emb_dim)
         else:
             actual_d_feature = d_feature * 2
 
         self.ORT_weight = ORT_weight
         self.MIT_weight = MIT_weight
 
-        self.diffusion_embedding = DiffusionEmbedding(diff_steps, diff_t_emb_dim, projection_dim=int(diff_t_emb_dim / 2))
+        self.diffusion_embedding = DiffusionEmbedding(diff_steps, diff_t_emb_dim, projection_dim=int(diff_t_emb_dim))
         
         if self.time_strategy == 'cat':
             self.diffusion_projection1 = nn.Linear(1, d_time)
         else:
-            self.diffusion_projection1 = nn.Linear(int(diff_t_emb_dim/2), d_time)
+            self.diffusion_projection1 = nn.Linear(int(diff_t_emb_dim), d_time)
         
         self.layer_stack_for_first_block = nn.ModuleList([
             EncoderLayer(d_time, actual_d_feature, d_model, d_inner, n_head, d_k, d_v, dropout, 0,
@@ -104,10 +107,57 @@ class DiffSAITS(nn.Module):
 
     def impute(self, inputs, time_step=None):
         X, masks = inputs['X'], inputs['missing_mask']
+        diffusion_emb = self.diffusion_embedding(time_step)
 
+        print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+        diffusion_emb = self.diffusion_projection1(diffusion_emb)
+        diffusion_emb = diffusion_emb.unsqueeze(-1)
+        print(f"diffusion_emb after proj1: {diffusion_emb.shape}")
+        # first DMSA block
+        input_X_for_first = torch.cat([X, masks], dim=2)
+        print(f"X after mask concat: {input_X_for_first.shape}")
+        input_X_for_first = self.embedding_1(input_X_for_first)
+        print(f"input_X_for_first: {input_X_for_first.shape}")
+        enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
+        print(f"enc_output: {enc_output.shape}")
+        for encoder_layer in self.layer_stack_for_first_block:
+            enc_output += diffusion_emb
+            enc_output, _ = encoder_layer(enc_output)
+
+        X_tilde_1 = self.reduce_dim_z(enc_output)
+        X_prime = masks * X + (1 - masks) * X_tilde_1
+
+        # second DMSA block
+        input_X_for_second = torch.cat([X_prime, masks], dim=2)
+        input_X_for_second = self.embedding_2(input_X_for_second)
+        enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
+        for encoder_layer in self.layer_stack_for_second_block:
+            enc_output += diffusion_emb
+            enc_output, attn_weights = encoder_layer(enc_output)
+
+        X_tilde_2 = self.reduce_dim_gamma(F.relu(self.reduce_dim_beta(enc_output)))
+
+        # attention-weighted combine
+        attn_weights = attn_weights.squeeze(dim=1)  # namely term A_hat in Eq.
+        if len(attn_weights.shape) == 4:
+            # if having more than 1 head, then average attention weights from all heads
+            attn_weights = torch.transpose(attn_weights, 1, 3)
+            attn_weights = attn_weights.mean(dim=3)
+            attn_weights = torch.transpose(attn_weights, 1, 2)
+
+        combining_weights = torch.sigmoid(
+            self.weight_combine(torch.cat([masks, attn_weights], dim=2))
+        )  # namely term eta
+        # combine X_tilde_1 and X_tilde_2
+        X_tilde_3 = (1 - combining_weights) * X_tilde_2 + combining_weights * X_tilde_1
+        X_c = masks * X + (1 - masks) * X_tilde_3  # replace non-missing part with original data
+        return X_c, [X_tilde_1, X_tilde_2, X_tilde_3]
+
+
+    def impute1(self, inputs, time_step=None):
+        X, masks = inputs['X'], inputs['missing_mask']
         diffusion_emb = self.diffusion_embedding(time_step)
         
-
         if self.time_strategy == 'cat':
             diffusion_emb = diffusion_emb.unsqueeze(-1)
             diffusion_emb = self.diffusion_projection1(diffusion_emb)
@@ -117,16 +167,16 @@ class DiffSAITS(nn.Module):
             # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
             input_X_for_first = torch.cat([X, masks, diffusion_emb], dim=2)
         else:
-            # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+            print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
             diffusion_emb = self.diffusion_projection1(diffusion_emb)
-            # print(f"diffusion_emb: {diffusion_emb.shape}")
+            print(f"diffusion_emb: {diffusion_emb.shape}")
             diffusion_emb = diffusion_emb.unsqueeze(-1)
             input_X_for_first = torch.cat([X, masks], dim=2)
-            input_X_for_first += diffusion_emb
-            # print(f"input X first: {input_X_for_first.shape}")
+            # input_X_for_first += diffusion_emb
+            print(f"input X first: {input_X_for_first.shape}")
 
         input_X_for_first = self.embedding_1(input_X_for_first)
-        # print(f"input_X_for_first: {input_X_for_first.shape}")
+        print(f"input_X_for_first: {input_X_for_first.shape}")
         enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
         for encoder_layer in self.layer_stack_for_first_block:
             enc_output, _ = encoder_layer(enc_output)
@@ -140,7 +190,7 @@ class DiffSAITS(nn.Module):
             input_X_for_second = torch.cat([X_prime, masks, diffusion_emb], dim=2)
         else:
             input_X_for_second = torch.cat([X_prime, masks], dim=2)
-            input_X_for_second += diffusion_emb
+            # input_X_for_second += diffusion_emb
         input_X_for_second = self.embedding_2(input_X_for_second)
         enc_output = self.position_enc(input_X_for_second)  # namely term alpha in math algo
         for encoder_layer in self.layer_stack_for_second_block:
@@ -169,7 +219,7 @@ class DiffSAITS(nn.Module):
         # X, masks = inputs['X'], inputs['missing_mask']
         # reconstruction_loss = 0
         # imputed_data, [X_tilde_1, X_tilde_2, X_tilde_3] = self.impute(inputs, time_emb)
-        predicted = self.impute(inputs, time_step)
+        predicted_mean, X_finals = self.impute(inputs, time_step)
 
         # reconstruction_loss += cal_mae(X_tilde_1, X, masks)
         # reconstruction_loss += cal_mae(X_tilde_2, X, masks)
@@ -181,7 +231,7 @@ class DiffSAITS(nn.Module):
         # imputation_loss = cal_mae(X_tilde_3, inputs['X_intact'], inputs['indicating_mask'])
 
         # loss = self.ORT_weight * reconstruction_loss + self.MIT_weight * imputation_loss
-        return predicted
+        return predicted_mean, X_finals
         # return {
         #     'imputed_data': imputed_data,
         #     'reconstruction_loss': reconstruction_loss, 'imputation_loss': imputation_loss,

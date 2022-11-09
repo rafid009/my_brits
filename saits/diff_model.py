@@ -137,6 +137,10 @@ class DiffModel(nn.Module):
         total_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
         return total_input
 
+    def calculate_mse(self, prediction, target, mask):
+        num_eval = mask.sum()
+        return ((target - prediction) ** 2).sum() / (num_eval if num_eval > 0 else 1)
+
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
@@ -146,13 +150,19 @@ class DiffModel(nn.Module):
         # print(f"noisy data: {noise_data.shape}")
         diff_input = self.set_input_to_diffmodel(noise_data, observed_data, cond_mask)
         diff_inputs = {'X': diff_input, 'missing_mask': observed_mask}
-        predicted = self.diff_model(diff_inputs, t)
+        predicted_mean, X_finals = self.diff_model(diff_inputs, t)
 
         target_mask = observed_mask - cond_mask
-        residual = (noise - predicted) * target_mask
-        num_eval = target_mask.sum()
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
-        print(f"loss: {loss}\npredicted: {predicted}")
+        imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
+        reconstruction_loss  = 0
+        for X_tilde in X_finals:
+            reconstruction_loss += self.calculate_mse(X_tilde, observed_data, cond_mask)
+        reconstruction_loss /= len(X_finals)
+        loss = imputation_loss + reconstruction_loss
+        # residual = (noise - predicted_mean) * target_mask
+        # num_eval = target_mask.sum()
+        # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        print(f"loss: {loss}\npredicted: {predicted_mean}")
         return loss
 
     def evaluate(self, data, n_samples):
@@ -184,20 +194,21 @@ class DiffModel(nn.Module):
                 diff_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 diff_inputs = {'X': diff_input, 'missing_mask': observerd_mask}
                 ts = (torch.ones(B) * t).long()
-                predicted = self.diff_model(diff_inputs, ts)
-                print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted}")
-                coeff1 = 1 / torch.sqrt(self.alphas[t])
-                coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
-                print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
-                current_sample = coeff1 * (current_sample - coeff2 * predicted)
+                predicted_mean, _ = self.diff_model(diff_inputs, ts)
+                print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted_mean}")
+                # coeff1 = 1 / torch.sqrt(self.alphas[t])
+                # coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
+                # print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
+                # current_sample = coeff1 * (current_sample - coeff2 * predicted)
+                current_sample = predicted_mean
                 print(f"Pre-variance sample: {current_sample}")
 
                 if t > 0:
                     noise = torch.randn_like(current_sample)
-                    # sigma = (
-                    #     ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
-                    # ) ** 0.5
-                    sigma = self.sigma[t]
+                    sigma = (
+                        ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
+                    ) ** 0.5
+                    # sigma = self.sigma[t]
                     print(f"Sigma: {sigma}")
                     print(f"Noise: {noise}")
                     current_sample += sigma * noise
