@@ -14,21 +14,24 @@ def create_synthetic_data(config):
     num_steps = config['n_steps']
     num_features = config['n_features']
     data = np.zeros((num_seasons, num_steps, num_features))
-    # value_range = [(0.1, 0.4, 0.7, 0.99), (1.2, 4.5, 15.4, 35.9), (11.0, 17.5, 40.5, 61.2), (100.1, 160.2, 500, 1000)]
+    value_range = [(0.1, 0.4, 0.7, 0.99), (11.0, 17.5, 40.5, 61.2), (100.1, 160.2, 500, 1000)]
 
 
 
     for i in range(data.shape[0]):
         for j in range(data.shape[2]):
-            # low = np.random.uniform(value_range[j][0], value_range[j][1])
-            # high = np.random.uniform(value_range[j][2], value_range[j][3])
-            # if j == 0 or j == 2:
-            #     data[i, :, j] = np.linspace(low, high, data.shape[1])
-            # elif j == 1:
-            #     data[i, :, j] = np.linspace(low ** 0.5, high ** 0.5, data.shape[1]) ** 2
-            # else:
-            #     data[i, :, j] = np.linspace(np.cbrt(low), np.cbrt(high), data.shape[1]) ** 3
-            data[i, :, j] = np.sin(np.linspace(0, 2 * np.pi, data.shape[1]))
+            if j == 3:
+                data[i, :, j] = np.sin(np.linspace(0, 2 * np.pi, data.shape[1]))
+                continue
+            low = np.random.uniform(value_range[j][0], value_range[j][1])
+            high = np.random.uniform(value_range[j][2], value_range[j][3])
+            if j == 0:
+                data[i, :, j] = np.linspace(low, high, data.shape[1])
+            elif j == 1:
+                data[i, :, j] = np.linspace(low ** 0.5, high ** 0.5, data.shape[1]) ** 2
+            else:
+                data[i, :, j] = np.linspace(np.cbrt(low), np.cbrt(high), data.shape[1]) ** 3
+            
     data_rows = data.reshape((-1, num_features))
     mean = np.mean(data_rows, axis=0)
     std = np.std(data_rows, axis=0)
@@ -55,7 +58,7 @@ def train(
     
     # X, Y = split_XY(season_df, max_length, season_array, features)
 
-    num_samples = 100#len(season_array) - 2
+    num_samples = 20#len(season_array) - 2
 
     # X = X[:-2]
     # Y = Y[:-2]
@@ -83,10 +86,10 @@ def train(
         mae_total = 0
         evalpoints_total = 0
         model.train()
-        print("Model weights...")
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(name, param.data)
+        # print("Model weights...")
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.data)
         with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
                 optimizer.zero_grad()

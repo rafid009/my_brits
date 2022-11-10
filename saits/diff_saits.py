@@ -33,15 +33,15 @@ class DiffusionEmbedding(nn.Module):
         self.projection2 = nn.Linear(projection_dim, projection_dim)
 
     def forward(self, diffusion_step):
-        print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
+        # print(f"diffusion_step: {diffusion_step.shape}\nemb: {self.embedding.shape}")
         x = self.embedding[diffusion_step]
-        print(f"x after emb: {x.shape}")
+        # print(f"x after emb: {x.shape}")
         x = self.projection1(x)
         x = F.silu(x)
-        print(f"x after proj1: {x.shape}")
+        # print(f"x after proj1: {x.shape}")
         x = self.projection2(x)
         x = F.silu(x)
-        print(f"x after proj2: {x.shape}")
+        # print(f"x after proj2: {x.shape}")
         return x
 
     def _build_embedding(self, num_steps, dim=64):
@@ -109,17 +109,17 @@ class DiffSAITS(nn.Module):
         X, masks = inputs['X'], inputs['missing_mask']
         diffusion_emb = self.diffusion_embedding(time_step)
 
-        print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
+        # print(f"X: {X.shape}, masks: {masks.shape}, diffusion_emb: {diffusion_emb.shape}")
         diffusion_emb = self.diffusion_projection1(diffusion_emb)
         diffusion_emb = diffusion_emb.unsqueeze(-1)
-        print(f"diffusion_emb after proj1: {diffusion_emb.shape}")
+        # print(f"diffusion_emb after proj1: {diffusion_emb.shape}")
         # first DMSA block
         input_X_for_first = torch.cat([X, masks], dim=2)
-        print(f"X after mask concat: {input_X_for_first.shape}")
+        # print(f"X after mask concat: {input_X_for_first.shape}")
         input_X_for_first = self.embedding_1(input_X_for_first)
-        print(f"input_X_for_first: {input_X_for_first.shape}")
+        # print(f"input_X_for_first: {input_X_for_first.shape}")
         enc_output = self.dropout(self.position_enc(input_X_for_first))  # namely, term e in the math equation
-        print(f"enc_output: {enc_output.shape}")
+        # print(f"enc_output: {enc_output.shape}")
         for encoder_layer in self.layer_stack_for_first_block:
             enc_output += diffusion_emb
             enc_output, _ = encoder_layer(enc_output)

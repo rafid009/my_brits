@@ -58,7 +58,7 @@ class DiffModel(nn.Module):
         self.num_steps = config['n_steps']
         self.diff_steps = config['diff_steps']
         self.betas = self.beta_schedule(config['schedule'], config['beta_start'], config['beta_end'])
-        print(f"Betas: {self.betas}")
+        # print(f"Betas: {self.betas}")
         self.alphas = 1 - self.betas
         self.alpha_hats = torch.cumprod(self.alphas, dim=0)
         self.beta_tildes = self.betas + 0
@@ -162,7 +162,7 @@ class DiffModel(nn.Module):
         # residual = (noise - predicted_mean) * target_mask
         # num_eval = target_mask.sum()
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
-        print(f"loss: {loss}\npredicted: {predicted_mean}")
+        print(f"loss: {loss}")
         return loss
 
     def evaluate(self, data, n_samples):
@@ -195,7 +195,7 @@ class DiffModel(nn.Module):
                 diff_inputs = {'X': diff_input, 'missing_mask': observerd_mask}
                 ts = (torch.ones(B) * t).long()
                 predicted_mean, _ = self.diff_model(diff_inputs, ts)
-                print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted_mean}")
+                # print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted_mean}")
                 # coeff1 = 1 / torch.sqrt(self.alphas[t])
                 # coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
                 # print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
@@ -209,10 +209,10 @@ class DiffModel(nn.Module):
                         ((1.0 - self.alpha_hats[t - 1]) / (1.0 - self.alpha_hats[t])) * self.betas[t]
                     ) ** 0.5
                     # sigma = self.sigma[t]
-                    print(f"Sigma: {sigma}")
-                    print(f"Noise: {noise}")
+                    # print(f"Sigma: {sigma}")
+                    # print(f"Noise: {noise}")
                     current_sample += sigma * noise
-                print(f"Curr: \n{current_sample}")
+                # print(f"Curr: \n{current_sample}")
             current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
             print(f"Current Sample {i}:\n{current_sample}")
             imputed_samples[:, i] = current_sample.detach()
