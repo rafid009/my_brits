@@ -141,6 +141,10 @@ class DiffModel(nn.Module):
         num_eval = mask.sum()
         return ((target - prediction) ** 2).sum() / (num_eval if num_eval > 0 else 1)
 
+    def calculate_mae(self, prediction, target, mask):
+        num_eval = mask.sum()
+        return (torch.abs(target - prediction)).sum() / (num_eval if num_eval > 0 else 1)
+
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
@@ -156,7 +160,7 @@ class DiffModel(nn.Module):
         imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
         reconstruction_loss  = 0
         for X_tilde in X_finals:
-            reconstruction_loss += self.calculate_mse(X_tilde, observed_data, cond_mask)
+            reconstruction_loss += self.calculate_mae(X_tilde, observed_data, cond_mask)
         reconstruction_loss /= len(X_finals)
         loss = imputation_loss + reconstruction_loss
         # residual = (noise - predicted_mean) * target_mask
