@@ -145,6 +145,21 @@ class DiffModel(nn.Module):
         num_eval = mask.sum()
         return (torch.abs(target - prediction)).sum() / (num_eval if num_eval > 0 else 1)
 
+    
+    def kl_loss(self, target, prediction, cond_mask):
+        """
+        Compute the KL divergence between two gaussians.
+        Shapes are automatically broadcasted, so batches can be compared to
+        scalars, among other use cases.
+        """
+        eps = 1e-10
+        target_mean = target * cond_mask + (1 - cond_mask) * eps
+        prediction_mean = prediction * cond_mask + (1 - cond_mask) * eps
+        target_mean = torch.flatten(target_mean, start_dim=1)
+        prediction_mean = torch.flatten(prediction_mean, start_dim=1)
+
+        return torch.mean(torch.sum((prediction_mean * torch.log2(torch.div(prediction_mean, target_mean))), dim=1))
+
     def calc_loss(self, observed_data, cond_mask, observed_mask):
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
@@ -160,7 +175,7 @@ class DiffModel(nn.Module):
         imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
         reconstruction_loss  = 0
         for X_tilde in X_finals:
-            reconstruction_loss += self.calculate_mae(X_tilde, observed_data, cond_mask)
+            reconstruction_loss += self.kl_loss(observed_data, X_tilde, cond_mask)
         reconstruction_loss /= len(X_finals)
         loss = imputation_loss + reconstruction_loss
         # residual = (noise - predicted_mean) * target_mask
