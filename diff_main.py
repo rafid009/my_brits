@@ -186,6 +186,7 @@ if __name__ == '__main__':
         'n_steps': 50, #252,
         'diff_steps': 100, #150,
         'n_features': 4, #len(features),
+        'layers': 4,
         'n_layers': 3,
         'd_model': 256,
         'd_inner': 128,
