@@ -260,7 +260,7 @@ class DiffModel(nn.Module):
                 # print(f"Curr: \n{current_sample}")
             current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
             print(f"Current Sample {i}:\n{current_sample}")
-            current_sample = torch.transpose(current_sample, 1, 2)
+            # current_sample = torch.transpose(current_sample, 1, 2)
             imputed_samples[:, i] = current_sample.detach()
         return imputed_samples
 
