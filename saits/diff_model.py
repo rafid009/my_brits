@@ -69,11 +69,11 @@ class DiffModel(nn.Module):
         self.alpha_hats_sqrt = (self.alpha_hats ** 0.5).unsqueeze(1).unsqueeze(1)
         self.comp_alpha_hats_sqrt = ((1.0 - self.alpha_hats) ** 0.5).unsqueeze(1).unsqueeze(1)
 
-        # self.diff_model = DiffSAITS(d_time=self.num_steps, d_feature=self.feature_dim, n_layers=config['n_layers'], \
-        #         d_model=config['d_model'], d_inner=config['d_inner'], n_head=config['n_head'], d_k=config['d_k'], \
-        #         d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps, time_strategy=config['time_strategy'])
-        config['channels'] = 64
-        self.diff_model = diff_CSDI(config)
+        self.diff_model = DiffSAITS(d_time=self.num_steps, d_feature=self.feature_dim, n_layers=config['n_layers'], \
+                d_model=config['d_model'], d_inner=config['d_inner'], n_head=config['n_head'], d_k=config['d_k'], \
+                d_v=config['d_v'], dropout=config['dropout'], diff_steps=self.diff_steps, time_strategy=config['time_strategy'])
+        # config['channels'] = 64
+        # self.diff_model = diff_CSDI(config)
         
 
     def beta_schedule(self, scheduler, start, end):
@@ -134,12 +134,12 @@ class DiffModel(nn.Module):
         return inputs
 
     def set_input_to_diffmodel(self, noisy_data, observed_data, cond_mask):
-        cond_obs = (cond_mask * observed_data).unsqueeze(1)
-        noisy_target = ((1 - cond_mask) * noisy_data).unsqueeze(1)
-        total_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
-        # cond_obs = cond_mask * observed_data
-        # noisy_target = (1 - cond_mask) * noisy_data
-        # total_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+        # cond_obs = (cond_mask * observed_data).unsqueeze(1)
+        # noisy_target = ((1 - cond_mask) * noisy_data).unsqueeze(1)
+        # total_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+        cond_obs = cond_mask * observed_data
+        noisy_target = (1 - cond_mask) * noisy_data
+        total_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
         return total_input
 
     def calculate_mse(self, prediction, target, mask):
@@ -157,18 +157,31 @@ class DiffModel(nn.Module):
         Shapes are automatically broadcasted, so batches can be compared to
         scalars, among other use cases.
         """
-        eps = 1e-10
+        eps = 1e-6
         target_mean = target * cond_mask + (1 - cond_mask) * eps
+        print(f"target: {target_mean}")
         prediction_mean = prediction * cond_mask + (1 - cond_mask) * eps
+        print(f"prediction: {prediction_mean}")
         target_mean = torch.flatten(target_mean, start_dim=1)
+        print(f"target2: {target_mean}")
         prediction_mean = torch.flatten(prediction_mean, start_dim=1)
-
-        return torch.mean(torch.sum((prediction_mean * torch.log2(torch.div(prediction_mean, target_mean))), dim=1))
+        print(f"prediction2: {prediction_mean}")
+        out = torch.div(prediction_mean, target_mean)
+        print(f"div: {out}")
+        out = torch.log2(out)
+        print(f"log2: {out}")
+        out = prediction_mean * out
+        print(f"multi: {out}")
+        out = torch.sum((out), dim=1)
+        print(f"sum: {out}")
+        out = torch.mean(out)
+        print(f"mean: {out}")
+        return out
 
     def calc_loss(self, observed_data, cond_mask, observed_mask):
-        observed_data = torch.transpose(observed_data, 1, 2) #CSDI
-        cond_mask = torch.transpose(cond_mask, 1, 2)
-        observed_mask = torch.transpose(observed_mask, 1, 2)
+        # observed_data = torch.transpose(observed_data, 1, 2) #CSDI
+        # cond_mask = torch.transpose(cond_mask, 1, 2)
+        # observed_mask = torch.transpose(observed_mask, 1, 2)
         B, K , L = observed_data.shape
         t = torch.randint(0, self.diff_steps, [B])
         noise = torch.randn_like(observed_data)
@@ -177,19 +190,19 @@ class DiffModel(nn.Module):
         # print(f"noisy data: {noise_data.shape}")
         diff_input = self.set_input_to_diffmodel(noise_data, observed_data, cond_mask)
         diff_inputs = {'X': diff_input, 'missing_mask': cond_mask}
-        # predicted_mean, X_finals = self.diff_model(diff_inputs, t)
-        predicted_mean = self.diff_model(diff_inputs, t)
+        predicted_mean, X_finals = self.diff_model(diff_inputs, t)
+        # predicted_mean = self.diff_model(diff_inputs, t)
 
         target_mask = observed_mask - cond_mask
-        # imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
-        # reconstruction_loss  = 0
-        # for X_tilde in X_finals:
-        #     reconstruction_loss += self.kl_loss(observed_data, X_tilde, cond_mask)
-        # reconstruction_loss /= len(X_finals)
-        # loss = imputation_loss + reconstruction_loss
-        residual = (noise - predicted_mean) * target_mask
-        num_eval = target_mask.sum()
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
+        reconstruction_loss  = 0
+        for X_tilde in X_finals:
+            reconstruction_loss += self.kl_loss(observed_data, X_tilde, cond_mask)
+        reconstruction_loss /= len(X_finals)
+        loss = imputation_loss + reconstruction_loss
+        # residual = (noise - predicted_mean) * target_mask
+        # num_eval = target_mask.sum()
+        # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
         print(f"loss: {loss}")
         return loss
 
@@ -208,8 +221,8 @@ class DiffModel(nn.Module):
         return samples, X_intact, target_mask, observed_mask #, observed_tp
 
     def impute(self, observed_data, cond_mask, observerd_mask, n_samples):
-        observed_data = torch.transpose(observed_data, 1, 2)
-        cond_mask = torch.transpose(cond_mask, 1, 2)
+        # observed_data = torch.transpose(observed_data, 1, 2)
+        # cond_mask = torch.transpose(cond_mask, 1, 2)
         B, K, L = observed_data.shape
 
         imputed_samples = torch.zeros(B, n_samples, K, L)#.to(self.device)
@@ -221,17 +234,17 @@ class DiffModel(nn.Module):
             for t in range(n_steps - 1, -1, -1):
                 cond_obs = cond_mask * observed_data
                 noisy_target = (1 - cond_mask) * current_sample
-                # diff_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
-                diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+                diff_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+                # diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 diff_inputs = {'X': diff_input, 'missing_mask': cond_mask}
-                ts = torch.tensor([t]) #(torch.ones(B) * t).long()
+                ts = (torch.ones(B) * t).long() # torch.tensor([t]) #
                 # predicted_mean, _ = self.diff_model(diff_inputs, ts)
                 predicted_mean = self.diff_model(diff_inputs, ts)
                 # print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted_mean}")
-                coeff1 = 1 / torch.sqrt(self.alphas[t])
-                coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
+                # coeff1 = 1 / torch.sqrt(self.alphas[t])
+                # coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
                 # print(f"coeff1: {coeff1}\n\ncoeff2: {coeff2}")
-                current_sample = coeff1 * (current_sample - coeff2 * predicted_mean)
+                # current_sample = coeff1 * (current_sample - coeff2 * predicted_mean)
                 current_sample = predicted_mean
                 print(f"Pre-variance sample: {current_sample}")
 

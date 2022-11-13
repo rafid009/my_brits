@@ -223,9 +223,9 @@ class DiffSAITS(nn.Module):
         # X, masks = inputs['X'], inputs['missing_mask']
         # reconstruction_loss = 0
         # imputed_data, [X_tilde_1, X_tilde_2, X_tilde_3] = self.impute(inputs, time_emb)
-        # predicted_mean, X_finals = self.impute(inputs, time_step)
+        predicted_mean, X_finals = self.impute(inputs, time_step)
 
-        predicted_mean = self.impute1(inputs, time_step)
+        # predicted_mean = self.impute1(inputs, time_step)
 
         # reconstruction_loss += cal_mae(X_tilde_1, X, masks)
         # reconstruction_loss += cal_mae(X_tilde_2, X, masks)
@@ -237,7 +237,7 @@ class DiffSAITS(nn.Module):
         # imputation_loss = cal_mae(X_tilde_3, inputs['X_intact'], inputs['indicating_mask'])
 
         # loss = self.ORT_weight * reconstruction_loss + self.MIT_weight * imputation_loss
-        return predicted_mean#, X_finals
+        return predicted_mean, X_finals
         # return {
         #     'imputed_data': imputed_data,
         #     'reconstruction_loss': reconstruction_loss, 'imputation_loss': imputation_loss,

@@ -132,6 +132,8 @@ def train(
                     refresh=False,
                 )
         model.train()
+        if epoch_no == 3:
+            break
 
     if foldername != "":
         if not os.path.isdir(foldername):
