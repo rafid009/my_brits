@@ -92,6 +92,7 @@ class DiffModel(nn.Module):
         rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
         for i in range(len(observed_mask)):
             sample_ratio = np.random.rand()  # missing ratio
+            print(f"missing ratio: {sample_ratio}")
             num_observed = observed_mask[i].sum().item()
             num_masked = round(num_observed * sample_ratio)
             rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
@@ -157,7 +158,7 @@ class DiffModel(nn.Module):
         Shapes are automatically broadcasted, so batches can be compared to
         scalars, among other use cases.
         """
-        eps = 1e-6
+        eps = 1e-10
         target_mean = target * cond_mask + (1 - cond_mask) * eps
         print(f"target: {target_mean}")
         prediction_mean = prediction * cond_mask + (1 - cond_mask) * eps
@@ -168,7 +169,7 @@ class DiffModel(nn.Module):
         print(f"prediction2: {prediction_mean}")
         out = torch.div(prediction_mean, target_mean)
         print(f"div: {out}")
-        out = torch.log2(out)
+        out = torch.log2(out + eps)
         print(f"log2: {out}")
         out = prediction_mean * out
         print(f"multi: {out}")
