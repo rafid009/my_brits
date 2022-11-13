@@ -250,7 +250,7 @@ class diff_CSDI(nn.Module):
         self.channels = config["channels"]
 
         self.diffusion_embedding = DiffusionEmbedding(
-            num_steps=config["n_steps"],
+            num_steps=config["diff_steps"],
             embedding_dim=config["diffusion_embedding_dim"],
         )
 
