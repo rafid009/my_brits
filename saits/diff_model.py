@@ -238,8 +238,8 @@ class DiffModel(nn.Module):
                 # diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 diff_inputs = {'X': diff_input, 'missing_mask': cond_mask}
                 ts = (torch.ones(B) * t).long() # torch.tensor([t]) #
-                # predicted_mean, _ = self.diff_model(diff_inputs, ts)
-                predicted_mean = self.diff_model(diff_inputs, ts)
+                predicted_mean, _ = self.diff_model(diff_inputs, ts)
+                # predicted_mean = self.diff_model(diff_inputs, ts)
                 # print(f"Sample {i} T = {t}:\nalphas: {self.alphas[t]}\nalphas_hat: {self.alpha_hats[t]}\npredicted noise: {predicted_mean}")
                 # coeff1 = 1 / torch.sqrt(self.alphas[t])
                 # coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
