@@ -149,11 +149,12 @@ class DatasetForMIT(BaseDataset):
         X_intact = np.copy(X)  # keep a copy of originally observed values in X_intact
         # select random indices for artificial mask
         indices = np.where(~np.isnan(X))[0].tolist()  # get the indices of observed values
+        print(f"orig miss: {len(indices)}")
         indices = np.random.choice(indices, int(len(indices) * rate), replace=False)
         # create artificially-missing values by selected indices
         X[indices] = np.nan  # mask values selected by indices
         indicating_mask = ((~np.isnan(X_intact)) ^ (~np.isnan(X))).astype(np.float32)
-        missing_mask = (~np.isnan(X)).astype(np.float32)
+        missing_mask = (~np.isnan(X_intact)).astype(np.float32)
         if nan == -1:
             intact_mask = np.isnan(X_intact)
             X_mask = np.isnan(X)
@@ -178,11 +179,13 @@ class DatasetForMIT(BaseDataset):
         X_intact = torch.clone(X)  # keep a copy of originally observed values in X_intact
         # select random indices for artificial mask
         indices = torch.where(~torch.isnan(X))[0].tolist()  # get the indices of observed values
+        # print(f"orig miss: {len(indices)}\nsupposed: {int(len(indices) * rate)}")
         indices = np.random.choice(indices, int(len(indices) * rate), replace=False)
+        # print(f"indicate indices: {indices}\nlength: {len(indices)}")
         # create artificially-missing values by selected indices
         X[indices] = torch.nan  # mask values selected by indices
-        indicating_mask = ((~torch.isnan(X_intact)) ^ (~torch.isnan(X))).type(torch.float32)
-        missing_mask = (~torch.isnan(X)).type(torch.float32)
+        indicating_mask = (~torch.isnan(X)).type(torch.float32)#((~torch.isnan(X_intact)) ^ (~torch.isnan(X))).type(torch.float32)
+        missing_mask = (~torch.isnan(X_intact)).type(torch.float32)
         if nan == -1:
             intact_mask = torch.isnan(X_intact)
             X_mask = torch.isnan(X)

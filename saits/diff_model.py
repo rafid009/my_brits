@@ -47,7 +47,17 @@ from saits.diff_saits import DiffSAITS, diff_CSDI
 #         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
 #         return embeddings
 
+def broadcast_shape(broadcast_from, broadcast_to):
+    result = broadcast_from
+    while len(result.shape) < len(broadcast_to.shape):
+        result = result[..., None]
+    return result.expand(broadcast_to.shape)
 
+def mean_flat(tensor):
+    """
+    Take the mean over all non-batch dimensions.
+    """
+    return tensor.mean(dim=list(range(1, len(tensor.shape))))
 
 class DiffModel(nn.Module):
     def __init__(self, config) -> None:
@@ -61,10 +71,12 @@ class DiffModel(nn.Module):
         # print(f"Betas: {self.betas}")
         self.alphas = 1 - self.betas
         self.alpha_hats = torch.cumprod(self.alphas, dim=0)
-        self.beta_tildes = self.betas + 0
-        for t in range(1, self.diff_steps):
-            self.beta_tildes *= (1 - self.alpha_hats[t - 1]) / (
-                1 - self.alpha_hats[t])
+        self.alpha_hats_prev = torch.cat((torch.tensor([1.0]), self.alpha_hats[1:]))
+        self.beta_tildes = self.betas * (1.0 - self.alpha_hats_prev) / (1.0 - self.alpha_hats)
+        self.beta_tilde_log_varience = torch.log(torch.cat((torch.tensor([self.beta_tildes[1]]), self.beta_tildes[1:])))
+        # for t in range(1, self.diff_steps):
+        #     self.beta_tildes *= (1 - self.alpha_hats[t - 1]) / (
+        #         1 - self.alpha_hats[t])
         self.sigma = torch.sqrt(self.beta_tildes)
         self.alpha_hats_sqrt = (self.alpha_hats ** 0.5).unsqueeze(1).unsqueeze(1)
         self.comp_alpha_hats_sqrt = ((1.0 - self.alpha_hats) ** 0.5).unsqueeze(1).unsqueeze(1)
@@ -88,14 +100,16 @@ class DiffModel(nn.Module):
         return betas
 
     def get_randmask(self, observed_mask):
-        rand_for_mask = torch.rand_like(observed_mask) * observed_mask
+        rand_for_mask = torch.abs(torch.rand_like(observed_mask)) * observed_mask
         rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
         for i in range(len(observed_mask)):
             sample_ratio = np.random.rand()  # missing ratio
             print(f"missing ratio: {sample_ratio}")
             num_observed = observed_mask[i].sum().item()
             num_masked = round(num_observed * sample_ratio)
+            print(f"topk: {rand_for_mask[i].topk(num_masked).indices}\ntopklen: {len(rand_for_mask[i].topk(num_masked).indices)}\nnum_masked: {num_masked}")
             rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
+            print(f"rand mask miss: {(rand_for_mask[i] > 0).reshape(observed_mask.shape[1], observed_mask.shape[2]).float()}\nnon-miss num: {(rand_for_mask[i] > 0).sum()}")
         cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
         return cond_mask
 
@@ -152,31 +166,15 @@ class DiffModel(nn.Module):
         return (torch.abs(target - prediction)).sum() / (num_eval if num_eval > 0 else 1)
 
     
-    def kl_loss(self, target, prediction, cond_mask):
+    def kl_loss(self, target_mean, traget_logvar, prediction_mean, prediction_logvar, cond_mask=None):
         """
         Compute the KL divergence between two gaussians.
         Shapes are automatically broadcasted, so batches can be compared to
         scalars, among other use cases.
         """
-        eps = 1e-10
-        target_mean = target * cond_mask + (1 - cond_mask) * eps
-        print(f"target: {target_mean}")
-        prediction_mean = prediction * cond_mask + (1 - cond_mask) * eps
-        print(f"prediction: {prediction_mean}")
-        target_mean = torch.flatten(target_mean, start_dim=1)
-        print(f"target2: {target_mean}")
-        prediction_mean = torch.flatten(prediction_mean, start_dim=1)
-        print(f"prediction2: {prediction_mean}")
-        out = torch.div(prediction_mean, target_mean)
-        print(f"div: {out}")
-        out = torch.log2(out + eps)
-        print(f"log2: {out}")
-        out = prediction_mean * out
-        print(f"multi: {out}")
-        out = torch.sum((out), dim=1)
-        print(f"sum: {out}")
-        out = torch.mean(out)
-        print(f"mean: {out}")
+        out = 0.5 * (-1.0 + prediction_logvar - traget_logvar + torch.exp(traget_logvar - prediction_logvar)
+             + ((target_mean + prediction_mean) ** 2) * torch.exp(- prediction_logvar))
+        out = mean_flat(out) / np.log(2.0)
         return out
 
     def calc_loss(self, observed_data, cond_mask, observed_mask):
@@ -191,16 +189,30 @@ class DiffModel(nn.Module):
         # print(f"noisy data: {noise_data.shape}")
         diff_input = self.set_input_to_diffmodel(noise_data, observed_data, cond_mask)
         diff_inputs = {'X': diff_input, 'missing_mask': cond_mask}
-        predicted_mean, X_finals = self.diff_model(diff_inputs, t)
+        predicted_final_mean, X_finals = self.diff_model(diff_inputs, t)
         # predicted_mean = self.diff_model(diff_inputs, t)
 
         target_mask = observed_mask - cond_mask
-        imputation_loss = self.calculate_mse(predicted_mean, observed_data, target_mask)
+        imputation_loss = self.calculate_mae(predicted_final_mean, observed_data, target_mask)
+
+        coeff1 = 1 / torch.sqrt(self.alphas[t])
+        coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
+        target_mean = broadcast_shape(coeff1, observed_data) * observed_data + broadcast_shape(coeff2, noise_data) * noise_data
+        target_logvar = broadcast_shape(self.beta_tilde_log_varience[t], noise_data)
+
+        predicted_logvar = torch.log(torch.cat((torch.tensor([self.beta_tildes[1]]), self.betas[1:])))
+        predicted_logvar = broadcast_shape(predicted_logvar[t], predicted_final_mean)
+
         reconstruction_loss  = 0
         for X_tilde in X_finals:
-            reconstruction_loss += self.kl_loss(observed_data, X_tilde, cond_mask)
+            predicted_mean = X_tilde
+            reconstruction_loss += self.kl_loss(target_mean, target_logvar, predicted_mean, predicted_logvar)
         reconstruction_loss /= len(X_finals)
-        loss = imputation_loss + reconstruction_loss
+
+        final_loss = self.kl_loss(target_mean, target_logvar, predicted_final_mean, predicted_logvar)
+
+        loss = imputation_loss + reconstruction_loss + final_loss
+        loss = loss.mean()
         # residual = (noise - predicted_mean) * target_mask
         # num_eval = target_mask.sum()
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
@@ -266,8 +278,12 @@ class DiffModel(nn.Module):
         return imputed_samples
 
     def forward(self, data, is_train=True):
-        _, X_art, X_intact, observed_mask, indicating_mask = data
-        cond_mask = self.get_randmask(indicating_mask)
-        return self.calc_loss(X_art, cond_mask, indicating_mask)
+        _, X_art, X_intact, observed_mask, art_missing_mask = data
+        # print(f"observed: {observed_mask}\art miss: {art_missing_mask}")
+        cond_mask = self.get_randmask(art_missing_mask)
+        X_cond = X_art * cond_mask
+        indicating_mask = ((~torch.isnan(X_art)) ^ (~torch.isnan(X_cond))).type(torch.float32)
+        return self.calc_loss(X_cond, cond_mask, indicating_mask)
+
 
 
