@@ -221,11 +221,14 @@ class DiffModel(nn.Module):
             current_sample = torch.randn_like(observed_data)
 
             for t in range(n_steps - 1, -1, -1):
-                cond_obs = cond_mask * observed_data
-                noisy_target = (1 - cond_mask) * current_sample
+
                 if self.is_epsilon:
+                    cond_obs = (cond_mask * observed_data).unsqueeze(1)
+                    noisy_target = ((1 - cond_mask) * current_sample).unsqueeze(1)
                     diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 else:
+                    cond_obs = cond_mask * observed_data
+                    noisy_target = (1 - cond_mask) * current_sample
                     diff_input = cond_obs + noisy_target # torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 
                 diff_inputs = {'X': diff_input, 'missing_mask': cond_mask}

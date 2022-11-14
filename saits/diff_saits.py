@@ -282,7 +282,7 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, inputs, diffusion_step):# cond_info, diffusion_step):
-        x = inputs['X']
+        x = inputs['X'].clone()
         cond_info = inputs['missing_mask'].clone()
         cond_info = cond_info.unsqueeze(1)
         B, inputdim, K, L = x.shape
