@@ -295,7 +295,9 @@ class diff_CSDI(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
+            print(f"cond info shape1: {cond_mask.shape}")
             cond_mask = cond_mask.unsqueeze(1)
+            print(f"cond info shape2: {cond_mask.shape}")
             x, skip_connection = layer(x, cond_mask, diffusion_emb)# cond_info, diffusion_emb)
             skip.append(skip_connection)
 
