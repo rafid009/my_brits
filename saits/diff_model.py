@@ -181,10 +181,10 @@ class DiffModel(nn.Module):
             predicted_logvar = broadcast_shape(predicted_logvar[t], predicted_final_mean)
 
             reconstruction_loss  = 0
-            for X_tilde in X_finals:
-                predicted_mean = X_tilde
-                reconstruction_loss += self.kl_loss(target_mean, target_logvar, predicted_mean, predicted_logvar)
-            reconstruction_loss /= len(X_finals)
+            # for X_tilde in X_finals:
+            #     predicted_mean = X_tilde
+            #     reconstruction_loss += self.kl_loss(target_mean, target_logvar, predicted_mean, predicted_logvar)
+            # reconstruction_loss /= len(X_finals)
 
             final_loss = self.kl_loss(target_mean, target_logvar, predicted_final_mean, predicted_logvar)
 
@@ -257,7 +257,7 @@ class DiffModel(nn.Module):
                     # print(f"Sigma: {sigma}")
                     # print(f"Noise: {noise}")
                     current_sample += sigma * noise
-                # print(f"Curr: \n{current_sample}")
+                print(f"Curr: \n{current_sample}")
             current_sample = cond_mask * observed_data + (1 - cond_mask) * current_sample
             print(f"Current Sample {i}:\n{current_sample}")
             if self.is_epsilon:
