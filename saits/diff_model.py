@@ -282,8 +282,8 @@ class DiffModel(nn.Module):
         # print(f"observed: {observed_mask}\art miss: {art_missing_mask}")
         cond_mask = self.get_randmask(art_missing_mask)
         X_cond = X_art * cond_mask
-        indicating_mask = ((~torch.isnan(X_art)) ^ (~torch.isnan(X_cond))).type(torch.float32)
-        return self.calc_loss(X_cond, cond_mask, indicating_mask)
+        # indicating_mask = ((~torch.isnan(X_art)) ^ (~torch.isnan(X_cond))).type(torch.float32)
+        return self.calc_loss(X_cond, cond_mask, art_missing_mask)
 
 
 
