@@ -166,7 +166,7 @@ class DiffModel(nn.Module):
         target_mask = observed_mask - cond_mask
 
         if self.is_epsilon:
-            residual = (noise - predicted_mean) * target_mask
+            residual = (noise - predicted_final_mean) * target_mask
             num_eval = target_mask.sum()
             loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
         else:
