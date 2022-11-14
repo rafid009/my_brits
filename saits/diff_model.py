@@ -214,7 +214,7 @@ class DiffModel(nn.Module):
             cond_mask = torch.transpose(cond_mask, 1, 2)
         B, K, L = observed_data.shape
 
-        imputed_samples = torch.zeros(B, n_samples, K, L)#.to(self.device)
+        imputed_samples = torch.zeros(B, n_samples, L, K)#.to(self.device)
         n_steps = self.diff_steps
         for i in range(n_samples):
 
