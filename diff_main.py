@@ -110,10 +110,10 @@ def train(
                 )
 
             lr_scheduler.step()
-        print("Model weights...")
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(name, param.data)
+        # print("Model weights...")
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.data)
         model.eval()
         with tqdm(train_loader) as it:
             for batch_no, train_batch in enumerate(it, start=1):
@@ -132,8 +132,8 @@ def train(
                     refresh=False,
                 )
         model.train()
-        if epoch_no == 3:
-            break
+        # if epoch_no == 3:
+        #     break
 
     if foldername != "":
         if not os.path.isdir(foldername):
@@ -206,7 +206,7 @@ if __name__ == '__main__':
         "lr": 1.0e-3,
         'time_strategy': 'add'
     }
-    model = DiffModel(config)
+    model = DiffModel(config, is_epsilon=False)
     train(model, config, foldername="saved_diff_model_w_sampling_synth")
     # X, mean, std = create_synthetic_data()
     # print(f"X: {X}\n\nmean: {mean}\nstd: {std}")

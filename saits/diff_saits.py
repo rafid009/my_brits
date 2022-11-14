@@ -295,6 +295,7 @@ class diff_CSDI(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
+            cond_mask = cond_mask.unsqueeze(1)
             x, skip_connection = layer(x, cond_mask, diffusion_emb)# cond_info, diffusion_emb)
             skip.append(skip_connection)
 
@@ -311,7 +312,7 @@ class ResidualBlock(nn.Module):
     def __init__(self, channels, diffusion_embedding_dim, nheads):# side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
-        # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        self.cond_projection = Conv1d_with_init(1, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
