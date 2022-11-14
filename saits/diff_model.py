@@ -104,12 +104,12 @@ class DiffModel(nn.Module):
         rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
         for i in range(len(observed_mask)):
             sample_ratio = np.random.rand()  # missing ratio
-            print(f"missing ratio: {sample_ratio}")
+            # print(f"missing ratio: {sample_ratio}")
             num_observed = observed_mask[i].sum().item()
             num_masked = round(num_observed * sample_ratio)
-            print(f"topk: {rand_for_mask[i].topk(num_masked).indices}\ntopklen: {len(rand_for_mask[i].topk(num_masked).indices)}\nnum_masked: {num_masked}")
+            # print(f"topk: {rand_for_mask[i].topk(num_masked).indices}\ntopklen: {len(rand_for_mask[i].topk(num_masked).indices)}\nnum_masked: {num_masked}")
             rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
-            print(f"rand mask miss: {(rand_for_mask[i] > 0).reshape(observed_mask.shape[1], observed_mask.shape[2]).float()}\nnon-miss num: {(rand_for_mask[i] > 0).sum()}")
+            # print(f"rand mask miss: {(rand_for_mask[i] > 0).reshape(observed_mask.shape[1], observed_mask.shape[2]).float()}\nnon-miss num: {(rand_for_mask[i] > 0).sum()}")
         cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
         return cond_mask
 
