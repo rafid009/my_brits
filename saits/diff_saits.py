@@ -283,7 +283,8 @@ class diff_CSDI(nn.Module):
 
     def forward(self, inputs, diffusion_step):# cond_info, diffusion_step):
         x = inputs['X']
-        cond_mask = inputs['missing_mask']
+        cond_info = inputs['missing_mask'].clone()
+        cond_info = cond_info.unsqueeze(1)
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
@@ -295,10 +296,7 @@ class diff_CSDI(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
-            print(f"cond info shape1: {cond_mask.shape}")
-            cond_mask = cond_mask.unsqueeze(1)
-            print(f"cond info shape2: {cond_mask.shape}")
-            x, skip_connection = layer(x, cond_mask, diffusion_emb)# cond_info, diffusion_emb)
+            x, skip_connection = layer(x, cond_info, diffusion_emb)# cond_info, diffusion_emb)
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
