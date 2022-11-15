@@ -188,8 +188,7 @@ class DiffModel(nn.Module):
 
             final_loss = self.kl_loss(target_mean, target_logvar, predicted_final_mean, predicted_logvar)
 
-            loss = imputation_loss + reconstruction_loss + final_loss
-            loss = loss.mean()
+            loss = imputation_loss + final_loss.mean()
         
         print(f"loss: {loss}")
         return loss
