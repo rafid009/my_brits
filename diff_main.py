@@ -59,6 +59,7 @@ def train(
     # X, Y = split_XY(season_df, max_length, season_array, features)
 
     num_samples = 20#len(season_array) - 2
+    num_batches = 2
 
     # X = X[:-2]
     # Y = Y[:-2]
@@ -99,15 +100,15 @@ def train(
                 avg_loss += loss.item()
                 optimizer.step()
                 
-                it.set_postfix(
-                    ordered_dict={
-                        "avg_epoch_loss": avg_loss / batch_no,
-                        # "valid_mse": mse_total / evalpoints_total,
-                        # "mae_total": mae_total / evalpoints_total
-                        "epoch": epoch_no,
-                    },
-                    refresh=False,
-                )
+            it.set_postfix(
+                ordered_dict={
+                    "avg_epoch_loss": avg_loss / num_batches,
+                    # "valid_mse": mse_total / evalpoints_total,
+                    # "mae_total": mae_total / evalpoints_total
+                    "epoch": epoch_no,
+                },
+                refresh=False,
+            )
 
             lr_scheduler.step()
         # print("Model weights...")
@@ -121,16 +122,16 @@ def train(
                 mse_total += (mse_current / eval_points)
                 mae_total += (mae_current / eval_points)
                 evalpoints_total += eval_points
-                print(f"Epoch {epoch_no}: mse: {mse_total  / batch_no} and mae: {mae_total / batch_no}")
-                it.set_postfix(
-                    ordered_dict={
-                        # "avg_epoch_loss": avg_loss / batch_no,
-                        "valid_mse": mse_total  / batch_no,
-                        "valid_mae": mae_total / batch_no,
-                        "epoch": epoch_no,
-                    },
-                    refresh=False,
-                )
+            print(f"Epoch {epoch_no}: mse: {mse_total  / num_batches} and mae: {mae_total / num_batches}")
+            it.set_postfix(
+                ordered_dict={
+                    # "avg_epoch_loss": avg_loss / batch_no,
+                    "valid_mse": mse_total  / num_batches,
+                    "valid_mae": mae_total / num_batches,
+                    "epoch": epoch_no,
+                },
+                refresh=False,
+            )
         model.train()
         # if epoch_no == 3:
         #     break
