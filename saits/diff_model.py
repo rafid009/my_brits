@@ -126,11 +126,11 @@ class DiffModel(nn.Module):
 
     def calculate_mse(self, prediction, target, mask):
         num_eval = mask.sum()
-        return ((target - prediction) ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        return (((target - prediction) ** 2) * mask).sum() / (num_eval if num_eval > 0 else 1)
 
     def calculate_mae(self, prediction, target, mask):
         num_eval = mask.sum()
-        return (torch.abs(target - prediction)).sum() / (num_eval if num_eval > 0 else 1)
+        return (torch.abs(target - prediction) * mask).sum() / (num_eval if num_eval > 0 else 1)
 
     
     def kl_loss(self, target_mean, traget_logvar, prediction_mean, prediction_logvar, cond_mask=None):
@@ -170,7 +170,7 @@ class DiffModel(nn.Module):
             num_eval = target_mask.sum()
             loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
         else:
-            imputation_loss = self.calculate_mae(predicted_final_mean, observed_data, target_mask)
+            imputation_loss = self.calculate_mse(predicted_final_mean, observed_data, target_mask)
 
             coeff1 = 1 / torch.sqrt(self.alphas[t])
             coeff2 = self.betas[t] / torch.sqrt(1.0 - self.alpha_hats[t])
@@ -180,7 +180,7 @@ class DiffModel(nn.Module):
             predicted_logvar = torch.log(torch.cat((torch.tensor([self.beta_tildes[1]]), self.betas[1:])))
             predicted_logvar = broadcast_shape(predicted_logvar[t], predicted_final_mean)
 
-            reconstruction_loss  = 0
+            # reconstruction_loss  = 0
             # for X_tilde in X_finals:
             #     predicted_mean = X_tilde
             #     reconstruction_loss += self.kl_loss(target_mean, target_logvar, predicted_mean, predicted_logvar)
@@ -190,7 +190,7 @@ class DiffModel(nn.Module):
 
             loss = imputation_loss + final_loss.mean()
         
-        print(f"loss: {loss}")
+        # print(f"loss: {loss}")
         return loss
 
     def evaluate(self, data, n_samples):

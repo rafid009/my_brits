@@ -99,7 +99,7 @@ def train(
                 loss.backward()
                 avg_loss += loss.item()
                 optimizer.step()
-                
+            print(f"avg loss: {avg_loss / num_batches}")
             it.set_postfix(
                 ordered_dict={
                     "avg_epoch_loss": avg_loss / num_batches,
@@ -140,6 +140,8 @@ def train(
         if not os.path.isdir(foldername):
             os.makedirs(foldername)
         torch.save(model.state_dict(), output_path)
+
+def evaluate_imputation(config, )
 
 def batch_eval(model, test_batch, nsample=200, scaler=1, mean_scaler=0):
     mid = True
